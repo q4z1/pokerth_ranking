@@ -23,5 +23,10 @@
         "vue": "^2.5.17",
         "vue-loader": "^15.9.6",
         "vue-template-compiler": "^2.6.10"
+    },
+    "dependencies": {
+        "chartjs": "^0.3.24",
+        "vue-autosuggest": "^2.2.0",
+        "vuetable-2": "^2.0.0-beta.4"
     }
 }

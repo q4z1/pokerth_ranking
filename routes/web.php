@@ -16,3 +16,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/player/autocomplete', [App\Http\Controllers\PlayerController::class, 'autocomplete']);
+Route::get('/player/show', [App\Http\Controllers\PlayerController::class, 'show']);
+Route::get('/ranking/leaderboard', [App\Http\Controllers\PlayerController::class, 'getLeaderboard']);
