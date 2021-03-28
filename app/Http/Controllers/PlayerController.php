@@ -40,8 +40,15 @@ class PlayerController extends Controller
 
     public function account_change(Request $request)
     {
-        $res = false;
-        return $request->toArray();
+        $salt = env('APP_SALT');
+        $p = Player::selectRaw('player_id, username, CAST(AES_DECRYPT(password, "'.$salt.'") AS CHAR ) as password')
+        ->where('email', $request->email)
+        ->first();
+        if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
+        else if($p->password != $request->cur_password) return ['status' => false, 'msg' => 'Password mismatch.'];
+        else if($request->new_password != $request->password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
+        else if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, $salt, $request->email ])) return ['status' => false, 'msg' => 'PW update failed.'];
+        return ['status' => 'success'];
     }
 
     public function getLeaderboard(Request $request){

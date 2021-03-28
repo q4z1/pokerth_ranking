@@ -1,5 +1,7 @@
 require('./app.js')
 
+var form_done = false
+
 document.onreadystatechange = function () {
     if (document.readyState === "complete") {
         console.log('injection: readystate complete')
@@ -15,24 +17,24 @@ document.onreadystatechange = function () {
                 });
             }else if($('#ucp').length > 0){
                 $('#ucp').submit(function( event ) {
-                    console.log( "Handler for .submit() during pw edit called." );
+                    if(form_done) return
+                    event.preventDefault()
                     let data = {}
                     $("form#ucp :input").each(function(){
-                        var input = $(this); // This is the jquery object of the input, do what you will
+                        var input = $(this)
                         data[$(input).attr('name')] = $(input).val()
                     });
                     axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/change', data)
                     .then(res => {
-                        console.log(res.data)
+                        form_done = true
+                        $("form#ucp").submit()
                     }).catch(err => {
                         console.log(err)
                     })
-                    event.preventDefault();
                 });
             }
-
-
         }
+        
         if($('input[name=new_password_confirm').length > 0){
             // pw_reset - form @action: /app.php/user/reset_password, @id: reset_password
             // https://test.pokerth.net/app.php/user/reset_password?u=59&token=83qtu3l2jluf6tsp8vf20gu0oy81jupt

@@ -50604,6 +50604,8 @@ var __webpack_exports__ = {};
   \************************************/
 __webpack_require__(/*! ./app.js */ "./resources/js/app.js");
 
+var form_done = false;
+
 document.onreadystatechange = function () {
   if (document.readyState === "complete") {
     console.log('injection: readystate complete');
@@ -50619,19 +50621,19 @@ document.onreadystatechange = function () {
         });
       } else if ($('#ucp').length > 0) {
         $('#ucp').submit(function (event) {
-          console.log("Handler for .submit() during pw edit called.");
+          if (form_done) return;
+          event.preventDefault();
           var data = {};
           $("form#ucp :input").each(function () {
-            var input = $(this); // This is the jquery object of the input, do what you will
-
+            var input = $(this);
             data[$(input).attr('name')] = $(input).val();
           });
           axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/change', data).then(function (res) {
-            console.log(res.data);
+            form_done = true;
+            $("form#ucp").submit();
           })["catch"](function (err) {
             console.log(err);
           });
-          event.preventDefault();
         });
       }
     }
