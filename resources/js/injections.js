@@ -1,4 +1,4 @@
-
+require('./app.js')
 
 document.onreadystatechange = function () {
     if (document.readyState === "complete") {
@@ -11,11 +11,23 @@ document.onreadystatechange = function () {
                 $('#register').submit(function( event ) {
                     console.log( "Handler for .submit() during reg called." );
                     // event.preventDefault();
+
                 });
             }else if($('#ucp').length > 0){
                 $('#ucp').submit(function( event ) {
                     console.log( "Handler for .submit() during pw edit called." );
-                    // event.preventDefault();
+                    let data = {}
+                    $("form#ucp :input").each(function(){
+                        var input = $(this); // This is the jquery object of the input, do what you will
+                        data[$(input).attr('name')] = $(input).val()
+                    });
+                    axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/change', data)
+                    .then(res => {
+                        console.log(res.data)
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                    event.preventDefault();
                 });
             }
 
@@ -24,7 +36,7 @@ document.onreadystatechange = function () {
         if($('input[name=new_password_confirm').length > 0){
             // pw_reset - form @action: /app.php/user/reset_password, @id: reset_password
             // https://test.pokerth.net/app.php/user/reset_password?u=59&token=83qtu3l2jluf6tsp8vf20gu0oy81jupt
-            // => u=59 = user_id?
+            // => u=59 = user_id
             // table: phpbb_users - fields: reset_token, reset_token_expiration
             console.log('new_password confirm here = pw reset')
         }

@@ -26,6 +26,24 @@ class PlayerController extends Controller
         return $res;
     }
 
+    public function account_create(Request $request)
+    {
+        $res = false;
+        return $res;
+    }
+
+    public function account_reset(Request $request)
+    {
+        $res = false;
+        return $res;
+    }
+
+    public function account_change(Request $request)
+    {
+        $res = false;
+        return $request->toArray();
+    }
+
     public function getLeaderboard(Request $request){
         // $start= $request->input('start', 1);
         // $size= $request->input('size', 50);
