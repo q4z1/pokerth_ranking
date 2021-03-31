@@ -4,16 +4,23 @@ var form_done = false
 
 document.onreadystatechange = function () {
     if (document.readyState === "complete") {
-        console.log('injection: readystate complete')
         if($('input[name=password_confirm').length > 0){
-            // registration - form @action: ./ucp.php?mode=register, @id: register
-            // pw edit - form @action: ./ucp.php?i=ucp_profile&mode=reg_details, @id: ucp
-            console.log('password confirm here - registration or pw edit')
             if($('#register').length > 0){
                 $('#register').submit(function( event ) {
-                    console.log( "Handler for .submit() during reg called." );
-                    // event.preventDefault();
-
+                    if(form_done) return
+                    event.preventDefault()
+                    let data = {}
+                    $("form#register :input").each(function(){
+                        var input = $(this)
+                        data[$(input).attr('name')] = $(input).val()
+                    });
+                    axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/create', data)
+                    .then(res => {
+                        form_done = true
+                        $("form#ucp").submit() // @FIXME: has to be triggered twice, or with a timeout?
+                    }).catch(err => {
+                        console.log(err)
+                    })
                 });
             }else if($('#ucp').length > 0){
                 $('#ucp').submit(function( event ) {
@@ -27,7 +34,7 @@ document.onreadystatechange = function () {
                     axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/change', data)
                     .then(res => {
                         form_done = true
-                        $("form#ucp").submit()
+                        $("form#ucp").submit() // @FIXME: has to be triggered twice, or with a timeout?
                     }).catch(err => {
                         console.log(err)
                     })
@@ -36,11 +43,22 @@ document.onreadystatechange = function () {
         }
         
         if($('input[name=new_password_confirm').length > 0){
-            // pw_reset - form @action: /app.php/user/reset_password, @id: reset_password
-            // https://test.pokerth.net/app.php/user/reset_password?u=59&token=83qtu3l2jluf6tsp8vf20gu0oy81jupt
-            // => u=59 = user_id
-            // table: phpbb_users - fields: reset_token, reset_token_expiration
-            console.log('new_password confirm here = pw reset')
+            $('#reset_password').submit(function( event ) {
+                if(form_done) return
+                event.preventDefault()
+                let data = {}
+                $("form#reset_password :input").each(function(){
+                    var input = $(this)
+                    data[$(input).attr('name')] = $(input).val()
+                })
+                axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/reset', data)
+                .then(res => {
+                    form_done = true
+                    $("form#reset_password").submit() // @FIXME: has to be triggered twice, or with a timeout?
+                }).catch(err => {
+                    console.log(err)
+                })
+            });
         }
 
         // email bestätigung
@@ -51,11 +69,23 @@ document.onreadystatechange = function () {
             // disable redirect - check out response and then redirect
             console.log('email verification here')
             window.stop()
-            // window.onbeforeunload = function(){
-            //     alert('leaving page...')
-            //     return 'leaving page?';
-            // };
+            let data = {}
+            $("body :input").each(function(){
+                var input = $(this)
+                data[$(input).attr('name')] = $(input).val()
+            })
+            data.href = window.location.href
+            axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/validate', data)
+            .then(res => {
+                // @TODO: redirect to board index here
+                console.log(res.data)
+
+            }).catch(err => {
+                console.log(err)
+            })
         }
+
+        // user delete (!)
 
     }
 }

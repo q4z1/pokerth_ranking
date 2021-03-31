@@ -23,7 +23,7 @@
                     <div class="card-body">
                         <vuetable ref="vuetable" v-if="leaderboard"
                             :fields="tableFields"
-                            api-url="https://test.pokerth.net/pthranking/ranking/leaderboard"
+                            :isApiMode="false"
                             @vuetable:pagination-data="onPaginationData"
                         ></vuetable>
                         <vuetable-pagination ref="pagination"  v-if="leaderboard"

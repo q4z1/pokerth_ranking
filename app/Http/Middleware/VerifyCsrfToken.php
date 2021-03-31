@@ -15,6 +15,7 @@ class VerifyCsrfToken extends Middleware
         // @TODO: IP deny stuff in nginx config instead
         '/account/reset',
         '/account/change',
-        '/account/create'
+        '/account/create',
+        '/account/validate'
     ];
 }
