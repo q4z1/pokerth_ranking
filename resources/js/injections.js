@@ -17,7 +17,7 @@ document.onreadystatechange = function () {
                     axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/create', data)
                     .then(res => {
                         form_done = true
-                        $("form#register").submit().submit() // @FIXME: has to be triggered twice, or with a timeout?
+                        $('form#register input[name=submit]').click()
                     }).catch(err => {
                         console.log(err)
                     })
@@ -34,7 +34,8 @@ document.onreadystatechange = function () {
                     axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/change', data)
                     .then(res => {
                         form_done = true
-                        $("form#ucp").submit().submit() // @FIXME: has to be triggered twice, or with a timeout?
+                        $('#ucp input[name=submit]').click()
+                        //$("form#ucp").submit().submit() // @FIXME: has to be triggered twice, or with a timeout?
                     }).catch(err => {
                         console.log(err)
                     })
@@ -54,7 +55,7 @@ document.onreadystatechange = function () {
                 axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/reset', data)
                 .then(res => {
                     form_done = true
-                    $("form#reset_password").submit().submit() // @FIXME: has to be triggered twice, or with a timeout?
+                    $("form#register").click() // @FIXME: has to be triggered twice, or with a timeout?
                 }).catch(err => {
                     console.log(err)
                 })
