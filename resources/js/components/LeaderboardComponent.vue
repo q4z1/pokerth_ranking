@@ -100,7 +100,7 @@
             }
         },
         mounted() {
-            // this.getLeaderboard()
+            this.getLeaderboard()
         },
         methods: {
             getLeaderboard: function(event){
