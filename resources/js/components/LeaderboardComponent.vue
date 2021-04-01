@@ -27,9 +27,9 @@
                             :data="leaderboard"
                             @vuetable:pagination-data="onPaginationData"
                         ></vuetable>
-                        <vuetable-pagination ref="pagination"  v-if="leaderboard"
+                        <!-- <vuetable-pagination ref="pagination"  v-if="leaderboard"
                             @vuetable-pagination:change-page="onChangePage"
-                        ></vuetable-pagination>
+                        ></vuetable-pagination> -->
                     </div>
                 </div>
                 <hr />
