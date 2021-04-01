@@ -111,6 +111,10 @@ class PlayerController extends Controller
         ->first();
 
         if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
+
+        $p->active = 1;
+        $p->save();
+
         $pr = PlayerRanking::selectRaw('player_id, username')
         ->where('player_id', $p->player_id)
         ->first();
