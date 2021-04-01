@@ -83,10 +83,10 @@ class PlayerController extends Controller
             if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, env('APP_SALT'), $phpbb_user->user_email ])) return ['status' => false, 'msg' => 'PW update during user creation failed.'];
         }
         $p = Player::selectRaw('player_id, username')
-        ->where('username', $phpbb_user->username)
+        ->where('email', $phpbb_user->user_email)
         ->first();
         $pr = PlayerRanking::selectRaw('player_id, username')
-        ->where('email', $phpbb_user->user_email)
+        ->where('username', $phpbb_user->username)
         ->first();
         if(!$pr){
             $pr = new PlayerRanking();
