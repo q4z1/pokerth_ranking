@@ -55,7 +55,7 @@ document.onreadystatechange = function () {
                 axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/reset', data)
                 .then(res => {
                     form_done = true
-                    $("form#register").click() // @FIXME: has to be triggered twice, or with a timeout?
+                    $("form#reset_password").click() // @FIXME: has to be triggered twice, or with a timeout?
                 }).catch(err => {
                     console.log(err)
                 })
