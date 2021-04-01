@@ -25,7 +25,6 @@
                             :fields="tableFields"
                             :isApiMode="false"
                             :data="leaderboard"
-                            @vuetable:pagination-data="onPaginationData"
                         ></vuetable>
                         <!-- <vuetable-pagination ref="pagination"  v-if="leaderboard"
                             @vuetable-pagination:change-page="onChangePage"
@@ -107,6 +106,7 @@
                 axios.get(location.protocol + '//' + location.hostname + '/pthranking/ranking/leaderboard')
                     .then(res => {
                         this.leaderboard = res.data
+                        console.log(res.data)
                         // if(res.data.status){
                         //     this.leaderboard = res.data.msg
                         // }else{
