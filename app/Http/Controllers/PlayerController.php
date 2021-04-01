@@ -80,6 +80,15 @@ class PlayerController extends Controller
             $p->blocked = 0;
             $p->active = 1;
             $p->save();
+            if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, env('APP_SALT'), $phpbb_user->user_email ])) return ['status' => false, 'msg' => 'PW update during user creation failed.'];
+        }
+        $p = Player::selectRaw('player_id, username')
+        ->where('email', $phpbb_user->user_email)
+        ->first();
+        $pr = PlayerRanking::selectRaw('player_id, username')
+        ->where('email', $phpbb_user->user_email)
+        ->first();
+        if(!$pr){
             $pr = new PlayerRanking();
             $pr->player_id = $p->player_id;
             $pr->final_score = 0;
@@ -88,9 +97,7 @@ class PlayerController extends Controller
             $pr->season_games = 0;
             $pr->average_score = 0;
             $pr->save();
-            if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, env('APP_SALT'), $phpbb_user->user_email ])) return ['status' => false, 'msg' => 'PW update during user creation failed.'];
         }
-
         return ['status' => 'success'];
     }
 
