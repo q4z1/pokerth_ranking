@@ -24,6 +24,7 @@
                         <vuetable ref="vuetable" v-if="leaderboard"
                             :fields="tableFields"
                             :isApiMode="false"
+                            :data="leaderboard"
                             @vuetable:pagination-data="onPaginationData"
                         ></vuetable>
                         <vuetable-pagination ref="pagination"  v-if="leaderboard"
