@@ -112,7 +112,7 @@ class PlayerController extends Controller
 
         if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
 
-        DB::statement('UPDATE player SET active = ?', [ 1 ]);
+        DB::statement('UPDATE player SET active = ? where email = ?', [ 1, $phpbb_user->user_email]);
 
         $pr = PlayerRanking::selectRaw('player_id, username')
         ->where('player_id', $p->player_id)
