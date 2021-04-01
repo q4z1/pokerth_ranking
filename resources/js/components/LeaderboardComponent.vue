@@ -67,7 +67,7 @@
                     },
                     {
                         name: 'username',
-                        sortField: 'username'
+                        // sortField: 'username'
                     },
                     {
                         name: 'average_score',
