@@ -106,12 +106,13 @@
             getLeaderboard: function(event){
                 axios.get(location.protocol + '//' + location.hostname + '/pthranking/ranking/leaderboard')
                     .then(res => {
-                        if(res.data.status){
-                            this.leaderboard = res.data.msg
-                        }else{
-                            console.log(res.data.msg)
-                            this.leaderboard = false
-                        }
+                        this.leaderboard = res.data
+                        // if(res.data.status){
+                        //     this.leaderboard = res.data.msg
+                        // }else{
+                        //     console.log(res.data.msg)
+                        //     this.leaderboard = false
+                        // }
                     }).catch(err => {
                         console.log(err)
                         this.leaderboard = false
