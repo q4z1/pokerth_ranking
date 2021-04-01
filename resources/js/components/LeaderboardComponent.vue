@@ -62,7 +62,7 @@
                 leaderboard: false,
                 tableFields: [
                     {
-                        name: 'rank',
+                        name: 'player_id',
                         // sortField: 'rank'
                     },
                     {
