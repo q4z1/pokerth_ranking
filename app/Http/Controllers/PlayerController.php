@@ -157,9 +157,25 @@ class PlayerController extends Controller
         ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
         ->select('player_ranking.*', 'player.country_iso', 'player.gender')
         ->where('player_ranking.username', 'NOT LIKE', 'deleted_%')
-        ->get();
+        ->orderBy('final_score', 'DESC')
+        ->get()->map(function($player){
+            $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
+            $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
+            return $player;
+        });
 
-        return ['data' => $rows];
+        $pagination = new stdClass();
+        $pagination->pagination = new stdClass();
+        $pagination->pagination->total = $rows->count();
+        $pagination->pagination->per_page = 50;
+        $pagination->pagination->current_page = 1;
+        $pagination->pagination->last_page = 10;
+        $pagination->pagination->from = 1;
+        $pagination->pagination->to = 50;
+        $pagination->pagination->next_page_url = ".";
+        $pagination->pagination->prev_page_url = ".";
+
+        return ['links' => $pagination, 'data' => $rows];
 
     }
     

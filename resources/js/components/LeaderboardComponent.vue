@@ -20,15 +20,13 @@
                         </div>
                     </div>
 
-                    <div class="card-body">
-                        <vuetable ref="vuetable" v-if="leaderboard"
+                    <div class="card-body" id="vtable">
+                        <vuetable ref="vuetable"
                             :fields="tableFields"
-                            :isApiMode="false"
-                            :data="leaderboard"
-                        ></vuetable>
-                        <!-- <vuetable-pagination ref="pagination"  v-if="leaderboard"
-                            @vuetable-pagination:change-page="onChangePage"
-                        ></vuetable-pagination> -->
+                            api-url="https://pokerth.net/pthranking/ranking/leaderboard"
+                            @row-clicked="rowClicked"
+                        >
+                        </vuetable>
                     </div>
                 </div>
                 <hr />
@@ -58,7 +56,6 @@
         },
         data: function() { 
             return {
-                leaderboard: false,
                 tableFields: [
                     {
                         name: 'player_id',
@@ -99,24 +96,11 @@
             }
         },
         mounted() {
-            this.getLeaderboard()
         },
         methods: {
-            getLeaderboard: function(event){
-                axios.get(location.protocol + '//' + location.hostname + '/pthranking/ranking/leaderboard')
-                    .then(res => {
-                        this.leaderboard = res.data
-                        console.log(res.data)
-                        // if(res.data.status){
-                        //     this.leaderboard = res.data.msg
-                        // }else{
-                        //     console.log(res.data.msg)
-                        //     this.leaderboard = false
-                        // }
-                    }).catch(err => {
-                        console.log(err)
-                        this.leaderboard = false
-                })
+            rowClicked: function(item, event){
+                console.log('row clicked')
+                console.log(item, event)
             },
             autocompleteUsername: function(event){
                 let el = document.getElementById('username')
@@ -130,16 +114,23 @@
             },
             onChangePage (page) {
                 this.$refs.vuetable.changePage(page)
+            },
+            onRowClicked (item) {
+                console.log('on row clicked')
+                console.log(item)
             }
         }
     }
 </script>
-<style scoped>
+<style lang="scss" scoped>
     .card{
         background-color: transparent;
     }
     .row .pagination{
         display: flex;
+    }
+    .formular{
+        margin-left: 0.9em;
     }
     .page-link {
         height: calc(1.4em + 0.75rem + 2px);
@@ -150,7 +141,5 @@
         line-height: calc(1.4em + 0.75rem + 2px);
         vertical-align: middle;
     }
-    .formular{
-        margin-left: 0.9em;
-    }
+
 </style>
