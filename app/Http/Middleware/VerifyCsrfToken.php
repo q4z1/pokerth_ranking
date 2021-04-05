@@ -16,6 +16,7 @@ class VerifyCsrfToken extends Middleware
         '/account/reset',
         '/account/change',
         '/account/create',
-        '/account/validate'
+        '/account/validate',
+        '/ranking/leaderboard'
     ];
 }

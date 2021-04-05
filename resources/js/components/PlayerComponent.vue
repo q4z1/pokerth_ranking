@@ -9,15 +9,7 @@
                     </div>
 
                     <div class="card-body">
-                        <vuetable ref="vuetable" v-if="leaderboard"
-                            :fields="['rank','username','average_points','season_games','final_score', 'gender', 'country']"
-                            :api-mode="false"
-                            :data="leaderboard"
-                            @vuetable:pagination-data="onPaginationData"
-                        ></vuetable>
-                        <vuetable-pagination ref="pagination"  v-if="leaderboard"
-                            @vuetable-pagination:change-page="onChangePage"
-                        ></vuetable-pagination>
+
                     </div>
                 </div>
             </div>
@@ -25,10 +17,9 @@
     </div>
 </template>
 <script>
-    import { Vuetable } from 'vuetable-2'
     export default {
         components: {
-            Vuetable
+
         },
         data: function() { 
             return {

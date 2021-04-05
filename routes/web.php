@@ -19,7 +19,7 @@ Route::get('/', function () {
 
 Route::get('/player/autocomplete', [App\Http\Controllers\PlayerController::class, 'autocomplete']);
 Route::get('/player/show', [App\Http\Controllers\PlayerController::class, 'show']);
-Route::get('/ranking/leaderboard', [App\Http\Controllers\PlayerController::class, 'getLeaderboard']);
+Route::post('/ranking/leaderboard', [App\Http\Controllers\PlayerController::class, 'getLeaderboard']);
 
 Route::post('/account/reset', [App\Http\Controllers\PlayerController::class, 'account_reset']);
 Route::post('/account/create', [App\Http\Controllers\PlayerController::class, 'account_create']);

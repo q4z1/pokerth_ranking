@@ -3,30 +3,27 @@
         <div class="row justify-content-center">
             <div class="col-md-12">
                 <div class="card">
-                    <div class="card-header">
-                        <div class="row">
-                            <div class="col-md-4">
-                                <label class="sr-only" for="username">Username</label>
-                                <div class="input-group mb-2">
-                                    <div class="input-group-prepend">
-                                        <div class="input-group-text"><i class="fa fa-search"></i></div>
-                                    </div>
-                                    <input type="text" class="form-control" id="username" placeholder="Username"
-                                        @keyup="autocompleteUsername"
-                                    >
-                                    <div id="suggestions"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="card-body" id="vtable">
-                        <vuetable ref="vuetable"
-                            :fields="tableFields"
-                            api-url="https://pokerth.net/pthranking/ranking/leaderboard"
-                            @row-clicked="rowClicked"
-                        >
-                        </vuetable>
+                        <el-col :span="12">
+                            <el-input v-model="filters.value" placeholder="Username"></el-input>
+                        </el-col>
+                        <data-tables-server 
+                            :data="data" 
+                            :total="total" 
+                            :loading="loading" 
+                            :table-props="tableProps"
+                            :filters="filters"
+                            @query-change="loadData"
+                            @current-page-change="handleCurrentPageChange"
+                            @current-change="handleCurrentChange"
+                            @prev-click="handlePrevClick"
+                            @size-change="handleSizeChange"
+                            @selection-change="handleSelectionChange"
+                            @row-click="handleRowClick"
+                            :pagination-props="{ pageSizes: [10, 25, 50] }">
+                            <el-table-column v-for="title in titles" :prop="title.prop" :label="title.label" :key="title.label" sortable="custom">
+                            </el-table-column>
+                        </data-tables-server>
                     </div>
                 </div>
                 <hr />
@@ -46,61 +43,71 @@
     </div>
 </template>
 <script>
-    import { Vuetable, VuetablePagination } from 'vuetable-2'
-    import VueAutosuggest from "vue-autosuggest"
     export default {
         components: {
-            Vuetable,
-            VuetablePagination,
-            VueAutosuggest
+
         },
         data: function() { 
             return {
-                tableFields: [
-                    {
-                        name: 'player_id',
-                        // sortField: 'rank'
-                    },
-                    {
-                        name: 'username',
-                        // sortField: 'username'
-                    },
-                    {
-                        name: 'average_score',
-                        // sortField: 'average_points',
-                        title: 'Ø Points'
-                    },
-                    {
-                        name: 'season_games',
-                        // sortField: 'season_games',
-                        title: 'Games'
-                    },
-                    {
-                        name: 'final_score',
-                        // sortField: 'final_score',
-                        title: 'Final Score'
-                    },
-                    {
-                        name: 'points_sum',
-                        // sortField: 'final_score',
-                        title: 'Total points'
-                    },
-                    {
-                        name: 'gender',
-                    },
-                    {
-                        name: 'country_iso',
-                        title: 'Country'
-                    },
-                ]
+                data: null,
+                titles: [
+                    { prop: 'player_id', label: 'ID'},
+                    { prop: 'username', label: 'Username'},
+                    { prop: 'average_score', label: 'Ø Points'},
+                    { prop: 'season_games', label: 'Games'},
+                    { prop: 'final_score', label: 'Final Score'},
+                    { prop: 'points_sum', label: 'Total Points'},
+                    // { prop: 'gender', label: 'Gender'},
+                    // { prop: 'country_iso', label: 'Country'},
+                ],
+                // filters: [{
+                //     prop: ['Username'],
+                //     value: ''
+                // }],
+                filters: {
+                    props: 'username',
+                    value: '',
+                    def: [{
+                        'value': '',
+                    }]
+                },
+                customButtonsForRow(row) {
+                    return [
+                    ]
+                },
+                loading: false,
+                total: 0,
+                tableProps: {
+                    border: true,
+                    stripe: true,
+                    defaultSort: {
+                        prop: 'final_score',
+                        order: 'descending'
+                    }
+                },
+                layout: 'table, pagination',
+                queryInfo: false,
             }
         },
         mounted() {
         },
         methods: {
-            rowClicked: function(item, event){
-                console.log('row clicked')
-                console.log(item, event)
+            async loadData(queryInfo) {
+                this.loading = true
+                const res = await axios.post('/pthranking/ranking/leaderboard', queryInfo);
+                let { data, total } = {data: res.data.data, total: res.data.total}
+                this.data = data
+                this.total = total
+                this.loading = false
+                this.queryInfo = queryInfo
+            },
+            handleCurrentPageChange(page) {},
+            handleCurrentChange(currentRow) {},
+            handlePrevClick(page) {},
+            handleSizeChange(size) {},
+            handleSelectionChange(val) {},
+            handleRowClick(row){
+                console.log("handleRowClick", row.player_id)
             },
             autocompleteUsername: function(event){
                 let el = document.getElementById('username')
@@ -109,23 +116,60 @@
                 console.log(val)
                 // @TODO: needs more players so that there is pagination
             },
-            onPaginationData (paginationData) {
-                this.$refs.pagination.setPaginationData(paginationData)
-            },
-            onChangePage (page) {
-                this.$refs.vuetable.changePage(page)
-            },
-            onRowClicked (item) {
-                console.log('on row clicked')
-                console.log(item)
-            }
         }
     }
 </script>
-<style lang="scss" scoped>
-    .card{
+<style>
+    .el-table th, .el-table tr {
+        background-color: inherit!important;
+    }
+    .el-table, .el-table__expanded-cell {
+        background-color: inherit!important;
+    }
+
+    .el-table--striped .el-table__body tr.el-table__row--striped td {
+        background: inherit!important;
+    }
+
+    .el-pagination{
+        margin-top: 15px;
+    }
+
+    .el-pagination button, .el-pagination button:disabled, .el-dialog, .el-pager li, .el-pagination .btn-next, .el-pagination .btn-prev {
+        background: inherit;
+        color: #888888!important;
+    }
+
+    .el-dialog, .el-pager li{
+        color: #888888!important;
+    }
+
+    .el-table * {
+        color: #888888!important;
+    }
+
+    .sc-table, .el-table, .el-table tr td, .el-table tr th, .el-table table{
+        border: none;
+    }
+
+    .el-table tr td, .el-table tr th{
+        cursor: pointer;
+    }
+
+    .el-table thead tr th{
+        border-bottom: 1px solid #555555;
+    }
+
+    .el-table--border::after, .el-table--group::after, .el-table::before {
         background-color: transparent;
     }
+</style>
+<style lang="scss" scoped>
+    .card{
+        background-color: inherit;
+    }
+
+
     .row .pagination{
         display: flex;
     }
