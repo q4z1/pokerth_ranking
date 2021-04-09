@@ -31,6 +31,7 @@ locale.use(lang)
 import { DataTablesServer } from 'vue-data-tables'
 Vue.use(DataTablesServer)
 
+Vue.use(InfiniteLoading, { /* options */ })
 
 
 

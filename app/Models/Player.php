@@ -14,4 +14,15 @@ class Player extends Model
     protected $hidden = ['password', 'email', 'fp', 'fpnew', 'last_ip', 'active', 'blocked', 'act_key', 'last_games'];
 
     public $timestamps = false;
+
+    public function ranking()
+    {
+        return $this->hasOneThrough(
+            PlayerRanking::class, Player::class,
+            'player_id',
+            'player_id',
+            'player_id',
+            'player_id' 
+        );
+    }
 }

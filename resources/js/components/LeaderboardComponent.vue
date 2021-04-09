@@ -4,7 +4,7 @@
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-body" id="vtable">
-                        <el-col :span="12">
+                        <el-col :span="4">
                             <el-input v-model="filters.value" placeholder="Username"></el-input>
                         </el-col>
                         <data-tables-server 
@@ -51,7 +51,7 @@
             return {
                 data: null,
                 titles: [
-                    { prop: 'player_id', label: 'ID'},
+                    { prop: 'rank_pos', label: '#'},
                     { prop: 'username', label: 'Username'},
                     { prop: 'average_score', label: 'Ø Points'},
                     { prop: 'season_games', label: 'Games'},
@@ -108,13 +108,8 @@
             handleSelectionChange(val) {},
             handleRowClick(row){
                 console.log("handleRowClick", row.player_id)
-            },
-            autocompleteUsername: function(event){
-                let el = document.getElementById('username')
-                let val = el.value
-                if(val.length < 2) return
-                console.log(val)
-                // @TODO: needs more players so that there is pagination
+                let sid = window.location.search.substr(1).substr(4)
+                window.location.href = window.location.origin + '/player?p=' + row.player_id + '&sid=' + sid
             },
         }
     }
@@ -154,6 +149,10 @@
 
     .el-table tr td, .el-table tr th{
         cursor: pointer;
+    }
+
+    .el-table tbody tr.el-table__row:hover, .el-table tbody tr.el-table__row--striped:hover{
+        background-color: #eeeeee!important;
     }
 
     .el-table thead tr th{

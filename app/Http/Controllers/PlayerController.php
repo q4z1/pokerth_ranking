@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Game;
+use App\Models\GameHasPlayer;
 use App\Models\Player;
 use App\Models\PlayerRanking;
 use stdClass;
@@ -12,18 +14,52 @@ class PlayerController extends Controller
 {
     public function show(Request $request)
     {
-        $res = Player::where("player_id", $request->player_id)
+        $u = $request->input('username', '');
+        if($u == ''){
+            $res = Player::where("player_id", $request->player_id)
+            ->with('ranking')
             ->first();
-        //dd($res->toArray());
-        return ['status' => true, 'msg' => $res];
+        }else{
+            $res = Player::where("username", $u)
+            ->with('ranking')
+            ->first();
+        }
+
+        if(!$res){
+            return ['status' => false, 'msg' => 'Player not found!'];
+        }
+
+        $last5 = DB::table('pokerth_ranking.game_has_player')
+        ->selectRaw('place')
+        ->where('player_idplayer', $res->player_id)
+        ->orderBy('start_time', 'DESC')
+        ->limit(5)
+        ->get()->map(function($game){
+            return $game->place;
+        });
+
+        $pos_array = PlayerRanking::orderBy('final_score', 'DESC')->get();
+        $pos = 1;
+        foreach($pos_array as $player){
+            if($player->player_id == $request->player_id) break;
+            $pos++;
+        }
+
+        $games = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(5)->get();
+
+        $aGames = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->get();
+        $stats = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0];
+        foreach($aGames as $g){
+            $stats[$g->place] += 1;
+        }
+
+        return ['status' => true, 'msg' => ['player' => $res, 'last5' => $last5, 'pos' => $pos, 'games' => $games, 'stats' => $stats]];
     }
 
-    public function autocomplete(Request $request)
+    public function games(Request $request)
     {
-        $res = Player::select("username")
-            ->where("username","LIKE","%{$request->term}%")
-            ->get();
-        return $res;
+        return GameHasPlayer::offset($request->l)->where('player_idplayer', $request->p)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(5)->get();
+
     }
 
     public function account_create(Request $request)
@@ -154,7 +190,11 @@ class PlayerController extends Controller
         $pagesize = $request->input('pageSize', 50);
         $sort = $request->input('sort');
         
-        $total = PlayerRanking::where('player_ranking.username', 'NOT LIKE', 'deleted_%')->get()->count();
+        $all = PlayerRanking::where('player_ranking.username', 'NOT LIKE', 'deleted_%')->get();
+
+        $ppos = 1;
+
+        $total = $all->count();
 
         $query = DB::table('player_ranking')
         ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
@@ -165,12 +205,20 @@ class PlayerController extends Controller
         if(!empty($filters)){
             $query->where('player_ranking.username', 'LIKE', $filters['value'] . '%');
         }
+
         $leaderboard = $query->get()->map(function($player){
             $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
             $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
             return $player;
         });
-        return ['total' => $total, 'data' => $leaderboard];
+        $lp = [];
+        foreach($leaderboard as $index => $pos){
+            $page = $request->input('page', 1);
+            $pagesize = $request->input('pageSize', 50);
+            $pos->rank_pos = ($page-1)*$pagesize + $index + 1;
+            $lp[] = $pos;
+        }
+        return ['total' => $total, 'data' => $lp];
 
     }
     

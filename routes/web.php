@@ -19,6 +19,7 @@ Route::get('/', function () {
 
 Route::get('/player/autocomplete', [App\Http\Controllers\PlayerController::class, 'autocomplete']);
 Route::get('/player/show', [App\Http\Controllers\PlayerController::class, 'show']);
+Route::get('/player/games/get', [App\Http\Controllers\PlayerController::class, 'games']);
 Route::post('/ranking/leaderboard', [App\Http\Controllers\PlayerController::class, 'getLeaderboard']);
 
 Route::post('/account/reset', [App\Http\Controllers\PlayerController::class, 'account_reset']);
