@@ -17,4 +17,9 @@ class GameHasPlayer extends Model
     {
         return $this->hasOne(Game::class, 'idgame', 'game_idgame');
     }
+
+    public function player()
+    {
+        return $this->hasOne(Player::class, 'player_id', 'player_idplayer');
+    }
 }

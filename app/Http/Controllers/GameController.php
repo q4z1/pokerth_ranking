@@ -10,60 +10,34 @@ use App\Models\Player;
 use App\Models\PlayerRanking;
 use stdClass;
 
-class PlayerController extends Controller
+class GameController extends Controller
 {
-    public function show(Request $request)
+    public function get(Request $request)
     {
-        $u = $request->input('username', '');
-        if($u == ''){
-            $res = Player::where("player_id", $request->player_id)
-            ->with('ranking')
-            ->first();
-        }else{
-            $res = Player::where("username", $u)
-            ->with('ranking')
-            ->first();
-        }
+        $g = $request->input('g', '');
+        if($g == '') return ['status' => false, 'msg' => 'Missing Parameter'];
 
-        if(!$res){
-            return ['status' => false, 'msg' => 'Player not found!'];
-        }
+        $game = "Game loded";
 
-        $last5 = DB::table('pokerth_ranking.game_has_player')
-        ->selectRaw('place')
-        ->where('player_idplayer', $res->player_id)
-        ->orderBy('start_time', 'DESC')
-        ->limit(5)
-        ->get()->map(function($game){
-            return $game->place;
-        });
+        $game = Game::where('idgame', $g)->with('players')->get();
 
-        $pos_array = PlayerRanking::orderBy('final_score', 'DESC')->get();
-        $pos = 1;
-        foreach($pos_array as $player){
-            if($player->player_id == $request->player_id) break;
-            $pos++;
-        }
-
-        $games = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(40)->get();
-
-        $aGames = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->get();
-        $stats = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0];
-        foreach($aGames as $g){
-            $stats[$g->place] += 1;
-        }
-        $bar_stats = [];
-        foreach($stats as $stat){
-            $bar_stats[] = $stat;
-        }
-
-        return ['status' => true, 'msg' => ['player' => $res, 'last5' => $last5, 'pos' => $pos, 'games' => $games, 'stats' => $stats, 'bar_stats' => $bar_stats]];
+        return ['status' => true, 'msg' => $game];
     }
 
     public function games(Request $request)
     {
-        return GameHasPlayer::offset($request->l)->where('player_idplayer', $request->p)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(40)->get();
+        return GameHasPlayer::offset($request->l)->where('player_idplayer', $request->p)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(5)->get();
 
+    }
+
+    public function show_table(Request $request){
+        $table = [];
+        for($i=1;$i<=10;$i++)
+        {
+            $p = PlayerRanking::where('username', $request->input('u' . $i))->first();
+            if($p) $table[] = $p;
+        }
+        return ['status' => true, 'msg' => $table];
     }
 
     public function account_create(Request $request)

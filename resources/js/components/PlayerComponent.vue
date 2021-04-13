@@ -54,9 +54,9 @@
                                     </div>
                                     <div class="card-body" v-if="games">
                                         <ul class="list-group games">
-                                            <li v-for="g in games" :key="g.game.game_idgame" class="game list-group-item ">
+                                            <li v-for="g in games" :key="g.game_idgame" class="game list-group-item ">
                                                 <div class="row">
-                                                    <div class="col text-primary" @click="getGame">{{ g.game.name }}</div>
+                                                    <div class="col text-primary" :data-gid="g.game_idgame" @click="getGame">{{ g.game.name }}</div>
                                                 </div>
                                                 <div class="row">
                                                     <div class="col">{{ g.game.start_time }} - {{ g.game.end_time }}</div>
@@ -68,6 +68,7 @@
                                 </div>
                             </div>
                         </div>
+                        <hr />
                         <div class="row">
                             <div class="col">
                                 <div class="card">
@@ -89,7 +90,7 @@
                                                     <th>8.</th>
                                                     <th>9.</th>
                                                     <th>10.</th>
-                                                    <th>Total Games:</th>
+                                                    <th style="border-left: 1px solid #bbbbbb">Total Games:</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -105,11 +106,15 @@
                                                     <td>{{ stats['8'] }}</td>
                                                     <td>{{ stats['9'] }}</td>
                                                     <td>{{ stats['10'] }}</td>
-                                                    <td>{{ player.ranking.season_games }}</td>
+                                                    <td style="border-left: 1px solid #bbbbbb">{{ player.ranking.season_games }}</td>
                                                 </tr>
                                             </tbody>
                                         </table>
-                                        <bar-chart-component  v-if="stats" :chart-data="stats" :options="options"></bar-chart-component>
+                                        <hr />
+                                        <PieChart :chartData="games_chart"/>
+                                        <hr />
+                                        <BarChart :chartData="games_chart"/>
+                                        <hr />
                                     </div>
                                 </div>
                             </div>
@@ -118,16 +123,13 @@
                 </div>
             </div>
         </div>
+        <game-component @close="closeGame()" v-if="game" :game="game"></game-component>
     </div>
 </template>
 <script>
-    import { Bar, mixins } from 'vue-chartjs'
-    const { reactiveProp } = mixins
-    export default {
-        extends: 'Bar',
-        components: {
 
-        },
+    export default {
+        components: {  },
         data: function() { 
             return {
                 player: false,
@@ -135,23 +137,8 @@
                 pos: false,
                 games: false,
                 stats: false,
-                seasonPie: false,
-                colors: [
-                    'rgba(86, 226, 137, 1.0)',
-                    'rgba(104, 226, 86, 1.0)',
-                    'rgba(174, 226, 86, 1.0)',
-                    'rgba(226, 297, 86, 1.0)',
-                    'rgba(226, 137, 86, 1.0)',
-                    'rgba(226, 84, 104, 1.0)',
-                    'rgba(226, 86, 174, 1.0)',
-                    'rgba(207, 86, 226, 1.0)',
-                    'rgba(138, 86, 226, 1.0)',
-                    'rgba(86, 104, 226, 1.0)'
-                ],
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                }
+                games_chart: null,
+                game: false,
             }
         },
         mounted() {
@@ -171,7 +158,7 @@
                             this.pos = res.data.msg.pos
                             this.games = res.data.msg.games
                             this.stats = res.data.msg.stats
-                            // this.renderChart(this.stats, this.options)
+                            this.games_chart = res.data.msg.bar_stats
                         }else{
                             console.log(res.data.msg)
                             this.player = false
@@ -182,48 +169,18 @@
                 })
             },
             getGame: function(event){
-                console.log('getGame clicked')
-                // $('#game_modal').modal('show');
-                // $('.modal-backdrop').removeClass('show').addClass('hide')
-            },
-            doSeasonPie: function() {
-                var seasonPie = $("#seasonPie");
-                // this.seasonPie = Chart(seasonPie, {
-                //     type: 'bar',
-                //     data: {
-                //         labels: ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th"],
-                //         datasets: [{
-                //             label: '# of Places',
-                //             data: this.stats,
-                //             backgroundColor: [
-                //                 'rgba(86, 226, 137, 1.0)',
-                //                 'rgba(104, 226, 86, 1.0)',
-                //                 'rgba(174, 226, 86, 1.0)',
-                //                 'rgba(226, 297, 86, 1.0)',
-                //                 'rgba(226, 137, 86, 1.0)',
-                //                 'rgba(226, 84, 104, 1.0)',
-                //                 'rgba(226, 86, 174, 1.0)',
-                //                 'rgba(207, 86, 226, 1.0)',
-                //                 'rgba(138, 86, 226, 1.0)',
-                //                 'rgba(86, 104, 226, 1.0)',
-                //             ],
-                //             borderColor: [
-                //                 'rgba(86, 226, 137, 0.5)',
-                //                 'rgba(104, 226, 86, 0.5)',
-                //                 'rgba(174, 226, 86, 0.5)',
-                //                 'rgba(226, 297, 86, 0.5)',
-                //                 'rgba(226, 137, 86, 0.5)',
-                //                 'rgba(226, 84, 104, 0.5)',
-                //                 'rgba(226, 86, 174, 0.5)',
-                //                 'rgba(207, 86, 226, 0.5)',
-                //                 'rgba(138, 86, 226, 0.5)',
-                //                 'rgba(86, 104, 226, 0.5)',
-                //             ],
-                //             borderWidth: 1
-                //         }]
-                //     },
-
-                // });
+                let gid = $(event.target).attr('data-gid')
+                axios.get('/pthranking/game/get?g=' + gid)
+                    .then(res => {
+                        if(res.data.status){
+                            this.game = res.data.msg
+                        }else{
+                            this.game = false
+                        }
+                    }).catch(err => {
+                        console.log(err)
+                        this.game = false
+                })
             },
             infiniteHandler: function($state){
                 axios.get('/pthranking/player/games/get?l=' + this.games.length + '&p=' + this.player.player_id).then(response => {
@@ -241,6 +198,9 @@
             isNumeric: function(str) {
                 if (typeof str != "string") return false
                 return !isNaN(str) && !isNaN(parseFloat(str))
+            },
+            closeGame: function() {
+                this.game = false
             }
         }
     }
@@ -260,12 +220,19 @@
     li.game div.text-primary{
         cursor: pointer;
     }
+    .player{
+        position: relative;
+    }
 </style>
 <style scoped>
-    ul.games, ul.data{
+    ul.games{
         min-height: 336px;
         max-height: 336px;
         overflow-y: auto;
+    }
+    .ul.data{
+        min-height: 336px;
+        max-height: 336px;
     }
     .infinite-loading-container{
         visibility: hidden;

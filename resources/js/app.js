@@ -7,9 +7,6 @@
 require('./bootstrap')
 import Vue from 'vue'
 
-import VueSession from 'vue-session'
-import VueToast from 'vue-toast-notification'
-import 'vue-toast-notification/dist/theme-default.css';
 import GLightbox from 'glightbox'
 import 'glightbox/dist/css/glightbox.min.css'
 import InfiniteLoading from 'vue-infinite-loading';
@@ -19,16 +16,14 @@ import 'element-ui/lib/theme-chalk/index.css'
 window.GLightbox = GLightbox
 window.Vue = Vue
 
-Vue.use(VueSession, {persist: true})
-Vue.use(require('vue-cookies'))
 Vue.use(ElementUI)
-Vue.use(VueToast);
 
 import lang from 'element-ui/lib/locale/lang/en'
 import locale from 'element-ui/lib/locale'
 locale.use(lang)
 
-import { DataTablesServer } from 'vue-data-tables'
+import { DataTables, DataTablesServer  } from 'vue-data-tables'
+Vue.use(DataTables)
 Vue.use(DataTablesServer)
 
 Vue.use(InfiniteLoading, { /* options */ })

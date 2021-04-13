@@ -12,4 +12,9 @@ class Game extends Model
     protected $table = "game";
 
     public $timestamps = false;
+
+    public function players()
+    {
+        return $this->hasMany(GameHasPlayer::class, 'game_idgame', 'idgame')->with('player.ranking');
+    }
 }

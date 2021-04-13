@@ -12,11 +12,11 @@ class VerifyCsrfToken extends Middleware
      * @var array
      */
     protected $except = [
-        // @TODO: IP deny stuff in nginx config instead
         '/account/reset',
         '/account/change',
         '/account/create',
         '/account/validate',
-        '/ranking/leaderboard'
+        '/ranking/leaderboard',
+        '/gametable/show'
     ];
 }
