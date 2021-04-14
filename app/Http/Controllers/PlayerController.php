@@ -106,7 +106,7 @@ class PlayerController extends Controller
         else if($request->new_password != $request->new_password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
 
         $p = Player::selectRaw('player_id, username, CAST(AES_DECRYPT(password, "'.env('APP_SALT').'") AS CHAR ) as password')
-        ->where('email', $phpbb_user->user_email)
+        ->where('username', $phpbb_user->username)
         ->first();
 
         if($p){
@@ -123,7 +123,7 @@ class PlayerController extends Controller
             if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, env('APP_SALT'), $phpbb_user->user_email ])) return ['status' => false, 'msg' => 'PW update during user creation failed.'];
         }
         $p = Player::selectRaw('player_id, username')
-        ->where('email', $phpbb_user->user_email)
+        ->where('username', $phpbb_user->username)
         ->first();
         $pr = PlayerRanking::selectRaw('player_id, username')
         ->where('username', $phpbb_user->username)
@@ -159,7 +159,7 @@ class PlayerController extends Controller
 
         if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
 
-        DB::statement('UPDATE player SET active = ? where email = ?', [ 1, $phpbb_user->user_email]);
+        DB::statement('UPDATE player SET active = ? where username = ?', [ 1, $phpbb_user->username]);
 
         $pr = PlayerRanking::selectRaw('player_id, username')
         ->where('player_id', $p->player_id)
