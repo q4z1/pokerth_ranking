@@ -16,6 +16,7 @@ document.onreadystatechange = function () {
                     });
                     axios.post(location.protocol + '//' + location.hostname + '/pthranking/account/create', data)
                     .then(res => {
+                        //console.log(res.data);
                         form_done = true
                         $('form#register input[name=submit]').click()
                     }).catch(err => {

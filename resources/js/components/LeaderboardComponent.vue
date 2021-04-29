@@ -107,7 +107,6 @@
             handleSizeChange(size) {},
             handleSelectionChange(val) {},
             handleRowClick(row){
-                console.log("handleRowClick", row.player_id)
                 let sid = window.location.search.substr(1).substr(4)
                 window.location.href = window.location.origin + '/player?p=' + row.player_id + '&sid=' + sid
             },

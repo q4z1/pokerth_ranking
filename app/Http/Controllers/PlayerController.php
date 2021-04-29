@@ -41,7 +41,7 @@ class PlayerController extends Controller
         $pos_array = PlayerRanking::orderBy('final_score', 'DESC')->get();
         $pos = 1;
         foreach($pos_array as $player){
-            if($player->player_id == $request->player_id) break;
+            if($player->player_id == $res->player_id) break;
             $pos++;
         }
 
@@ -78,7 +78,14 @@ class PlayerController extends Controller
         else if($request->new_password != $request->password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
 
         $p = Player::where('email', $request->email)->first();
-        if($p) return ['status' => false, 'msg' => 'email already used'];
+        if($p) return ['status' => false, 'msg' => 'email already used in ranking db'];
+
+        $p2 = DB::table('pokerth.phpbb_users')
+        ->selectRaw('*')
+        ->where('user_email', $request->email)
+        ->first();
+        if($p2) return ['status' => false, 'msg' => 'email already used in forum db'];
+
 
         // create player
         $p = new Player();

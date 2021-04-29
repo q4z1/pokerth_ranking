@@ -1,7 +1,10 @@
 <template>
-    <div CLASS="card">
+    <div class="card">
         <div class="card-body">
-            <data-tables v-if="game" :data="game" layout="tool, table">
+            <data-tables v-if="game" 
+                :data="game" 
+                layout="tool, table"
+                @row-click="handleRowClick">
                 <el-table-column v-for="title in titles"
                 :prop="title.prop"
                 :label="title.label"
@@ -62,7 +65,16 @@
                 var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
                 var results = regex.exec(location.search);
                 return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
-            }
+            },
+            handleCurrentPageChange(page) {},
+            handleCurrentChange(currentRow) {},
+            handlePrevClick(page) {},
+            handleSizeChange(size) {},
+            handleSelectionChange(val) {},
+            handleRowClick(row){
+                let sid = window.location.search.substr(1).substr(4)
+                window.location.href = window.location.origin + '/player?u=' + row.player + '&sid=' + sid
+            },
         }
     }
 </script>
