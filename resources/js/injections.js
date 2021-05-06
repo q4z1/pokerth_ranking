@@ -36,7 +36,6 @@ document.onreadystatechange = function () {
                     .then(res => {
                         form_done = true
                         $('#ucp input[name=submit]').click()
-                        //$("form#ucp").submit().submit() // @FIXME: has to be triggered twice, or with a timeout?
                     }).catch(err => {
                         console.log(err)
                     })
@@ -63,10 +62,6 @@ document.onreadystatechange = function () {
             });
         }
 
-        // email bestätigung
-        // https://test.pokerth.net/ucp.php?mode=activate&u=10099&k=YIUJ4TN0
-        // anschl. redirect
-        // besser per cron lösen?
         if(location.href.includes('mode=activate')){
             // disable redirect - check out response and then redirect
             console.log('email verification here')

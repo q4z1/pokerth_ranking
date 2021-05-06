@@ -146,11 +146,17 @@
         },
         methods: {
             getPlayer: function(event){
-                let player_id = window.location.search.substr(1).substr(2)
-                let e = player_id.indexOf('&sid=')
-                if(e != -1) player_id = player_id.substr(0, e)
-                let param = (this.isNumeric(player_id)) ? 'player_id=' : 'username='
-                axios.get('/pthranking/player/show?' + param + player_id)
+                let param = 'player_id'
+                let value = null
+                let urlParams = new URLSearchParams(window.location.search)
+                if(urlParams.has('u')){
+                    param = 'username'
+                    value = urlParams.get('u')
+                }else{
+                    param = 'player_id'
+                    value = urlParams.get('p')
+                }
+                axios.get('/pthranking/player/show?' + param + '=' + value)
                     .then(res => {
                         if(res.data.status){
                             this.player = res.data.msg.player

@@ -72,8 +72,7 @@
             handleSizeChange(size) {},
             handleSelectionChange(val) {},
             handleRowClick(row){
-                let sid = window.location.search.substr(1).substr(4)
-                window.location.href = window.location.origin + '/player?u=' + row.player + '&sid=' + sid
+                window.open(window.location.origin + '/player?u=' + row.player, '_blank')
             },
         }
     }

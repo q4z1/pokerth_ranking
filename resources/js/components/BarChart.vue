@@ -43,24 +43,21 @@ export default {
                         tootltips: {
                             display: false
                         },
-                        scales: {
-                            yAxes: [{
-                                display: true,
-                                ticks: {
-                                        beginAtZero:true
-                                    }
-                            }],
-                            xAxes: [{
-                                display: true,
-                            }],
-                        },                        
                     }
                 }
             ],
-
         },
-
-        { responsive: true, maintainAspectRatio: false }
+        { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true
+                    }
+                }]
+            }
+        }
         );
     }
 };
