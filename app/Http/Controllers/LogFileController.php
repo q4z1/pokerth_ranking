@@ -22,7 +22,10 @@ class LogFileController extends Controller
 		$this->pdo = new PDO("sqlite:/var/www/pokerth/log_file_analysis/upload/$pdb");
 		// sqlite error handling necessary?
 
+		$game_ids = $this->get_game_ids();
+
 		$player_list = $player_list2 = $this->get_player_list();
+		if(!is_array($player_list) || count((array)$player_list) == 0) return false;
 		array_multisort($player_list[0],$player_list[1],$player_list[2],$player_list[3],$player_list[4],$player_list[5],$player_list[6],$player_list[7]);
 		$hand_cash = $this->get_hand_cash();
 		$played_hands = $this->get_played_hands($player_list[3]);
@@ -48,7 +51,7 @@ class LogFileController extends Controller
 		$player_list2[1] = $this->convertHtmlEntities($player_list2[1]);
 
 		$game = array(
-			// "result" => $result_table,
+			"game_ids" => $game_ids,
 			"player_list" => $player_list2,
 			"most hands played" => $played_hands,
 			"best hands" => $best_hands,
@@ -778,6 +781,22 @@ class LogFileController extends Controller
         parse_str($parts['query'], $query);
 		$this->game_id = $query['UniqueGameID'];
 		return $query['ID'] . '.pdb';
+	}
+
+	private function get_game_ids() {
+		$db = $this->pdo;
+		$query = "
+			SELECT UniqueGameID
+			FROM player
+			GROUP BY UniqueGameID
+			ORDER BY UniqueGameID ASC";
+		$query = $db->prepare($query);
+		$query->execute();
+		$game_ids = [];
+		while($row = $query->fetch(PDO::FETCH_ASSOC)) {
+			$game_ids[] = $row['UniqueGameID'];
+		}
+		return $game_ids;
 	}
 
     private function get_player_list() {

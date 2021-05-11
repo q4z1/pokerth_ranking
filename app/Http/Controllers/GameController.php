@@ -29,7 +29,7 @@ class GameController extends Controller
         if(!$pdb){
             return ["status" => false, "msg" => 'Missing Parameter!'];
         }
-        $id = $request->input('id', 1);
+        $id = $request->input('game_id', 1);
         $log = new LogFileController();
         $pdb .= ".pdb";
         $game = $log->process_log_file($pdb, $id);

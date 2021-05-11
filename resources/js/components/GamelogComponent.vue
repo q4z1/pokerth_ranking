@@ -2,17 +2,20 @@
     <div>
         <b-container v-if="game">
             <b-row class="mt-3">
+                <b-col class="mt-2" sm="6" md="2"><strong>Game ID:</strong></b-col>
+                <b-col sm="6" md="10">
+                    <b-form-select v-model="game_id" :options="game_ids" :label="'Game:'" @change="getGame"></b-form-select>
+                </b-col>
+            </b-row>
+            <b-row class="mt-3">
+                <b-col>
+                    <hr />
+                </b-col>
+            </b-row>
+            <b-row class="mt-3">
                 <b-col class="mt-3">
                     <h3>Basic data</h3>
-                    <!-- <b-row>
-                        <b-col><strong>Unique Game ID:</strong></b-col>
-                        <b-col>#{{ game.uid }}</b-col>
-                    </b-row>
-                    <b-row>
-                        <b-col><strong>Date/Time:</strong></b-col>
-                        <b-col>{{ game.started }}</b-col>
-                    </b-row> -->
-                    <b-row>
+                    <b-row class="mt-3">
                         <b-col><strong>Winner:</strong></b-col>
                         <b-col><a :href="'/player?u=' + game['player_list'][1][0]" :title="game['player_list'][1][0]">{{ game['player_list'][1][0] }}</a></b-col>
                     </b-row>
@@ -27,7 +30,7 @@
                 </b-col>
                 <b-col class="mt-3">
                     <h3>Ranking</h3>
-                    <b-table id="game_ranking" striped hover :items="ranking" @row-clicked="rowClick">
+                    <b-table id="game_ranking" striped hover :items="ranking" @row-clicked="rowClick" class="mt-3">
                         <template #cell(_)="data">
                             <span v-html="data.value"></span>
                         </template>
@@ -122,21 +125,32 @@ export default {
             most_bingo: null,
             basic_data: null,
             ranking: null,
+            game_ids: null,
+            game_id: 1,
         }
     },
     methods:{
         init(){
-            axios.get('/pthranking/game/log?pdb=' + this.getUrlParameter('pdb'))
+            let gId = this.getUrlParameter('game_id')
+            if(gId === null){
+                gId = ''
+            }else{
+                this.game_id = gId
+                gId = '&game_id=' + gId
+            }
+            axios.get('/pthranking/game/log?pdb=' + this.getUrlParameter('pdb') + gId)
                 .then(res => {
-                    console.log(res.data)
                     if(res.data.status && res.data.status == true){
                         this.game = res.data.msg
-                        console.log("game", this.game)
                         this.render_game()
                     }
                 }).catch(err => {
                     console.log(err)
             })
+        },
+        getGame(){
+            console.log("getGame", this.game_id);
+            window.location.href = window.location.origin + '/gamelog?pdb=' + this.getUrlParameter('pdb') + '&game_id=' + this.game_id
         },
         getUrlParameter: function(key) {
             let address = window.location.search
@@ -144,6 +158,12 @@ export default {
             return parameterList.get(key)
         },        
         render_game(){
+            this.game_ids = []
+            for(let id in this.game.game_ids){
+                this.game_ids.push(
+                    { value: this.game.game_ids[id], text: this.game.game_ids[id] }
+                )
+            }
             let colors = [
                 'rgba(86, 226, 137, 1.0)',
                 'rgba(104, 226, 86, 1.0)',
@@ -157,7 +177,6 @@ export default {
                 'rgba(86, 104, 226, 1.0)'
             ]
             // hand cash
-            // console.log(this.game.hand_cash)
             let labels1 = []
             for(let i=1;i<=this.game.hand_cash[0].length;i++){
                 if(i === 1)  labels1.push("Hand: " + i);
