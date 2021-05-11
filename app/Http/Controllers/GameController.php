@@ -24,6 +24,18 @@ class GameController extends Controller
         return ['status' => true, 'msg' => $game];
     }
 
+    public function log(Request $request){
+        $pdb = $request->input('pdb', false);
+        if(!$pdb){
+            return ["status" => false, "msg" => 'Missing Parameter!'];
+        }
+        $id = $request->input('id', 1);
+        $log = new LogFileController();
+        $pdb .= ".pdb";
+        $game = $log->process_log_file($pdb, $id);
+        return ["status" => true, "msg" => $game];
+    }    
+
     public function games(Request $request)
     {
         return GameHasPlayer::offset($request->l)->where('player_idplayer', $request->p)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(5)->get();
