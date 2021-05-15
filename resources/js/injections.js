@@ -1,9 +1,14 @@
-require('./app.js')
-
 var form_done = false
 
 document.onreadystatechange = function () {
     if (document.readyState === "complete") {
+        var element = document.getElementById('inner-wrap')
+        var parent = element.parentNode
+        var wrapper = document.createElement('div')
+        $(wrapper).attr('id', 'app')
+        parent.replaceChild(wrapper, element);
+        wrapper.appendChild(element);
+
         if($('input[name=password_confirm').length > 0){
             if($('#register').length > 0){
                 $('#register').submit(function( event ) {
@@ -85,4 +90,7 @@ document.onreadystatechange = function () {
         // user delete (!)
 
     }
+
+    require('./app.js')
 }
+

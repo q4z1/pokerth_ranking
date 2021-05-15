@@ -26,6 +26,7 @@ Route::post('/gametable/show', [App\Http\Controllers\GameController::class, 'sho
 Route::get('/game/get', [App\Http\Controllers\GameController::class, 'get']);
 Route::get('/game/log', [App\Http\Controllers\GameController::class, 'log']);
 Route::post('/ranking/leaderboard', [App\Http\Controllers\PlayerController::class, 'getLeaderboard']);
+Route::get('/ranking/cod', [App\Http\Controllers\GameController::class, 'getCOD']);
 
 Route::post('/account/reset', [App\Http\Controllers\PlayerController::class, 'account_reset']);
 Route::post('/account/create', [App\Http\Controllers\PlayerController::class, 'account_create']);

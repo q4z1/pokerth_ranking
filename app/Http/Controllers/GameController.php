@@ -52,128 +52,6 @@ class GameController extends Controller
         return ['status' => true, 'msg' => $table];
     }
 
-    public function account_create(Request $request)
-    {
-        $phpbb_confirm = DB::table('pokerth.phpbb_confirm')
-        ->selectRaw('*')
-        ->where('confirm_id', $request->confirm_id)
-        ->where('code', $request->confirm_code)
-        ->first();
-
-        if(!$phpbb_confirm) return ['status' => false, 'msg' => 'code wrong'];
-        else if($request->new_password != $request->password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
-
-        $p = Player::where('email', $request->email)->first();
-        if($p) return ['status' => false, 'msg' => 'email already used'];
-
-        // create player
-        $p = new Player();
-        $p->username = $request->username;
-        $p->email = $request->email;
-        $p->created = date("Y-m-d H:i:s");
-        $p->blocked = 0;
-        $p->active = 0;
-        $p->save();
-        if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, env('APP_SALT'), $request->email ])) return ['status' => false, 'msg' => 'PW update during user creation failed.'];
-
-        return ['status' => 'success'];
-    }
-
-    public function account_reset(Request $request)
-    {
-        $phpbb_user = DB::table('pokerth.phpbb_users')
-            ->selectRaw('user_email, username')
-            ->where('user_id', $request->u)
-            ->where('reset_token', $request->token)
-            ->where('reset_token_expiration', '>=', time())
-            ->first();
-
-        if(!$phpbb_user) return ['status' => false, 'msg' => 'Player not found or token expired.'];
-        else if($request->new_password != $request->new_password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
-
-        $p = Player::selectRaw('player_id, username, CAST(AES_DECRYPT(password, "'.env('APP_SALT').'") AS CHAR ) as password')
-        ->where('email', $phpbb_user->user_email)
-        ->first();
-
-        if($p){
-            if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, env('APP_SALT'), $phpbb_user->user_email ])) return ['status' => false, 'msg' => 'PW update failed.'];
-        }else {
-            // create player
-            $p = new Player();
-            $p->username = $phpbb_user->username;
-            $p->email = $phpbb_user->user_email;
-            $p->created = date("Y-m-d H:i:s");
-            $p->blocked = 0;
-            $p->active = 1;
-            $p->save();
-            if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, env('APP_SALT'), $phpbb_user->user_email ])) return ['status' => false, 'msg' => 'PW update during user creation failed.'];
-        }
-        $p = Player::selectRaw('player_id, username')
-        ->where('email', $phpbb_user->user_email)
-        ->first();
-        $pr = PlayerRanking::selectRaw('player_id, username')
-        ->where('username', $phpbb_user->username)
-        ->first();
-        if(!$pr){
-            $pr = new PlayerRanking();
-            $pr->player_id = $p->player_id;
-            $pr->final_score = 0;
-            $pr->username = $phpbb_user->username;
-            $pr->points_sum = 0;
-            $pr->season_games = 0;
-            $pr->average_score = 0;
-            $pr->save();
-        }
-        return ['status' => 'success'];
-    }
-
-    public function account_validate(Request $request)
-    {
-        $p = explode("&", $request->href);
-        $user_id = explode("=", $p[1])[1];
-
-        $phpbb_user = DB::table('pokerth.phpbb_users')
-            ->selectRaw('user_email, username')
-            ->where('user_id', $user_id)
-            ->first();
-
-        if(!$phpbb_user) return ['status' => false, 'msg' => 'User not found.'];
-
-        $p = Player::selectRaw('player_id, username')
-        ->where('email', $phpbb_user->user_email)
-        ->first();
-
-        if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
-
-        DB::statement('UPDATE player SET active = ? where email = ?', [ 1, $phpbb_user->user_email]);
-
-        $pr = PlayerRanking::selectRaw('player_id, username')
-        ->where('player_id', $p->player_id)
-        ->first();
-        if($pr) return ['status' => false, 'msg' => 'Player Ranking already exists.'];
-        $pr = new PlayerRanking();
-        $pr->player_id = $p->player_id;
-        $pr->final_score = 0;
-        $pr->username = $p->username;
-        $pr->points_sum = 0;
-        $pr->season_games = 0;
-        $pr->average_score = 0;
-        $pr->save();
-        return ['status' => 'success'];
-    }
-
-    public function account_change(Request $request)
-    {
-        $p = Player::selectRaw('player_id, username, CAST(AES_DECRYPT(password, "'.env('APP_SALT').'") AS CHAR ) as password')
-        ->where('email', $request->email)
-        ->first();
-        if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
-        else if($p->password != $request->cur_password) return ['status' => false, 'msg' => 'Password mismatch.'];
-        else if($request->new_password != $request->password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
-        else if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password,env('APP_SALT'), $request->email ])) return ['status' => false, 'msg' => 'PW update failed.'];
-        return ['status' => 'success'];
-    }
-
     public function getLeaderboard(Request $request){
         $filters = $request->input('filters');
         $page = $request->input('page', 1);
@@ -210,6 +88,52 @@ class GameController extends Controller
         }
         return ['total' => $total, 'data' => $lp];
 
+    }
+
+    public function getCOD(){
+        $points = [
+            1 => 15,
+            2 => 9,
+            3 => 6,
+            4 => 4,
+            5 => 3,
+            6 => 2,
+            7 => 1,
+            8 => 0,
+            9 => 0,
+            10 => 0
+        ];
+
+        //@TODO: cache
+        $games = Game::whereBetween('end_time', [date('Y-m-d 00:00:00', strtotime('-1 day')), date('Y-m-d 23:59:59', strtotime('-1 day'))])
+        ->with('players')->get();
+        $players = [];
+        foreach($games as $game){
+            $pls = $game->players;
+            foreach($pls as $pl){
+                if(!array_key_exists($pl->player->player_id, $players)){
+                    $players[$pl->player->player_id] = [
+                        'username' => $pl->player->username,
+                        'url' => '/player?u=' . $pl->player->username,
+                        'score' => 0,
+                        'games' => 0
+                    ];
+                }
+                $players[$pl->player->player_id]['games'] += 1;
+                $players[$pl->player->player_id]['score'] += $points[$pl->place];
+            }
+            
+        }
+        foreach($players as $id => $pl){
+            $players[$id]['score'] = $players[$id]['score']/$players[$id]['games'];
+            if($pl['games'] < 6) unset($players[$id]);
+        }
+
+        usort($players, function($a, $b) {
+            return $a['score'] <=> $b['score'];
+        });
+
+        return array_reverse($players);
     }
     
 }
