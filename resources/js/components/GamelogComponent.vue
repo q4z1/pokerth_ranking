@@ -27,6 +27,14 @@
                         <b-col><strong>Hands:</strong></b-col>
                         <b-col>{{ game['player_list'][3][0] }}</b-col>
                     </b-row>
+                    <b-row>
+                        <b-col><strong>Date:</strong></b-col>
+                        <b-col>{{ game['session']['Date'] }}</b-col>
+                    </b-row>
+                    <b-row>
+                        <b-col><strong>Session started:</strong></b-col>
+                        <b-col>{{ game['session']['Time'] }}</b-col>
+                    </b-row>
                 </b-col>
                 <b-col class="mt-3">
                     <h3>Ranking</h3>

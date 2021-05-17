@@ -21,6 +21,8 @@ class LogFileController extends Controller
 		if(is_null($this->game_id) && !is_null($id)) $this->game_id = $id;
 		$this->pdo = new PDO("sqlite:/var/www/pokerth/log_file_analysis/upload/$pdb");
 		// sqlite error handling necessary?
+		
+		$session = $this->get_session();
 
 		$game_ids = $this->get_game_ids();
 
@@ -64,7 +66,8 @@ class LogFileController extends Controller
 			"hand_cash" => $hand_cash,
 			"pot_size" => $pot_size,
 			"pdb" => $pdb,
-			"game_id" => $this->game_id
+			"game_id" => $this->game_id,
+			"session" => $session,
 		);
 
 		return $game;
@@ -798,6 +801,16 @@ class LogFileController extends Controller
 		}
 		return $game_ids;
 	}
+
+	private function get_session() {
+		$db = $this->pdo;
+		$query = "
+			SELECT *
+			FROM Session";
+		$query = $db->prepare($query);
+		$query->execute();
+		return $query->fetch(PDO::FETCH_ASSOC);
+	}	
 
     private function get_player_list() {
 

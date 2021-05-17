@@ -27,7 +27,7 @@ export default {
     },
     methods: {
         getCOD: function(){
-            console.log('getCOD')
+            // console.log('getCOD')
             axios.get('/pthranking/ranking/cod')
                 .then(res => {
                     this.champions = res.data
@@ -41,11 +41,14 @@ export default {
 </script>
 <style lang="scss" scoped>
     .col.cod{
-        // display: none;
         margin-bottom: 30px;
         margin-left: auto;
         margin-right: auto;
         width: 90%;
+
+        * {
+            background-color: transparent!important;
+        }
 
         ol{
             list-style-position: inside;
@@ -53,6 +56,7 @@ export default {
             padding: 0;
             li{
                 text-align: left;
+                font-size: larger;
             }
         }
     }
