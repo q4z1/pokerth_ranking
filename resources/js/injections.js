@@ -1,98 +1,90 @@
+require('./app.js')
+
 var form_done = false
 
 document.onreadystatechange = function () {
     if (document.readyState === "complete") {
-        var element = document.getElementById('inner-wrap')
-        var parent = element.parentNode
-        var wrapper = document.createElement('div')
-        $(wrapper).attr('id', 'app')
-        parent.replaceChild(wrapper, element);
-        wrapper.appendChild(element);
-
-        window.setTimeout(function(){
-            if($('input[name=password_confirm').length > 0){
-                if($('#register').length > 0){
-                    $('#register').submit(function( event ) {
-                        if(form_done) return
-                        event.preventDefault()
-                        let data = {}
-                        $("form#register :input").each(function(){
-                            var input = $(this)
-                            data[$(input).attr('name')] = $(input).val()
-                        });
-                        axios.post(window.location.origin + '/pthranking/account/create', data)
-                        .then(res => {
-                            //console.log(res.data);
-                            form_done = true
-                            $('form#register input[name=submit]').click()
-                        }).catch(err => {
-                            console.log(err)
-                        })
-                    });
-                }else if($('#ucp').length > 0){
-                    $('#ucp').submit(function( event ) {
-                        if(form_done) return
-                        event.preventDefault()
-                        let data = {}
-                        $("form#ucp :input").each(function(){
-                            var input = $(this)
-                            data[$(input).attr('name')] = $(input).val()
-                        });
-                        axios.post(window.location.origin + '/pthranking/account/change', data)
-                        .then(res => {
-                            form_done = true
-                            $('#ucp input[name=submit]').click()
-                        }).catch(err => {
-                            console.log(err)
-                        })
-                    });
-                }
-            }
-            
-            if($('input[name=new_password_confirm').length > 0){
-                $('#reset_password').submit(function( event ) {
+        if($('input[name=password_confirm').length > 0){
+            if($('#register').length > 0){
+                $('#register').submit(function( event ) {
                     if(form_done) return
                     event.preventDefault()
                     let data = {}
-                    $("form#reset_password :input").each(function(){
+                    $("form#register :input").each(function(){
                         var input = $(this)
                         data[$(input).attr('name')] = $(input).val()
-                    })
-                    axios.post(window.location.origin + '/pthranking/account/reset', data)
+                    });
+                    axios.post(window.location.origin + '/pthranking/account/create', data)
                     .then(res => {
-                        // console.log(res)
+                        //console.log(res.data);
                         form_done = true
-                        $("form#reset_password input[name=submit]").click() // @FIXME: has to be triggered twice, or with a timeout?
+                        $('form#register input[name=submit]').click()
+                    }).catch(err => {
+                        console.log(err)
+                    })
+                });
+            }else if($('#ucp').length > 0){
+                $('#ucp').submit(function( event ) {
+                    if(form_done) return
+                    event.preventDefault()
+                    let data = {}
+                    $("form#ucp :input").each(function(){
+                        var input = $(this)
+                        data[$(input).attr('name')] = $(input).val()
+                    });
+                    axios.post(window.location.origin + '/pthranking/account/change', data)
+                    .then(res => {
+                        form_done = true
+                        $('#ucp input[name=submit]').click()
                     }).catch(err => {
                         console.log(err)
                     })
                 });
             }
-
-            if(location.href.includes('mode=activate')){
-                // disable redirect - check out response and then redirect
-                console.log('email verification here')
-                window.stop()
+        }
+        
+        if($('input[name=new_password_confirm').length > 0){
+            $('#reset_password').submit(function( event ) {
+                if(form_done) return
+                event.preventDefault()
                 let data = {}
-                $("body :input").each(function(){
+                $("form#reset_password :input").each(function(){
                     var input = $(this)
                     data[$(input).attr('name')] = $(input).val()
                 })
-                data.href = window.location.href
-                axios.post(window.location.origin + '/pthranking/account/validate', data)
+                axios.post(window.location.origin + '/pthranking/account/reset', data)
                 .then(res => {
-                    // @TODO: redirect to board index here
-                    console.log(res.data)
-
+                    // console.log(res)
+                    form_done = true
+                    $("form#reset_password input[name=submit]").click() // @FIXME: has to be triggered twice, or with a timeout?
                 }).catch(err => {
                     console.log(err)
                 })
-            }
-        }, 1000)
-        // user delete (!)
+            });
+        }
+
+        if(location.href.includes('mode=activate')){
+            // disable redirect - check out response and then redirect
+            console.log('email verification here')
+            window.stop()
+            let data = {}
+            $("body :input").each(function(){
+                var input = $(this)
+                data[$(input).attr('name')] = $(input).val()
+            })
+            data.href = window.location.href
+            axios.post(window.location.origin + '/pthranking/account/validate', data)
+            .then(res => {
+                // @TODO: redirect to board index here
+                console.log(res.data)
+
+            }).catch(err => {
+                console.log(err)
+            })
+        }
+        // @TODO: intercept user delete (!)
 
     }
 
-    require('./app.js')
 }
 
