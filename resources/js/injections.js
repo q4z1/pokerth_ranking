@@ -1,7 +1,5 @@
 require('./app.js')
-
 var form_done = false
-
 document.onreadystatechange = function () {
     if (document.readyState === "complete") {
         if($('input[name=password_confirm').length > 0){
@@ -84,6 +82,8 @@ document.onreadystatechange = function () {
         }
         // @TODO: intercept user delete (!)
 
+        
+        
     }
 
 }
