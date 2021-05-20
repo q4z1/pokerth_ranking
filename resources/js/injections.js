@@ -30,6 +30,9 @@ document.onreadystatechange = function () {
                         var input = $(this)
                         data[$(input).attr('name')] = $(input).val()
                     });
+                    if(Object.keys(data).filter(function (key) {return key !== 'email'})){
+                        data['email'] = document.querySelectorAll('#ucp fieldset dl dd strong')[1].textContent
+                    }
                     axios.post(window.location.origin + '/pthranking/account/change', data)
                     .then(res => {
                         form_done = true
