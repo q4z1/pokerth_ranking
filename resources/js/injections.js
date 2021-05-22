@@ -1,5 +1,4 @@
 require('./app.js')
-require('./jquery.gorilla-dropdown.min.js')
 var form_done = false
 
 var countries = [
@@ -295,6 +294,22 @@ document.onreadystatechange = function () {
             }
         }
 
+        if($('.has-profile').length > 0){
+            $('.has-profile').each(function(i, item){
+                axios.get(window.location.origin + '/pthranking/player/gender-country?u=' + $(item).find('a[class^=username]').text())
+                .then(res => {
+                    if(res.data.country_iso != ""){
+                        $(item).find('a[class^=username]').parent().append(
+                            $('<br/>'),
+                            $('<img/>').attr('src', '/images/flags/' + res.data.country_iso + '.svg').css('width', '24px').css('height', '14px').css('margin-top', '2px')
+                        )
+                    }
+                }).catch(err => {
+                    console.log(err)
+                })
+            })
+        }
+
         if($('form#ucp').length > 0 && $('#pf_phpbb_location').length > 0){
             // country flag stuff
             var styles = document.createElement('link');
@@ -331,37 +346,42 @@ document.onreadystatechange = function () {
                 ]
             })
             $(fieldset).append(ctrs)
-            if($('html').hasClass('fd_dark')){
-                $('select#pth_country').gorillaDropdown(
-                    {
-                        dropdownHeight	: '200px',
-                        backgroundColor: '#171b24',
-                        textFontWeight	: 'normal',
-                        textFontColor: '#cccccc',
-                        padding: 6,
-                        borderColor: 'rgba(255,255,255,0.04)'
-                    }
-                )
-            }else{
-                $('select#pth_country').gorillaDropdown(
-                    {
-                        dropdownHeight	: '200px',
-                        backgroundColor: '#ffffff',
-                        textFontWeight	: 'normal',
-                        textFontColor: '#333333',
-                        padding: 6,
-                        borderColor: '#edecec'
-                    }
-                )
-            }
-            axios.get(window.location.origin + '/pthranking/player/gender-country?u=' + $('#username_logged_in span.username').text())
+
+            $.getScript('/pthranking/js/dd.js', function()
+            {
+                if($('html').hasClass('fd_dark')){
+                    $('select#pth_country').gorillaDropdown(
+                        {
+                            dropdownHeight	: '200px',
+                            backgroundColor: '#171b24',
+                            textFontWeight	: 'normal',
+                            textFontColor: '#cccccc',
+                            padding: 6,
+                            borderColor: 'rgba(255,255,255,0.04)'
+                        }
+                    )
+                }else{
+                    $('select#pth_country').gorillaDropdown(
+                        {
+                            dropdownHeight	: '200px',
+                            backgroundColor: '#ffffff',
+                            textFontWeight	: 'normal',
+                            textFontColor: '#333333',
+                            padding: 6,
+                            borderColor: '#edecec'
+                        }
+                    )
+                }
+            });
+
+            axios.get(window.location.origin + '/pthranking/player/gender-country?u=' + $('#username_logged_in span[class^=username]').text())
             .then(res => {
-                console.log(res.data)
-                $('.pth_country li.dd-item').removeClass('selected')
-                $('.pth_country input.value[value=' + res.data.country_iso + ']').parent().addClass('selected')
-                $('.pth_country .current .content img.image').attr('src', '/images/flags/' + res.data.country_iso + '.svg')
-                $('.pth_country .current .content div.text').text($('.pth_country input.value[value=' + res.data.country_iso + ']').parent().find('div.text').text())
-                return
+                if(res.data.country_iso != ""){
+                    $('.pth_country li.dd-item').removeClass('selected')
+                    $('.pth_country input.value[value=' + res.data.country_iso + ']').parent().addClass('selected')
+                    $('.pth_country .current .content img.image').attr('src', '/images/flags/' + res.data.country_iso + '.svg')
+                    $('.pth_country .current .content div.text').text($('.pth_country input.value[value=' + res.data.country_iso + ']').parent().find('div.text').text())
+                }
             }).catch(err => {
                 console.log(err)
             })
@@ -375,7 +395,7 @@ document.onreadystatechange = function () {
                     var input = $(this)
                     data[$(input).attr('name')] = $(input).val()
                 });
-                data['username'] = $('#username_logged_in span.username').text()
+                data['username'] = $('#username_logged_in span[class^=username]').text()
                 axios.post(window.location.origin + '/pthranking/player/country', data)
                 .then(res => {
                     form_done = true

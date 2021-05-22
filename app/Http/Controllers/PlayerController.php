@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\Game;
 use App\Models\GameHasPlayer;
@@ -211,13 +212,16 @@ class PlayerController extends Controller
         else if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
         else if(sha1($request->creation_time . $phpbb_user->user_form_salt . 'ucp_profile_info') != $request->form_token) return ['status' => false, 'msg' => 'Token mismatch.'];
         else if(!DB::statement('UPDATE player SET country_iso = ? WHERE username = ?', [ strtoupper($request->country_iso), $request->username ])) return ['status' => false, 'msg' => 'Setting Country ID failed.'];
+        Cache::forget('gender.prof.' . $request->username);
         return ['status' => 'success'];
     }
 
     public function get_gender_country(Request $request){
-        $p = Player::selectRaw('gender, country_iso')
-        ->where('username', $request->u)
-        ->first();
+        $p = Cache::rememberForever('gender.prof.' . $request->u, function() use($request){
+            return Player::selectRaw('gender, country_iso')
+            ->where('username', $request->u)
+            ->first();
+        });
         if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
         return ['status' => 'success', 'gender' => $p->gender, 'country_iso' => strtolower($p->country_iso)];
     }

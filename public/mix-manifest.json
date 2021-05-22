@@ -2,5 +2,6 @@
     "/js/injections.js": "/js/injections.js",
     "/css/app.css": "/css/app.css",
     "/css/countryflags.css": "/css/countryflags.css",
+    "/js/dd.js": "/js/dd.js",
     "/css/dd.css": "/css/dd.css"
 }
