@@ -42,15 +42,15 @@ class LogFileController extends Controller
 		$pot_size = $this->get_pot_size();
 		
 		// remove html entities
-		$best_hands[1] = $this->convertHtmlEntities($best_hands[1]);
-		$highest_win[1] = $this->convertHtmlEntities($highest_win[1]);
-		$longest_losses[1] = $this->convertHtmlEntities($longest_losses[1]);
-		$longest_wins[1] = $this->convertHtmlEntities($longest_wins[1]);
-		$most_all_in[1] = $this->convertHtmlEntities($most_all_in[1]);
-		$most_raises[1] = $this->convertHtmlEntities($most_raises[1]);
-		$played_hands[1] = $this->convertHtmlEntities($played_hands[1]);
-		$most_wins[1] = $this->convertHtmlEntities($most_wins[1]);
-		$player_list2[1] = $this->convertHtmlEntities($player_list2[1]);
+		if(count((array)$best_hands) > 0) $best_hands[1] = $this->convertHtmlEntities($best_hands[1]);
+		if(count((array)$highest_win) > 0) $highest_win[1] = $this->convertHtmlEntities($highest_win[1]);
+		if(count((array)$longest_losses) > 0) $longest_losses[1] = $this->convertHtmlEntities($longest_losses[1]);
+		if(count((array)$longest_wins) > 0) $longest_wins[1] = $this->convertHtmlEntities($longest_wins[1]);
+		if(count((array)$most_all_in) > 0) $most_all_in[1] = $this->convertHtmlEntities($most_all_in[1]);
+		if(count((array)$most_raises) > 0) $most_raises[1] = $this->convertHtmlEntities($most_raises[1]);
+		if(count((array)$played_hands) > 0) $played_hands[1] = $this->convertHtmlEntities($played_hands[1]);
+		if(count((array)$most_wins) > 0) $most_wins[1] = $this->convertHtmlEntities($most_wins[1]);
+		if(count((array)$player_list2) > 0) $player_list2[1] = $this->convertHtmlEntities($player_list2[1]);
 
 		$game = array(
 			"game_ids" => $game_ids,

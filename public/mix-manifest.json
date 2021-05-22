@@ -1,4 +1,6 @@
 {
     "/js/injections.js": "/js/injections.js",
-    "/css/app.css": "/css/app.css"
+    "/css/app.css": "/css/app.css",
+    "/css/countryflags.css": "/css/countryflags.css",
+    "/css/dd.css": "/css/dd.css"
 }

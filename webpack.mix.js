@@ -13,4 +13,6 @@ const mix = require('laravel-mix');
 
 mix.vue()
     .sass('resources/sass/app.scss', 'public/css')
-    .js('resources/js/injections.js', 'public/js');
+    .sass('resources/sass/countryflags.scss', 'public/css')
+    .copy('resources/css/jquery.gorilla-dropdown.min.css', 'public/css/dd.css')
+    .js('resources/js/injections.js', 'public/js')

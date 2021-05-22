@@ -185,14 +185,41 @@ class PlayerController extends Controller
 
     public function account_change(Request $request)
     {
+        $phpbb_user = DB::table('pokerth.phpbb_users')
+            ->where('user_email', $request->email)
+            ->first();
         $p = Player::selectRaw('player_id, username, CAST(AES_DECRYPT(password, "'.env('APP_SALT').'") AS CHAR ) as password')
         ->where('email', $request->email)
         ->first();
-        if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
-        else if($p->password != $request->cur_password) return ['status' => false, 'msg' => 'Password mismatch.'];
+
+        if(!$phpbb_user) return ['status' => false, 'msg' => 'Forum User not found.'];
+        else if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
         else if($request->new_password != $request->password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
+        else if(sha1($request->creation_time . $phpbb_user->user_form_salt . 'ucp_reg_details') != $request->form_token) return ['status' => false, 'msg' => 'Token mismatch.'];
         else if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password,env('APP_SALT'), $request->email ])) return ['status' => false, 'msg' => 'PW update failed.'];
         return ['status' => 'success'];
+    }
+
+    public function set_country(Request $request){
+        $phpbb_user = DB::table('pokerth.phpbb_users')
+        ->where('username', $request->username)
+        ->first();
+        $p = Player::selectRaw('player_id, username')
+        ->where('username', $request->username)
+        ->first();
+        if(!$phpbb_user) return ['status' => false, 'msg' => 'Forum User not found.'];
+        else if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
+        else if(sha1($request->creation_time . $phpbb_user->user_form_salt . 'ucp_profile_info') != $request->form_token) return ['status' => false, 'msg' => 'Token mismatch.'];
+        else if(!DB::statement('UPDATE player SET country_iso = ? WHERE username = ?', [ strtoupper($request->country_iso), $request->username ])) return ['status' => false, 'msg' => 'Setting Country ID failed.'];
+        return ['status' => 'success'];
+    }
+
+    public function get_gender_country(Request $request){
+        $p = Player::selectRaw('gender, country_iso')
+        ->where('username', $request->u)
+        ->first();
+        if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
+        return ['status' => 'success', 'gender' => $p->gender, 'country_iso' => strtolower($p->country_iso)];
     }
 
     public function getLeaderboard(Request $request){
@@ -202,8 +229,6 @@ class PlayerController extends Controller
         $sort = $request->input('sort');
         
         $all = PlayerRanking::where('player_ranking.username', 'NOT LIKE', 'deleted_%')->get();
-
-        $ppos = 1;
 
         $total = $all->count();
 

@@ -72,6 +72,14 @@
  * @license Modernizr 3.0.0pre (Custom Build) | MIT
  */
 
+/**
+ * gorilla-dropdown
+ * Description - A jQuery plugin for custom drop-down list, allowing the display of text, images, and maybe more...
+ * @version v0.3.0
+ * @link https://github.com/wahabmirjan/gorilla-dropdown#readme
+ * @license MIT
+ */
+
 /**!
  * @fileOverview Kickass library to create and place poppers near their reference elements.
  * @version 1.16.1
