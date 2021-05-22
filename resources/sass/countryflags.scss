@@ -1,4 +1,5 @@
 .pth_country{
+    padding: 4px 0;
     .pth_label{
         float: left;
         width: 41%;
@@ -32,4 +33,23 @@
         }
     }
 
+}
+
+.pth_gender{
+    padding: 4px 0;
+    .pth_label{
+        float: left;
+        width: 41%;
+        label{
+            color: #84bd00;
+            font-weight: 500;
+            &:hover{
+                color: #425700;
+            }
+        }
+    }
+    span{
+        padding: 4px;
+        margin: 0px 4px;
+    }
 }

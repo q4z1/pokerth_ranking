@@ -19,7 +19,7 @@ Route::get('/', function () {
 
 Route::get('/player/autocomplete', [App\Http\Controllers\PlayerController::class, 'autocomplete']);
 Route::get('/player/show', [App\Http\Controllers\PlayerController::class, 'show']);
-Route::post('/player/country', [App\Http\Controllers\PlayerController::class, 'set_country']);
+Route::post('/player/gender-country', [App\Http\Controllers\PlayerController::class, 'set_gender_country']);
 Route::get('/player/gender-country', [App\Http\Controllers\PlayerController::class, 'get_gender_country']);
 Route::get('/player/games/get', [App\Http\Controllers\PlayerController::class, 'games']);
 Route::post('/gametable/show', [App\Http\Controllers\GameController::class, 'show_table']);

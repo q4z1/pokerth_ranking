@@ -201,7 +201,7 @@ class PlayerController extends Controller
         return ['status' => 'success'];
     }
 
-    public function set_country(Request $request){
+    public function set_gender_country(Request $request){
         $phpbb_user = DB::table('pokerth.phpbb_users')
         ->where('username', $request->username)
         ->first();
@@ -211,7 +211,7 @@ class PlayerController extends Controller
         if(!$phpbb_user) return ['status' => false, 'msg' => 'Forum User not found.'];
         else if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
         else if(sha1($request->creation_time . $phpbb_user->user_form_salt . 'ucp_profile_info') != $request->form_token) return ['status' => false, 'msg' => 'Token mismatch.'];
-        else if(!DB::statement('UPDATE player SET country_iso = ? WHERE username = ?', [ strtoupper($request->country_iso), $request->username ])) return ['status' => false, 'msg' => 'Setting Country ID failed.'];
+        else if(!DB::statement('UPDATE player SET country_iso = ?, gender = ? WHERE username = ?', [ strtoupper($request->country_iso), $request->pth_gender, $request->username ])) return ['status' => false, 'msg' => 'Setting Country/Gender failed.'];
         Cache::forget('gender.prof.' . $request->username);
         return ['status' => 'success'];
     }
