@@ -10,7 +10,7 @@
                     <el-button type="default" @click="closeGame">Close</el-button></div>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body" v-if="theGame">
             <data-tables :data="theGame" layout="tool, table">
                 <el-table-column v-for="title in titles"
                 :prop="title.prop"
@@ -59,13 +59,16 @@
         }
     }
 </script>
-<style>
+<style lang="scss">
     .game.card{
         position: absolute;
-        top: 1em;
+        top: 0.5em;
         left: 1em;
         right: 1em;
         background: #dddddd!important;
         box-shadow: 0 0 0.1em 0.1em gray;
+        .el-table tr td, .el-table tr th {
+            cursor: default;
+        }
     }
 </style>

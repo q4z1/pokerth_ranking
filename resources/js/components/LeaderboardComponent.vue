@@ -108,7 +108,7 @@
             handleSelectionChange(val) {},
             handleRowClick(row){
                 let sid = window.location.search.substr(1).substr(4)
-                window.location.href = window.location.origin + '/player?p=' + row.player_id + '&sid=' + sid
+                window.open(window.location.origin + '/player?p=' + row.player_id, '_blank')
             },
         }
     }
@@ -181,7 +181,6 @@
         padding: .5rem 1.5rem;
         margin-left: -1px;
         line-height: calc(1.4em + 0.75rem + 2px);
-        vertical-align: middle;
     }
 
 </style>

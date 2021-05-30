@@ -4,7 +4,24 @@
             <div class="col-md-12">
                 <div v-if="player" class="card">
                     <div class="card-header">
-                        <h1>{{ player.username }}</h1>
+                        <div class="row">
+                            <div class="col">
+                                <h1><div class="name">{{ player.username }}</div>
+                                    <div class="icons">
+                                        <span class="gender" v-if="player.gender">
+                                            <i v-if="player.gender === 'f'" class="icon fa-female gender" />
+                                            <i v-else-if="player.gender === 'm'" class="icon fa-male gender" />
+                                        </span>
+                                        <span v-if="player.country_iso && country.svg != 'n/a'" class="flag">
+                                            <img data-toggle="tooltip" @mouseenter="tipHover" @mouseleave="tipLeave" :title="country.title" :src="'/images/flags/' + country.svg + '.svg'" />
+                                        </span>
+                                    </div>
+                                </h1>
+                            </div>
+                            <div v-if="avatar" class="col avatar">
+                                <img :src="avatar" class="float-right" />
+                            </div>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -121,6 +138,9 @@
                         </div>
                     </div>
                 </div>
+                <div class="card p-4 text-center" v-if="err">
+                    <strong class="text-danger">{{ err }}</strong>
+                </div>
             </div>
         </div>
         <game-component @close="closeGame()" v-if="game" :game="game"></game-component>
@@ -139,10 +159,27 @@
                 stats: false,
                 games_chart: null,
                 game: false,
+                countries: null,
+                err: false,
+            }
+        },
+        computed: {
+            country: function () {
+                return this.countries.filter(obj => {
+                    return obj.png === this.player.country_iso.toLowerCase()
+                })[0]
+            },
+            avatar: function () {
+                let avatar = false
+                if(this.player.avatar_hash != ''){
+                    avatar = '/images/avatars/game/' + this.player.avatar_hash + '.' + this.player.avatar_mime
+                }
+                return avatar
             }
         },
         mounted() {
             this.getPlayer()
+            this.countries = window.countries
         },
         methods: {
             getPlayer: function(event){
@@ -165,14 +202,21 @@
                             this.games = res.data.msg.games
                             this.stats = res.data.msg.stats
                             this.games_chart = res.data.msg.bar_stats
+                            this.err = false
                         }else{
-                            console.log(res.data.msg)
+                            this.err = res.data.msg
                             this.player = false
                         }
                     }).catch(err => {
-                        console.log(err)
+                        this.err = err
                         this.player = false
                 })
+            },
+            tipHover: function(evt){
+                $(evt.target).tooltip('show')
+            },
+            tipLeave: function(evt){
+                $(evt.target).tooltip('hide')
             },
             getGame: function(event){
                 let gid = $(event.target).attr('data-gid')
@@ -211,14 +255,50 @@
         }
     }
 </script>
-<style>
+<style lang="scss">
     .content ul, .content ol {
         margin: 0.8em 0;
     }
-    .badge{
-        margin-top: 0.8em;
-        margin-right: 0.9em;
-        font-size: 100%;
+    .card-header{
+        .avatar {
+            img{
+                max-width: 175px;
+            }
+            
+        }
+        h1{
+            div{
+                float: left;
+                &.name{
+                    margin-right: 0.5em;
+                }
+                &.icons{
+                    line-height: 1.11em;
+                    span{
+                        &.gender{
+                            background: transparent;
+                            font-size: 100%;
+                            i{
+                                font-size: 0.7em;
+                                &.fa-female{
+                                    color: var(--pink);
+                                }
+                                &.fa-male{
+                                    color: var(--cyan);
+                                }
+                            }
+                        }
+                        &.flag{
+                            img{
+                                margin-top: 0.1em;
+                                width: 40px;
+                                height: 20px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
     li.game{
         font-size: smaller!important;
@@ -246,20 +326,5 @@
     }
     .card{
         background-color: transparent;
-    }
-    .row .pagination{
-        display: flex;
-    }
-    .page-link {
-        height: calc(1.4em + 0.75rem + 2px);
-        position: relative;
-        display: block;
-        padding: .5rem 1.5rem;
-        margin-left: -1px;
-        line-height: calc(1.4em + 0.75rem + 2px);
-        vertical-align: middle;
-    }
-    .formular{
-        margin-left: 0.9em;
     }
 </style>
