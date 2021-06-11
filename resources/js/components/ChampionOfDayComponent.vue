@@ -27,10 +27,9 @@ export default {
     },
     methods: {
         getCOD: function(){
-            // console.log('getCOD')
             axios.get('/pthranking/ranking/cod')
                 .then(res => {
-                    this.champions = res.data
+                    this.champions = (res.data.length) ? res.data : false
                 }).catch(err => {
                     console.log(err)
                     this.champions = false

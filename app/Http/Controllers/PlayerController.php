@@ -9,7 +9,7 @@ use App\Models\Game;
 use App\Models\GameHasPlayer;
 use App\Models\Player;
 use App\Models\PlayerRanking;
-use stdClass;
+use App\Models\SuspendedNickname;
 
 class PlayerController extends Controller
 {
@@ -25,11 +25,9 @@ class PlayerController extends Controller
             ->with('ranking')
             ->first();
         }
-
         if(!$res){
             return ['status' => false, 'msg' => 'Player not found!'];
         }
-
         $last5 = DB::table('pokerth_ranking.game_has_player')
         ->selectRaw('place')
         ->where('player_idplayer', $res->player_id)
@@ -38,16 +36,13 @@ class PlayerController extends Controller
         ->get()->map(function($game){
             return $game->place;
         });
-
         $pos_array = PlayerRanking::orderBy('final_score', 'DESC')->get();
         $pos = 1;
         foreach($pos_array as $player){
             if($player->player_id == $res->player_id) break;
             $pos++;
         }
-
         $games = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(40)->get();
-
         $aGames = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->get();
         $stats = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0];
         foreach($aGames as $g){
@@ -57,14 +52,12 @@ class PlayerController extends Controller
         foreach($stats as $stat){
             $bar_stats[] = $stat;
         }
-
         return ['status' => true, 'msg' => ['player' => $res, 'last5' => $last5, 'pos' => $pos, 'games' => $games, 'stats' => $stats, 'bar_stats' => $bar_stats]];
     }
 
     public function games(Request $request)
     {
         return GameHasPlayer::offset($request->l)->where('player_idplayer', $request->p)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(40)->get();
-
     }
 
     public function account_create(Request $request)
@@ -97,7 +90,6 @@ class PlayerController extends Controller
         $p->active = 0;
         $p->save();
         if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, env('APP_SALT'), $request->email ])) return ['status' => false, 'msg' => 'PW update during user creation failed.'];
-
         return ['status' => 'success'];
     }
 
@@ -109,14 +101,11 @@ class PlayerController extends Controller
             ->where('reset_token', $request->token)
             ->where('reset_token_expiration', '>=', time())
             ->first();
-
         if(!$phpbb_user) return ['status' => false, 'msg' => 'Player not found or token expired.'];
         else if($request->new_password != $request->new_password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
-
         $p = Player::selectRaw('player_id, username, CAST(AES_DECRYPT(password, "'.env('APP_SALT').'") AS CHAR ) as password')
         ->where('username', $phpbb_user->username)
         ->first();
-
         if($p){
             if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password, env('APP_SALT'), $phpbb_user->user_email ])) return ['status' => false, 'msg' => 'PW update failed.'];
         }else {
@@ -153,22 +142,16 @@ class PlayerController extends Controller
     {
         $p = explode("&", $request->href);
         $user_id = explode("=", $p[1])[1];
-
         $phpbb_user = DB::table('pokerth.phpbb_users')
             ->selectRaw('user_email, username')
             ->where('user_id', $user_id)
             ->first();
-
         if(!$phpbb_user) return ['status' => false, 'msg' => 'User not found.'];
-
         $p = Player::selectRaw('player_id, username')
         ->where('email', $phpbb_user->user_email)
         ->first();
-
         if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
-
         DB::statement('UPDATE player SET active = ? where username = ?', [ 1, $phpbb_user->username]);
-
         $pr = PlayerRanking::selectRaw('player_id, username')
         ->where('player_id', $p->player_id)
         ->first();
@@ -192,13 +175,133 @@ class PlayerController extends Controller
         $p = Player::selectRaw('player_id, username, CAST(AES_DECRYPT(password, "'.env('APP_SALT').'") AS CHAR ) as password')
         ->where('email', $request->email)
         ->first();
-
         if(!$phpbb_user) return ['status' => false, 'msg' => 'Forum User not found.'];
         else if(!$p) return ['status' => false, 'msg' => 'Player not found.'];
         else if($request->new_password != $request->password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
         else if(sha1($request->creation_time . $phpbb_user->user_form_salt . 'ucp_reg_details') != $request->form_token) return ['status' => false, 'msg' => 'Token mismatch.'];
         else if(!DB::statement('UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE email = ?', [ $request->new_password,env('APP_SALT'), $request->email ])) return ['status' => false, 'msg' => 'PW update failed.'];
         return ['status' => 'success'];
+    }
+
+    public function account_delete(Request $request)
+    {
+        $phpbb_user = DB::table('pokerth.phpbb_users')
+        ->where('username', $request->nickname)
+        ->first();
+        $p = Player::where('username', $request->nickname)->first();
+        if(!$phpbb_user) return ['success' => false, 'msg' => 'Forum User not found.'];
+        else if(!$p) return ['success' => false, 'msg' => 'Player not found.'];
+        else if(sha1($request->creation_time . $phpbb_user->user_form_salt . 'ucp_profile_info') != $request->form_token) return ['status' => false, 'msg' => 'Token mismatch.'];
+        // *** @INFO: 1. phpbb stuff - taken from /includes/functions_user.php => function user_delete()
+        // delete reports
+        $rp = DB::table('pokerth.phpbb_reports')->join('pokerth.phpbb_posts', 'pokerth.phpbb_reports.post_id', '=', 'pokerth.phpbb_posts.post_id')
+        ->where('pokerth.phpbb_reports.user_id', $phpbb_user->user_id)
+        ->get();
+        $report_posts = $report_topics = array();
+        foreach ($rp as $report_post)
+        {
+            $report_posts[] = $report_post->post_id;
+            $report_topics[] = $report_post->topic_id;
+        }
+        if (count($report_posts))
+        {
+            $report_posts = array_unique($report_posts);
+            $report_topics = array_unique($report_topics);
+            $krt = DB::table('pokerth.phpbb_posts')->selectRaw('DISTINCT topic_id')
+            ->whereIn('pokerth.phpbb_posts.topic_id', $report_topics)
+            ->where('pokerth.phpbb_posts.post_reported', 1)
+            ->whereIn('pokerth.phpbb_posts.post_id', $report_posts)
+            ->get();
+            $keep_report_topics = array();
+            foreach ($krt as $rt)
+            {
+                $keep_report_topics[] = $rt->topic_id;
+            }
+            if (count($keep_report_topics))
+            {
+                $report_topics = array_diff($report_topics, $keep_report_topics);
+            }
+            unset($keep_report_topics);
+            DB::statement('UPDATE pokerth.phpbb_posts SET post_reported = 0 WHERE post_id IN(' . implode(',', $report_posts) . ')');
+            if (count($report_topics))
+            {
+                DB::statement('UPDATE pokerth.phpbb_topics SET topic_reported = 0 WHERE topic_id IN(' . implode(',', $report_topics) . ')');
+            }
+        }
+        DB::statement('DELETE FROM pokerth.phpbb_reports WHERE user_id = ' . $phpbb_user->user_id);
+        // delete avatar
+        $avatar_path = DB::table('pokerth.phpbb_config')->where('config_name', 'avatar_path')->pluck('config_value')->toArray()[0];
+        if ($phpbb_user->user_avatar && $phpbb_user->user_avatar_type == 'avatar.driver.upload')
+		{
+            if (substr($phpbb_user->user_avatar, 0, 1) !== 'g' && $phpbb_user->user_avatar !== '' && !is_numeric($phpbb_user->user_avatar))
+            {
+                if (file_exists(base_path() . $avatar_path . '/' . $phpbb_user->user_avatar))
+                {
+                    @unlink(base_path() . $avatar_path . '/' . $phpbb_user->user_avatar);
+                }
+            }
+        }
+        // Unlink accounts from auth providers if it's not db
+        $auth_provider = DB::table('pokerth.phpbb_config')->where('config_name', 'auth_method')->pluck('config_value')->toArray()[0];
+        if($auth_provider !== 'db'){
+            // @TODO: if oauth is used for example
+        }
+        // update num_users
+        DB::statement('UPDATE pokerth.phpbb_config SET config_value=(config_value-1) WHERE config_name = ?', ['num_users']);
+        // When we delete these users and retain the posts, we must assign all the data to the guest user
+        DB::statement('UPDATE pokerth.phpbb_forums SET forum_last_poster_id = 1, forum_last_poster_name = ?, forum_last_poster_colour = ? WHERE forum_last_poster_id = ?',
+            ['Deleted', '', $phpbb_user->user_id]);
+        DB::statement('UPDATE pokerth.phpbb_posts SET poster_id = 1, post_username = ? WHERE poster_id = ?', ['Deleted', '', $phpbb_user->user_id]);
+        DB::statement('UPDATE pokerth.phpbb_topics SET topic_poster = 1, topic_first_poster_name = ?, topic_first_poster_colour = ? WHERE topic_poster = ?',
+            ['Deleted', '', $phpbb_user->user_id]);
+        DB::statement('UPDATE pokerth.phpbb_topics SET topic_last_poster_id = 1, topic_last_poster_name = ?, topic_last_poster_colour = ? WHERE topic_last_poster_id = ?',
+            ['Deleted', '', $phpbb_user->user_id]);
+        // Since we change every post by this author, we need to count this amount towards the anonymous user
+        $added_guest_posts = ($phpbb_user->user_posts) ? $phpbb_user->user_posts : 0;
+		// Assign more data to the Anonymous user
+		DB::statement('UPDATE pokerth.phpbb_attachments SET poster_id = 1 WHERE poster_id = ' . $phpbb_user->user_id);
+		DB::statement('UPDATE pokerth.phpbb_users SET user_posts = user_posts + ' . $added_guest_posts . ' WHERE user_id = 1');
+        // delete any entry with user_id from the following tables:
+        $table_ary = [
+            'phpbb_users',
+            'phpbb_user_group',
+            'phpbb_topics_watch',
+            'phpbb_forums_watch',
+            'phpbb_acl_users',
+            'phpbb_topics_track',
+            'phpbb_topics_posted',
+            'phpbb_forums_track',
+            'phpbb_profile_fields_data',
+            'phpbb_moderator_cache',
+            'phpbb_drafts',
+            'phpbb_bookmarks',
+            'phpbb_sessions_keys',
+            'phpbb_privmsgs_folder',
+            'phpbb_privmsgs_rules',
+            'phpbb_oauth_tokens',
+            'phpbb_oauth_states',
+            'phpbb_oauth_accounts',
+            'phpbb_user_notifications'
+        ];
+        foreach ($table_ary as $table)
+        {
+            try {
+                DB::statement('DELETE FROM pokerth.' . $table . ' WHERE user_id = ' . $phpbb_user->user_id);
+            } catch (\Throwable $e) {
+                throw $e;
+            }
+            
+        }
+        // *** @INFO: 2. ranking stuff
+        $sus = new  SuspendedNickname();
+        $sus->nickname = $p->username;
+        $sus->player_id = $p->player_id;
+        $sus->save();
+        $pr = PlayerRanking::where('username', $request->nickname)->first();
+        $pr->username = $p->username = $p->email = 'deleted_' . $p->player_id;
+        $pr->save();
+        $p->save();
+        return ['succes' => true];
     }
 
     public function set_gender_country(Request $request){
@@ -231,11 +334,8 @@ class PlayerController extends Controller
         $page = $request->input('page', 1);
         $pagesize = $request->input('pageSize', 50);
         $sort = $request->input('sort');
-        
         $all = PlayerRanking::where('player_ranking.username', 'NOT LIKE', 'deleted_%')->get();
-
         $total = $all->count();
-
         $query = DB::table('player_ranking')
         ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
         ->select('player_ranking.*', 'player.country_iso', 'player.gender')
@@ -245,7 +345,6 @@ class PlayerController extends Controller
         if(!empty($filters)){
             $query->where('player_ranking.username', 'LIKE', $filters['value'] . '%');
         }
-
         $leaderboard = $query->get()->map(function($player){
             $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
             $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
@@ -259,7 +358,5 @@ class PlayerController extends Controller
             $lp[] = $pos;
         }
         return ['total' => $total, 'data' => $lp];
-
     }
-    
 }

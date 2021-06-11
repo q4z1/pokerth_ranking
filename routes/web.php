@@ -22,11 +22,14 @@ Route::get('/player/show', [App\Http\Controllers\PlayerController::class, 'show'
 Route::post('/player/gender-country', [App\Http\Controllers\PlayerController::class, 'set_gender_country']);
 Route::get('/player/gender-country', [App\Http\Controllers\PlayerController::class, 'get_gender_country']);
 Route::get('/player/games/get', [App\Http\Controllers\PlayerController::class, 'games']);
-Route::post('/gametable/show', [App\Http\Controllers\GameController::class, 'show_table']);
 
+Route::get('/html/{title}', [App\Http\Controllers\HtmlBlockController::class, 'getBlock']);
+
+Route::post('/gametable/show', [App\Http\Controllers\GameController::class, 'show_table']);
 
 Route::get('/game/get', [App\Http\Controllers\GameController::class, 'get']);
 Route::get('/game/log', [App\Http\Controllers\GameController::class, 'log']);
+
 Route::post('/ranking/leaderboard', [App\Http\Controllers\PlayerController::class, 'getLeaderboard']);
 Route::get('/ranking/cod', [App\Http\Controllers\GameController::class, 'getCOD']);
 
@@ -34,3 +37,4 @@ Route::post('/account/reset', [App\Http\Controllers\PlayerController::class, 'ac
 Route::post('/account/create', [App\Http\Controllers\PlayerController::class, 'account_create']);
 Route::post('/account/change', [App\Http\Controllers\PlayerController::class, 'account_change']);
 Route::post('/account/validate', [App\Http\Controllers\PlayerController::class, 'account_validate']);
+Route::post('/account/delete', [App\Http\Controllers\PlayerController::class, 'account_delete']);

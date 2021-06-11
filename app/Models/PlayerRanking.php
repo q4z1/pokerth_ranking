@@ -11,5 +11,7 @@ class PlayerRanking extends Model
 
     protected $table = "player_ranking";
 
+    protected $primaryKey = 'player_id';
+
     public $timestamps = false;
 }

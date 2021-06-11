@@ -11,6 +11,8 @@ class Player extends Model
 
     protected $table = "player";
 
+    protected $primaryKey = 'player_id';
+
     protected $hidden = ['password', 'email', 'fp', 'fpnew', 'last_ip', 'active', 'blocked', 'act_key', 'last_games'];
 
     public $timestamps = false;

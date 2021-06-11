@@ -66,3 +66,15 @@ if(document.getElementById('vue2')){
         el: '#vue2',
     });
 }
+
+if(document.getElementById('vue3')){
+    new Vue({
+        el: '#vue3',
+    });
+}
+
+if(document.getElementById('vue4')){
+    new Vue({
+        el: '#vue4',
+    });
+}

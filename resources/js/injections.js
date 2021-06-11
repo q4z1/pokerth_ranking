@@ -14,7 +14,6 @@ document.onreadystatechange = function () {
                     });
                     axios.post(window.location.origin + '/pthranking/account/create', data)
                     .then(res => {
-                        //console.log(res.data);
                         form_done = true
                         $('form#register input[name=submit]').click()
                     }).catch(err => {
@@ -61,6 +60,40 @@ document.onreadystatechange = function () {
         }
 
         if($('form#ucp').length > 0 && $('#pf_phpbb_location').length > 0){
+            // user deletion
+            $('#cp-menu #navigation ul').append(
+                $('<li />')
+                .append(
+                    $('<a/>').css('cursor', 'pointer').click(() => {
+                        let delmsg = '<h1 style="padding-top: 1em">Delete account</h1>'
+                            + '<h2 style="text-align: center">Are you sure you want to <strong>delete</strong> your account?</h2>'
+                            + '<div style="color: red; text-align: center; padding-bottom: 1em;"><i>After account deletion your username will be unavailable for re-registraion until next season!</i></div>'
+                            + '<fieldset class="submit-buttons">'
+                            + '<input type="button" name="confirm" value="Yes" class="button2">&nbsp;'
+                            + '<input type="button" name="cancel" value="No" class="button2">'
+                            + '</fieldset>'
+                        phpbb.confirm(delmsg, function(del) {
+                            if (!del) {
+                                return;
+                            }
+                            let data = new FormData();
+                            data.append('form_token', $('input[name=form_token]').val())
+                            data.append('creation_time', $('input[name=creation_time]').val())
+                            data.append('nickname', $('#username_logged_in span[class^=username]').text())
+                            axios.post(window.location.origin + '/pthranking/account/delete', data)
+                            .then(res => {
+                                console.log(res.data)
+                            }).catch(err => {
+                                console.log(err)
+                            })
+                        }, false);
+                    })
+                    .append(
+                        $('<span/>')
+                        .css('color', '#bc8700').text('Delete account')
+                    )
+                )
+            )
             // country flag stuff
             var styles = document.createElement('link');
             styles.rel = 'stylesheet';
@@ -216,7 +249,6 @@ document.onreadystatechange = function () {
                 console.log(err)
             })
         }
-        // @TODO: intercept user delete (!)
 
     }
 }
