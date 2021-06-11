@@ -74,7 +74,7 @@ document.onreadystatechange = function () {
           data.append('creation_time', $('input[name=creation_time]').val());
           data.append('nickname', $('#username_logged_in span[class^=username]').text());
           axios.post(window.location.origin + '/pthranking/account/delete', data).then(function (res) {
-            console.log(res.data);
+            window.location.href = window.location.origin;
           })["catch"](function (err) {
             console.log(err);
           });
