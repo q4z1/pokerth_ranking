@@ -1,30 +1,20 @@
 <template>
-    <div class="game card">
-        <div class="card-header">
-            <div class="row">
-                <div class="col-md-6">
-                    <h1>{{ gameTitle }}</h1>
-                    <span>{{ game[0].start_time }} - {{ game[0].end_time }}</span>
-                </div>
-                <div class="col-md-6 text-right">
-                    <el-button type="default" @click="closeGame">Close</el-button></div>
-            </div>
-        </div>
-        <div class="card-body" v-if="theGame">
-            <data-tables :data="theGame" layout="tool, table">
-                <el-table-column v-for="title in titles"
-                :prop="title.prop"
-                :label="title.label"
-                :key="title.label"
-                sortable="custom">
-                </el-table-column>
-            </data-tables>
-        </div>
+    <div class="game">
+        <el-table v-if="theGame" :data="theGame"
+            :default-sort = "{prop: 'place', order: 'ascending'}"
+            style="width: 100%">
+            <el-table-column v-for="title in titles"
+            :prop="title.prop"
+            :label="title.label"
+            :key="title.label"
+            sortable>
+            </el-table-column>
+        </el-table>
     </div>
 </template>
 <script>
     export default {
-        props: ['game'],
+        props: ['gameid'],
         data: function() { 
             return {
                 theGame: false,
@@ -35,40 +25,48 @@
                     { prop: 'score', label: 'Final Score'},
                     { prop: 'games', label: 'Season Games'}
                 ],
-                gameTitle: '',
             }
         },
         mounted() {
-            this.theGame = []
-            this.gameTitle = this.game[0].name
-            for(let i=0;i<this.game[0].players.length;i++){
-                let p = this.game[0].players[i]
-                let player = {}
-                player.player = p.player.username
-                player.place = p.place
-                player.score = p.player.ranking.final_score/100
-                player.average = p.player.ranking.average_score / 100
-                player.games = p.player.ranking.season_games
-                this.theGame.push(player)
-            }
+            this.getGame()
         },
         methods: {
-            closeGame: function(){
-                this.$emit("close");
-            }
+            getGame: function(){
+                axios.get('/pthranking/game/get?g=' + this.gameid)
+                    .then(res => {
+                        if(res.data.status){
+                            let game = res.data.msg[0]
+                            this.theGame = []
+                            for(let i in game.players){
+                                let p = game.players[i]
+                                let player = {}
+                                if(typeof p !== 'undefined' && p.player !== null){
+                                    player.player = p.player.username
+                                    player.place = p.place
+                                    player.score = p.player.ranking.final_score/100
+                                    player.average = p.player.ranking.average_score / 100
+                                    player.games = p.player.ranking.season_games
+                                }else{
+                                    player.player = 'n/a'
+                                    player.place = p.place
+                                    player.score = 0
+                                    player.average = 0
+                                    player.games = 0
+                                }
+
+                                this.theGame.push(player)
+                            }
+                        }else{
+                            this.theGame = false
+                        }
+                    }).catch(err => {
+                        console.log(err)
+                        this.theGame = false
+                })
+            },
         }
     }
 </script>
 <style lang="scss">
-    .game.card{
-        position: absolute;
-        top: 0.5em;
-        left: 1em;
-        right: 1em;
-        background: #dddddd!important;
-        box-shadow: 0 0 0.1em 0.1em gray;
-        .el-table tr td, .el-table tr th {
-            cursor: default;
-        }
-    }
+
 </style>

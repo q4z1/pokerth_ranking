@@ -1,149 +1,172 @@
 <template>
-    <div class="container-fluid player">
-        <div class="row justify-content-center">
-            <div class="col-md-12">
-                <div v-if="player" class="card">
-                    <div class="card-header">
-                        <div class="row">
-                            <div class="col">
-                                <h1><div class="name">{{ player.username }}</div>
-                                    <div class="icons">
-                                        <span class="gender" v-if="player.gender">
-                                            <i v-if="player.gender === 'f'" class="icon fa-female gender" />
-                                            <i v-else-if="player.gender === 'm'" class="icon fa-male gender" />
-                                        </span>
-                                        <span v-if="player.country_iso && country.svg != 'n/a'" class="flag">
-                                            <img data-toggle="tooltip" @mouseenter="tipHover" @mouseleave="tipLeave" :title="country.title" :src="'/images/flags/' + country.svg + '.svg'" />
-                                        </span>
+    <div class="player">
+        <div class="inner" v-if="player">
+            <ul class="topiclist">
+                <li class="header">
+                    <dl class="row-item">
+                        <dt><div class="list-inner">
+                            {{ player.username }}
+                            <span class="icons">
+                                &nbsp;&nbsp;
+                                <span class="gender" v-if="player.gender">
+                                    <i v-if="player.gender === 'f'" class="icon fa-female gender" />
+                                    <i v-else-if="player.gender === 'm'" class="icon fa-male gender" />
+                                </span>
+                                <span v-if="player.country_iso && country.svg != 'n/a'" class="flag">
+                                    <img data-toggle="tooltip" :title="country.title" :src="'/images/flags/' + country.svg + '.svg'" />
+                                </span>
+                            </span>
+                        </div></dt>
+                    </dl>
+                </li>
+            </ul>
+            <ul class="topiclist forums">
+		        <li class="row">
+                    <div class="list-inner">
+                        <el-row class="data">
+                            <el-col :xs="24" :md="6" v-if="avatar" class="avatar before">
+                                <el-card class="box-card">
+                                    <img :src="avatar" :alt="player.username" :title="player.username" />
+                                </el-card>
+                            </el-col>
+                            <el-col class="data" :xs="24" :md="(avatar) ? 18 : 24">
+                                <el-card class="box-card fix">
+                                    <div slot="header" class="clearfix">
+                                        <span>Season Data</span>
                                     </div>
-                                </h1>
-                            </div>
-                            <div v-if="avatar" class="col avatar">
-                                <img :src="avatar" class="float-right" />
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h3>Season Data</h3>
+                                    <el-row>
+                                        <el-col :span="12">Ranking position:</el-col>
+                                        <el-col :span="12">{{ pos }}</el-col>
+                                    </el-row>
+                                    <el-row>
+                                        <el-col :span="12">Final Score:</el-col>
+                                        <el-col :span="12">{{ (player.ranking.final_score/100) }}</el-col>
+                                    </el-row>
+                                    <el-row>
+                                        <el-col :span="12">Ø Points:</el-col>
+                                        <el-col :span="12">{{ (player.ranking.average_score/100) }}</el-col>
+                                    </el-row>
+                                    <el-row>
+                                        <el-col :span="12">Total Points:</el-col>
+                                        <el-col :span="12">{{ player.ranking.points_sum }}</el-col>
+                                    </el-row>
+                                    <el-row>
+                                        <el-col :span="12">Number of games:</el-col>
+                                        <el-col :span="12">{{ player.ranking.season_games }}</el-col>
+                                    </el-row>
+                                    <el-row>
+                                        <el-col :span="12">Last 5 games place:</el-col>
+                                        <el-col :span="12">{{ last5.join(', ') }}</el-col>
+                                    </el-row>
+                                    <el-row>
+                                        <el-col :span="12">Number of games:</el-col>
+                                        <el-col :span="12">{{ player.ranking.season_games }}</el-col>
+                                    </el-row>
+                                </el-card>
+                            </el-col>
+                            <el-col :xs="24" :md="6" v-if="avatar" class="avatar after">
+                                <el-card class="box-card">
+                                    <img :src="avatar" :alt="player.username" :title="player.username" />
+                                </el-card>
+                            </el-col>
+                            <el-col :xs="24" class="games" :md="24" v-else>
+                                <el-card class="box-card fix">
+                                    <div slot="header" class="clearfix">
+                                        <span>Season Games</span>
                                     </div>
-                                    <div class="card-body">
-                                        <ul class="list-group data">
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Ranking position:
-                                                <span class="badge badge-default">{{ pos }}</span>
-                                            </li>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Final Score:
-                                                <span class="badge badge-default">{{ (player.ranking.final_score/100) }}</span>
-                                            </li>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Ø Points:
-                                                <span class="badge badge-default">{{ (player.ranking.average_score/100) }}</span>
-                                            </li>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Total Points:
-                                                <span class="badge badge-default">{{ player.ranking.points_sum }}</span>
-                                            </li>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Number of games:
-                                                <span class="badge badge-default">{{ player.ranking.season_games }}</span>
-                                            </li>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Last 5 games place:
-                                                <span class="badge badge-default">{{ last5.join(', ') }}</span>
-                                            </li>
-                                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                Location:
-                                                <span class="badge badge-default"></span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h3>Season Games</h3>
-                                    </div>
-                                    <div class="card-body" v-if="games">
-                                        <ul class="list-group games">
-                                            <li v-for="g in games" :key="g.game_idgame" class="game list-group-item ">
-                                                <div class="row">
-                                                    <div class="col text-primary" :data-gid="g.game_idgame" @click="getGame">{{ g.game.name }}</div>
-                                                </div>
-                                                <div class="row">
-                                                    <div class="col">{{ g.game.start_time }} - {{ g.game.end_time }}</div>
-                                                </div>
-                                            </li>
-                                        </ul>
+                                    <div v-if="games" class="list">
+                                        <el-row v-for="g in games" :key="g.game_idgame" class="game">
+                                            <el-col>
+                                                <el-row>
+                                                    <el-col>
+                                                        <el-collapse>
+                                                            <el-collapse-item :title="g.game.name">
+                                                                <game-component :gameid="g.game_idgame"></game-component>
+                                                            </el-collapse-item>
+                                                        </el-collapse>
+                                                    </el-col>
+                                                </el-row>
+                                                <el-row>
+                                                    <el-col class="date">{{ g.game.start_time }} - {{ g.game.end_time }}</el-col>
+                                                </el-row>
+                                                <el-row>
+                                                    <el-col class="divider"><hr /></el-col>
+                                                </el-row>
+                                            </el-col>
+                                        </el-row>
                                         <infinite-loading @infinite="infiniteHandler"></infinite-loading>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <hr />
-                        <div class="row">
-                            <div class="col">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h3>Season Stats</h3>
+                                </el-card>
+                            </el-col>
+                        </el-row>
+                        <el-row v-if="avatar" class="games">
+                            <el-col>
+                                <el-card class="box-card fix">
+                                    <div slot="header" class="clearfix">
+                                        <span>Season Games</span>
                                     </div>
-                                    <div class="card-body" v-if="stats">
-                                        <table class="table table-responsive">
-                                            <thead>
-                                                <tr>
-                                                    <th>Position:</th>
-                                                    <th>1.</th>
-                                                    <th>2.</th>
-                                                    <th>3.</th>
-                                                    <th>4.</th>
-                                                    <th>5.</th>
-                                                    <th>6.</th>
-                                                    <th>7.</th>
-                                                    <th>8.</th>
-                                                    <th>9.</th>
-                                                    <th>10.</th>
-                                                    <th style="border-left: 1px solid #bbbbbb">Total Games:</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td></td>
-                                                    <td>{{ stats['1'] }}</td>
-                                                    <td>{{ stats['2'] }}</td>
-                                                    <td>{{ stats['3'] }}</td>
-                                                    <td>{{ stats['4'] }}</td>
-                                                    <td>{{ stats['5'] }}</td>
-                                                    <td>{{ stats['6'] }}</td>
-                                                    <td>{{ stats['7'] }}</td>
-                                                    <td>{{ stats['8'] }}</td>
-                                                    <td>{{ stats['9'] }}</td>
-                                                    <td>{{ stats['10'] }}</td>
-                                                    <td style="border-left: 1px solid #bbbbbb">{{ player.ranking.season_games }}</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                        <hr />
-                                        <PieChart :chartData="games_chart"/>
-                                        <hr />
-                                        <BarChart :chartData="games_chart"/>
-                                        <hr />
+                                    <div v-if="games" class="list">
+                                        <el-row v-for="g in games" :key="g.game_idgame" class="game">
+                                            <el-col>
+                                                <el-row>
+                                                    <el-col>
+                                                        <el-collapse>
+                                                            <el-collapse-item :title="g.game.name">
+                                                                <game-component :gameid="g.game_idgame"></game-component>
+                                                            </el-collapse-item>
+                                                        </el-collapse>
+                                                    </el-col>
+                                                </el-row>
+                                                <el-row>
+                                                    <el-col class="date">{{ g.game.start_time }} - {{ g.game.end_time }}</el-col>
+                                                </el-row>
+                                                <el-row>
+                                                    <el-col class="divider"><hr /></el-col>
+                                                </el-row>
+                                            </el-col>
+                                        </el-row>
+                                        <infinite-loading @infinite="infiniteHandler"></infinite-loading>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
+                                </el-card>
+                            </el-col>
+                        </el-row>
+                        <el-row>
+                            <el-col>
+                                <el-card class="box-card">
+                                    <div slot="header" class="clearfix">
+                                        <span>Season Stats</span>
+                                    </div>
+                                    <el-table :data="[stats]" style="width: 100%">
+                                        <el-table-column
+                                            label="Position">
+                                        </el-table-column>
+                                        <el-table-column v-for="(stat, index) in stats"
+                                            :key="index"
+                                            :prop="index"
+                                            :label="index"
+                                            width="50px">
+                                        </el-table-column>
+                                    </el-table>
+                                    <hr />
+                                    <PieChart :chartData="games_chart"/>
+                                    <hr />
+                                    <BarChart :chartData="games_chart"/>
+                                </el-card>
+                            </el-col>
+                        </el-row>
                     </div>
-                </div>
-                <div class="card p-4 text-center" v-if="err">
-                    <strong class="text-danger">{{ err }}</strong>
-                </div>
-            </div>
+		        </li>
+            </ul>
         </div>
-        <game-component @close="closeGame()" v-if="game" :game="game"></game-component>
+        <div class="inner" v-else>
+            <ul class="topiclist">
+                <li class="header">
+                    <dl class="row-item">
+                        <dt><div class="list-inner">Player not found!</div></dt>
+                    </dl>
+                </li>
+            </ul>
+        </div>
     </div>
 </template>
 <script>
@@ -158,9 +181,9 @@
                 games: false,
                 stats: false,
                 games_chart: null,
-                game: false,
                 countries: null,
                 err: false,
+                modalVisible: false,
             }
         },
         computed: {
@@ -218,20 +241,6 @@
             tipLeave: function(evt){
                 $(evt.target).tooltip('hide')
             },
-            getGame: function(event){
-                let gid = $(event.target).attr('data-gid')
-                axios.get('/pthranking/game/get?g=' + gid)
-                    .then(res => {
-                        if(res.data.status){
-                            this.game = res.data.msg
-                        }else{
-                            this.game = false
-                        }
-                    }).catch(err => {
-                        console.log(err)
-                        this.game = false
-                })
-            },
             infiniteHandler: function($state){
                 axios.get('/pthranking/player/games/get?l=' + this.games.length + '&p=' + this.player.player_id).then(response => {
                     if(typeof response.data === 'object' && response.data.length){
@@ -249,82 +258,241 @@
                 if (typeof str != "string") return false
                 return !isNaN(str) && !isNaN(parseFloat(str))
             },
-            closeGame: function() {
-                this.game = false
-            }
         }
     }
 </script>
 <style lang="scss">
-    .content ul, .content ol {
-        margin: 0.8em 0;
+.player{
+    .fix{
+        .el-card__body{
+            min-height: 280px;
+            max-height: 280px;
+            height: 280px;
+            overflow-y: scroll;
+            margin: 1em 0;
+            padding: 0 1em;
+        }
     }
-    .card-header{
-        .avatar {
+    ul{
+        margin: 0!important;
+        .row-item{
+            margin: 0.4em!important;
+        }
+        &.forums{
+            margin: 0!important;
+            padding: 0;
+            .el-card{
+                background-color: inherit;
+                color: inherit;
+            }
+        }
+    }
+    .avatar {
+        .el-card{
+            width: auto;
+            text-align: center;
             img{
                 max-width: 175px;
+                width: 100%;
             }
-            
         }
-        h1{
-            div{
-                float: left;
-                &.name{
-                    margin-right: 0.5em;
+    }
+    span{
+        &.icons{
+            line-height: 1.11em;
+            span{
+                &.gender{
+                    background: transparent;
+                    font-size: 100%;
+                    i{
+                        font-size: 0.7em;
+                        &.fa-female{
+                            color: var(--pink);
+                        }
+                        &.fa-male{
+                            color: var(--cyan);
+                        }
+                    }
                 }
-                &.icons{
-                    line-height: 1.11em;
-                    span{
-                        &.gender{
-                            background: transparent;
-                            font-size: 100%;
-                            i{
-                                font-size: 0.7em;
-                                &.fa-female{
-                                    color: var(--pink);
-                                }
-                                &.fa-male{
-                                    color: var(--cyan);
-                                }
-                            }
-                        }
-                        &.flag{
-                            img{
-                                margin-top: 0.1em;
-                                width: 40px;
-                                height: 20px;
-                            }
-                        }
+                &.flag{
+                    img{
+                        width: 40px;
+                        height: 20px;
                     }
                 }
             }
         }
     }
-    li.game{
-        font-size: smaller!important;
+    .games{
+        .list{
+            .game{
+                .date{
+                    font-size: 0.7em;
+                }
+                .el-col{
+                    padding-bottom: 0;
+                    hr{
+                        margin-bottom: 0px;
+                    }
+                }
+            }
+        }
     }
-    li.game div.text-primary{
-        cursor: pointer;
+    .data{
+        .el-col{
+            padding-bottom: 1em;
+        }
     }
-    .player{
-        position: relative;
+    .el-table{
+        th {
+            background-color: transparent!important;
+        }
+        tr{
+            cursor: default;
+            background-color: transparent!important;
+            &:hover{
+                background-color: transparent!important;
+            }
+            td{
+                background-color: transparent!important;
+                &:hover{
+                    background-color: transparent!important;
+                }
+            }
+        }
+        thead tr{
+            background-color: transparent!important;
+            &:hover{
+                background-color: transparent!important;
+            }
+            td{
+                background-color:transparent!important;
+                &:hover{
+                    background-color: transparent!important;
+                }
+            }
+        }
     }
-</style>
-<style scoped>
-    ul.games{
-        min-height: 336px;
-        max-height: 336px;
-        overflow-y: auto;
+    .el-collapse{
+        background: transparent !important;
+        border-bottom: 0!important;
+        border-top: 0!important;
+        border-color: transparent!important;
+        border-width: 0!important;
+        *:not(.sort-caret){
+            background: transparent !important;
+            border-bottom: 0!important;
+            border-top: 0!important;
+            border-color: transparent!important;
+            border-width: 0!important;
+        }
+        .el-table{
+            .sort-caret{
+                border-width: 5px!important;
+            }
+            .ascending .ascending{
+                border-bottom-color: #383c44;
+            }
+            .descending .descending{
+                border-top-color: #383c44;
+            }
+            .el-table__header-wrapper{
+                cursor: pointer!important;
+                border-bottom-width: 1px!important;
+                border-bottom-color: #EBEEF5!important;
+                border-bottom: 1px solid #EBEEF5!important;
+            }
+            td, th{
+                padding: 0.1em 0;
+            }
+            tr{
+                &:last-child{
+                    td, th{
+                        padding: 0 0 0.2em 0;
+                    }
+                }
+            }
+        }
+        .el-collapse-item{
+            .el-collapse-item__header{
+                color: inherit;
+                font-size: 1em;
+                cursor: pointer!important;
+            }
+            .el-collapse-item__content {
+                padding-bottom: 0.6em;
+                color: inherit;
+            }
+            .el-collapse-item__wrap {
+                border-bottom: 0!important;
+            }
+        }
     }
-    .ul.data{
-        min-height: 336px;
-        max-height: 336px;
-    }
+
     .infinite-loading-container{
         visibility: hidden;
         height: 0px;
     }
-    .card{
-        background-color: transparent;
+    @media only screen and (max-width: 991px){
+        .after{
+            display: none;
+        }
     }
+    @media only screen and (min-width: 992px){
+        .el-col-xs-24 {
+            &.avatar{
+                padding-left: 1em!important;
+            }
+        }
+        .before{
+            display: none;
+        }
+    }
+
+}
+.fd_dark .player{
+    background: #242a36 !important;
+    ul{
+        &.forums{
+            .el-card{
+                border: 1px solid #383c44;
+                background-color: inherit;
+                color: inherit;
+            }
+            .el-card__header {
+                border-bottom: 1px solid #383c44;
+            }
+        }
+    }
+    li.row:hover{
+        background: inherit!important;
+    }
+    .el-table{
+        background-color: transparent!important;
+        tr{
+            background-color: transparent!important;
+            &:hover{
+                background-color: transparent!important;
+            }
+            td{
+                background-color:transparent!important;
+                &:hover{
+                    background-color: transparent!important;
+                }
+            }
+        }
+        thead tr{
+            background-color: transparent!important;
+            &:hover{
+                background-color: transparent!important;
+            }
+            td{
+                background-color:transparent!important;
+                &:hover{
+                    background-color: transparent!important;
+                }
+            }
+        }
+    }
+}
 </style>

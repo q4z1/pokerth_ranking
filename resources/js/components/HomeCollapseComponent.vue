@@ -49,7 +49,6 @@ export default {
 </script>
 <style lang="scss">
 #home-collapse{
-
     background-color: #2d3039;
     margin: 1em 0;
     padding: 1em;

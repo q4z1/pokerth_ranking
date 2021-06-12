@@ -1,117 +1,319 @@
 <template>
     <div>
-        <b-container v-if="game">
-            <b-row class="mt-3">
-                <b-col class="mt-2" sm="6" md="2"><strong>Game ID:</strong></b-col>
-                <b-col sm="6" md="10">
-                    <b-form-select v-model="game_id" :options="game_ids" :label="'Game:'" @change="getGame"></b-form-select>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <hr />
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col class="mt-3">
-                    <h3>Basic data</h3>
-                    <b-row class="mt-3">
-                        <b-col><strong>Winner:</strong></b-col>
-                        <b-col><a :href="'/player?u=' + game['player_list'][1][0]" :title="game['player_list'][1][0]">{{ game['player_list'][1][0] }}</a></b-col>
-                    </b-row>
-                    <b-row>
-                        <b-col><strong>Number of Players:</strong></b-col>
-                        <b-col>{{ game['player_list'][0].length }}</b-col>
-                    </b-row>
-                    <b-row>
-                        <b-col><strong>Hands:</strong></b-col>
-                        <b-col>{{ game['player_list'][3][0] }}</b-col>
-                    </b-row>
-                    <b-row>
-                        <b-col><strong>Date:</strong></b-col>
-                        <b-col>{{ game['session']['Date'] }}</b-col>
-                    </b-row>
-                    <b-row>
-                        <b-col><strong>Session started:</strong></b-col>
-                        <b-col>{{ game['session']['Time'] }}</b-col>
-                    </b-row>
-                </b-col>
-                <b-col class="mt-3">
-                    <h3>Ranking</h3>
-                    <b-table id="game_ranking" striped hover :items="ranking" @row-clicked="rowClick" class="mt-3">
-                        <template #cell(_)="data">
-                            <span v-html="data.value"></span>
-                        </template>
-                    </b-table>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Hand Cash</h3>
-                    <line-chart-component :chart-data="datacollection1" :options="options1"></line-chart-component>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Pot Size</h3>
-                    <bar-chart-component :chart-data="datacollection2" :options="options2"></bar-chart-component>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Most hands played</h3>
-                    <b-table striped :items="most_hands"></b-table>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Best hands</h3>
-                    <b-table striped :items="best_hands"></b-table>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Most wins</h3>
-                    <b-table striped :items="most_wins"></b-table>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Highest wins</h3>
-                    <b-table striped :items="highest_wins"></b-table>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Longest wins</h3>
-                    <b-table striped :items="longest_wins"></b-table>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Longest losses</h3>
-                    <b-table striped :items="longest_losses"></b-table>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Most bets/raises</h3>
-                    <b-table striped :items="most_bets"></b-table>
-                </b-col>
-            </b-row>
-            <b-row class="mt-3">
-                <b-col>
-                    <h3>Most all in</h3>
-                    <b-table striped :items="most_bingo"></b-table>
-                </b-col>
-            </b-row>
-            <b-row>
-                <b-col><small>
-                    *)	percental value: absolute value in relation to hands played<br>
-                    **)	percental value: number of hands with at least one bet/raise in relation to all hands played
-                </small></b-col>
-            </b-row>
-        </b-container>
+        <div v-if="game" class="game-log inner">
+            <ul class="topiclist">
+                <li class="header">
+                    <dl class="row-item">
+                        <dt><div class="list-inner">
+                            Logfile-Analysis
+                        </div></dt>
+                    </dl>
+                </li>
+            </ul>
+            <ul class="topiclist forums">
+		        <li class="row">
+                    <div class="list-inner">
+                        <el-row>
+                            <el-col :xs="12" :md="6"><strong>Game ID:</strong></el-col>
+                            <el-col :xs="12" :md="18">
+                                <el-select v-model="game_id" @change="getGame" size="small">
+                                <el-option
+                                    v-for="item in game_ids"
+                                    :key="item.value"
+                                    :label="item.label"
+                                    :value="item.value">
+                                </el-option>
+                                </el-select>
+                            </el-col>
+                        </el-row>
+                        <el-row>
+                            <el-col>
+                                <hr />
+                            </el-col>
+                        </el-row>
+                        <el-row>
+                            <el-col :xs="24" :md="12" class="pb">
+                                <h3>Basic data</h3>
+                                <el-row>
+                                    <el-col :span="12"><strong>Winner:</strong></el-col>
+                                    <el-col :span="12"><a :href="'/player?u=' + game['player_list'][1][0]" :title="game['player_list'][1][0]">{{ game['player_list'][1][0] }}</a></el-col>
+                                </el-row>
+                                <el-row>
+                                    <el-col :span="12"><strong>Number of Players:</strong></el-col>
+                                    <el-col :span="12">{{ game['player_list'][0].length }}</el-col>
+                                </el-row>
+                                <el-row>
+                                    <el-col :span="12"><strong>Hands:</strong></el-col>
+                                    <el-col :span="12">{{ game['player_list'][3][0] }}</el-col>
+                                </el-row>
+                                <el-row>
+                                    <el-col :span="12"><strong>Date:</strong></el-col>
+                                    <el-col :span="12">{{ game['session']['Date'] }}</el-col>
+                                </el-row>
+                                <el-row>
+                                    <el-col :span="12"><strong>Session started:</strong></el-col>
+                                    <el-col :span="12">{{ game['session']['Time'] }}</el-col>
+                                </el-row>
+                            </el-col>
+                            <el-col :xs="24" :md="12" class="pb">
+                                <h3>Ranking</h3>
+                                <el-table :data="ranking" style="width: 100%" @row-click="rowClick" class="ranking">
+                                    <el-table-column
+                                        prop="pos"
+                                        label="#"
+                                        width="50">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="player"
+                                        label="Player">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="hand"
+                                        label="Hand">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="_"
+                                        label=" ">
+                                        <template slot-scope="scope">
+                                            <span v-html="scope.row['_']"></span>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Hand Cash</h3>
+                                <line-chart-component :chart-data="datacollection1" :options="options1"></line-chart-component>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Pot Size</h3>
+                                <bar-chart-component :chart-data="datacollection2" :options="options2"></bar-chart-component>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Most hands played</h3>
+                                <el-table :data="most_hands" style="width: 100%" class="ranking">
+                                    <el-table-column
+                                        prop="pos"
+                                        label="#"
+                                        width="50">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="player"
+                                        label="Player">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="count"
+                                        label="Count">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="_10_to_7_player"
+                                        label="10 to 7">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="_6_to_4_player"
+                                        label="6 to 4">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="_3_to_1_player"
+                                        label="3 to 1">
+                                    </el-table-column>
+                                </el-table>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Best hands</h3>
+                                <el-table :data="best_hands" style="width: 100%" class="ranking">
+                                    <el-table-column
+                                        prop="pos"
+                                        label="#"
+                                        width="50">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="cards"
+                                        label="Cards">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="player"
+                                        label="Player">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="hand"
+                                        label="Hand">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="result"
+                                        label="Result">
+                                    </el-table-column>
+                                </el-table>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Most wins</h3>
+                                <el-table :data="most_wins" style="width: 100%" class="ranking">
+                                    <el-table-column
+                                        prop="pos"
+                                        label="#"
+                                        width="50">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="player"
+                                        label="Player">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="count *"
+                                        label="Count *)">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="highest"
+                                        label="Highest">
+                                    </el-table-column>
+                                </el-table>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Highest wins</h3>
+                                <el-table :data="highest_wins" style="width: 100%" class="ranking">
+                                    <el-table-column
+                                        prop="pos"
+                                        label="#"
+                                        width="50">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="amount"
+                                        label="Amount">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="player"
+                                        label="Player">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="hand"
+                                        label="Hand">
+                                    </el-table-column>
+                                </el-table>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Longest wins</h3>
+                                <el-table :data="longest_wins" style="width: 100%" class="ranking">
+                                    <el-table-column
+                                        prop="pos"
+                                        label="#"
+                                        width="50">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="duration"
+                                        label="Duration">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="player"
+                                        label="Player">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="total_gain"
+                                        label="Total gain">
+                                    </el-table-column>
+                                </el-table>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Longest losses</h3>
+                                <el-table :data="longest_losses" style="width: 100%" class="ranking">
+                                    <el-table-column
+                                        prop="pos"
+                                        label="#"
+                                        width="50">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="duration"
+                                        label="Duration">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="player"
+                                        label="Player">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="total_loss"
+                                        label="Total loss">
+                                    </el-table-column>
+                                </el-table>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Most bets/raises</h3>
+                                <el-table :data="most_bets" style="width: 100%" class="ranking">
+                                    <el-table-column
+                                        prop="pos"
+                                        label="#"
+                                        width="50">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="player"
+                                        label="Player">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="Count **"
+                                        label="Count **)">
+                                    </el-table-column>
+                                </el-table>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col>
+                                <h3>Most all in</h3>
+                                <el-table :data="most_bingo" style="width: 100%" class="ranking">
+                                    <el-table-column
+                                        prop="pos"
+                                        label="#"
+                                        width="50">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="player"
+                                        label="Player">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="total_count"
+                                        label="Total count">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="in_preflop"
+                                        label="In preflop">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="first_5_hands"
+                                        label="First 5 hands">
+                                    </el-table-column>
+                                    <el-table-column
+                                        prop="total_won"
+                                        label="Total won">
+                                    </el-table-column>
+                                </el-table>
+                            </el-col>
+                        </el-row>
+                        <el-row class="pb">
+                            <el-col><small>
+                                *)	percental value: absolute value in relation to hands played<br>
+                                **)	percental value: number of hands with at least one bet/raise in relation to all hands played
+                            </small></el-col>
+                        </el-row>
+                        <el-row>
+                            <el-col><hr /></el-col>
+                        </el-row>
+                    </div>
+		        </li>
+            </ul>
+        </div>
     </div>
 </template>
 <script>
@@ -399,22 +601,103 @@ export default {
     },
 }
 </script>
-<style lang="scss" scoped>
-    tbody tr{
-        cursor: pointer;
+<style lang="scss">
+.content ul, .content ol {
+    margin: 0!important;
+}
+ul.forums, ul.topics {
+    padding: 0;
+}
+.el-select-dropdown{
+    border-color: #EBEEF5;
+    .el-select-dropdown__item.hover, .el-select-dropdown__item:hover{
+        background-color: #fff;
     }
-    table{
-        overflow-x: scroll;
+}
+.game-log{
+s    .el-input__inner{
+        background-color: transparent;
     }
-</style>
-<style>
-    #app{
-        position: relative;
+
+    .el-select .el-input__inner, .el-input{
+        &:focus,&:hover, &.is-focus .el-input__inner{
+            border-color: #383c44;
+        }
     }
-    #delete footer{
-        display: none;
+
+    .pb{
+        padding-bottom: 1em;
     }
-    table > tbody > tr{
-        cursor: pointer;
+    h3{
+        padding-bottom: 0.5em;
     }
+    .el-table{
+        background-color: transparent!important;
+        td, th{
+            padding: 0.2em 0;
+            border-bottom: 0;
+        }
+        tr{
+            &:last-child{
+                td, th{
+                    padding: 0 0 0.3em 0;
+                }
+            }
+        }
+        &.ranking{
+            tr{
+                cursor: pointer;
+            }
+        }
+        th {
+            background-color: transparent!important;
+            border-bottom: 0;
+        }
+        tr{
+            cursor: default;
+            background-color: transparent!important;
+            &:hover{
+                background-color: transparent!important;
+            }
+            td{
+                background-color: transparent!important;
+                &:hover{
+                    background-color: transparent!important;
+                }
+            }
+        }
+        thead tr{
+            background-color: transparent!important;
+            &:hover{
+                background-color: transparent!important;
+            }
+            td{
+                background-color:transparent!important;
+                &:hover{
+                    background-color: transparent!important;
+                }
+            }
+        }
+        .el-table__header-wrapper{
+            border-bottom: 1px solid #EBEEF5!important;
+        }
+    }
+}
+.fd_dark{
+    .popper__arrow, .popper__arrow::after, .popper__arrow *{
+        border-bottom-color: #242a36!important;
+    }
+    .el-select-dropdown{
+        border-color: #242a36;
+        background-color: #242a36;
+        .el-select-dropdown__item{
+            background-color: #242a36;
+        }
+    }
+    .game-log{
+        li.row:hover{
+            background-color: #242a36!important;
+        }
+    }
+}
 </style>

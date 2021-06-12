@@ -36,12 +36,9 @@ class PlayerController extends Controller
         ->get()->map(function($game){
             return $game->place;
         });
-        $pos_array = PlayerRanking::orderBy('final_score', 'DESC')->get();
-        $pos = 1;
-        foreach($pos_array as $player){
-            if($player->player_id == $res->player_id) break;
-            $pos++;
-        }
+        $pr = PlayerRanking::find($res->player_id);
+
+        $pos = PlayerRanking::where('final_score', '>=', $pr->final_score)->orderBy('final_score', 'DESC')->count();
         $games = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(40)->get();
         $aGames = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->get();
         $stats = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0];
@@ -67,20 +64,15 @@ class PlayerController extends Controller
         ->where('confirm_id', $request->confirm_id)
         ->where('code', $request->confirm_code)
         ->first();
-
         if(!$phpbb_confirm) return ['status' => false, 'msg' => 'code wrong'];
         else if($request->new_password != $request->password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
-
         $p = Player::where('email', $request->email)->first();
         if($p) return ['status' => false, 'msg' => 'email already used in ranking db'];
-
         $p2 = DB::table('pokerth.phpbb_users')
         ->selectRaw('*')
         ->where('user_email', $request->email)
         ->first();
         if($p2) return ['status' => false, 'msg' => 'email already used in forum db'];
-
-
         // create player
         $p = new Player();
         $p->username = $request->username;
@@ -334,29 +326,40 @@ class PlayerController extends Controller
         $page = $request->input('page', 1);
         $pagesize = $request->input('pageSize', 50);
         $sort = $request->input('sort');
-        $all = PlayerRanking::where('player_ranking.username', 'NOT LIKE', 'deleted_%')->get();
-        $total = $all->count();
+        if($sort['prop'] === 'rank_pos') $sort['prop'] = 'final_score';
+        $total = PlayerRanking::where([
+            ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
+            ['player_ranking.season_games', '>', 3],
+        ])->count();
         $query = DB::table('player_ranking')
         ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
-        ->select('player_ranking.*', 'player.country_iso', 'player.gender')
-        ->where('player_ranking.username', 'NOT LIKE', 'deleted_%')
+        ->selectRaw('player_ranking.*, player.country_iso, player.gender')
+        ->where([
+            ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
+            ['player_ranking.season_games', '>', 3],
+        ])
         ->orderBy($sort['prop'], (($sort['order'] == 'descending') ? 'DESC' : 'ASC'))
         ->offset(($page-1)*$pagesize)->limit($pagesize);
         if(!empty($filters)){
             $query->where('player_ranking.username', 'LIKE', $filters['value'] . '%');
         }
-        $leaderboard = $query->get()->map(function($player){
+        $leaderboard = $query->get()->map(function($player, $index) use($request, $filters){
+            if(empty($filters)){
+                $page = $request->input('page', 1);
+                $pagesize = $request->input('pageSize', 50);
+                $player->rank_pos = ($page-1)*$pagesize + $index + 1;
+            }else{
+                $player->rank_pos = DB::table('player_ranking')->where([
+                    ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
+                    ['player_ranking.season_games', '>', 3],
+                    ['player_ranking.final_score', '>=', $player->final_score],
+                ])->count();
+            }
+            $player->gender_country = ['gender' => $player->gender, 'country' => $player->country_iso];
             $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
             $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
             return $player;
         });
-        $lp = [];
-        foreach($leaderboard as $index => $pos){
-            $page = $request->input('page', 1);
-            $pagesize = $request->input('pageSize', 50);
-            $pos->rank_pos = ($page-1)*$pagesize + $index + 1;
-            $lp[] = $pos;
-        }
-        return ['total' => $total, 'data' => $lp];
+        return ['total' => $total, 'data' => $leaderboard];
     }
 }

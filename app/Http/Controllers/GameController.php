@@ -47,47 +47,12 @@ class GameController extends Controller
         for($i=1;$i<=10;$i++)
         {
             $p = PlayerRanking::where('username', $request->input('u' . $i))->first();
-            if($p) $table[] = $p;
+            if($p){
+                $p->rank_pos = PlayerRanking::where('final_score', '>=', $p->final_score)->orderBy('final_score', 'DESC')->count();
+                $table[] = $p;
+            }
         }
         return ['status' => true, 'msg' => $table];
-    }
-
-    public function getLeaderboard(Request $request){
-        $filters = $request->input('filters');
-        $page = $request->input('page', 1);
-        $pagesize = $request->input('pageSize', 50);
-        $sort = $request->input('sort');
-        
-        $all = PlayerRanking::where('player_ranking.username', 'NOT LIKE', 'deleted_%')->get();
-
-        $ppos = 1;
-
-        $total = $all->count();
-
-        $query = DB::table('player_ranking')
-        ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
-        ->select('player_ranking.*', 'player.country_iso', 'player.gender')
-        ->where('player_ranking.username', 'NOT LIKE', 'deleted_%')
-        ->orderBy($sort['prop'], (($sort['order'] == 'descending') ? 'DESC' : 'ASC'))
-        ->offset(($page-1)*$pagesize)->limit($pagesize);
-        if(!empty($filters)){
-            $query->where('player_ranking.username', 'LIKE', $filters['value'] . '%');
-        }
-
-        $leaderboard = $query->get()->map(function($player){
-            $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
-            $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
-            return $player;
-        });
-        $lp = [];
-        foreach($leaderboard as $index => $pos){
-            $page = $request->input('page', 1);
-            $pagesize = $request->input('pageSize', 50);
-            $pos->rank_pos = ($page-1)*$pagesize + $index + 1;
-            $lp[] = $pos;
-        }
-        return ['total' => $total, 'data' => $lp];
-
     }
 
     public function getCOD(){

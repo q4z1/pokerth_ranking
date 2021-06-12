@@ -1,18 +1,18 @@
 <template>
-    <div class="row" v-if="champions">
-        <div class="col cod">
-            <div class="card">
-                <div class="card-body">
-                    <h2>Champions of the Day</h2>
-                    <ol>
-                        <li><a :href="champions[0]['url']" v-html="champions[0]['username']" target="_blank"></a></li>
-                        <li><a :href="champions[1]['url']" v-html="champions[1]['username']" target="_blank"></a></li>
-                        <li><a :href="champions[2]['url']" v-html="champions[2]['username']" target="_blank"></a></li>
-                    </ol>
-                </div>
-            </div>
-            <hr />
-        </div>
+    <div>
+        <el-row v-if="champions">
+            <el-col class="cod">
+                <h2>Champions of the Day</h2>
+                <ol>
+                    <li><a :href="champions[0]['url']" v-html="champions[0]['username']" target="_blank"></a></li>
+                    <li><a :href="champions[1]['url']" v-html="champions[1]['username']" target="_blank"></a></li>
+                    <li><a :href="champions[2]['url']" v-html="champions[2]['username']" target="_blank"></a></li>
+                </ol>
+            </el-col>
+        </el-row>
+        <el-row>
+            <el-col><hr /></el-col>
+        </el-row>
     </div>
 </template>
 <script>
@@ -39,16 +39,13 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-    .col.cod{
-        margin-bottom: 30px;
-        margin-left: auto;
-        margin-right: auto;
-        width: 90%;
-
+    .el-col.cod{
         * {
             background-color: transparent!important;
         }
-
+        width: 86%;
+        margin: 0 7%;
+        text-align: center;
         ol{
             list-style-position: inside;
             margin: 0;
