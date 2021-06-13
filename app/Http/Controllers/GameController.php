@@ -17,9 +17,12 @@ class GameController extends Controller
         $g = $request->input('g', '');
         if($g == '') return ['status' => false, 'msg' => 'Missing Parameter'];
 
-        $game = "Game loded";
-
-        $game = Game::where('idgame', $g)->with('players')->get();
+        $game = Game::where('idgame', $g)->with('players.player.ranking')->get()->map(function($g){
+            foreach($g->players as $i => $p){
+                $g->players[$i]->player->rank = PlayerRanking::where('final_score', '>=', $p->player->ranking->final_score)->orderBy('final_score', 'DESC')->count();
+            }
+            return $g;
+        });
 
         return ['status' => true, 'msg' => $game];
     }

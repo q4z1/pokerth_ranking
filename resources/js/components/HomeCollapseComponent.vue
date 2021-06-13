@@ -1,16 +1,16 @@
 <template>
     <div v-if="html">
-        <b-collapse id="home-collapse" :visible="visible">
-            <b-button class="close" @click="closeCollapse">x</b-button>
+        <div id="home-collapse" v-if="!disabled">
+            <a class="close" @click="closeCollapse">x</a>
             <div v-html="html"></div>
-        </b-collapse>
+        </div>
     </div>    
 </template>
 <script>
 export default {
     data() {
         return {
-            visible: true,
+            disabled: false,
             html: false
         }
     },
@@ -21,7 +21,7 @@ export default {
             .then(res => {
                 if(typeof res.data.success !== 'undefined' && res.data.success === true){
                     this.html =res.data.html
-                    this.visible = true
+                    this.disabled = false
                 }else{
                     console.log(res.data)
                 }
@@ -37,7 +37,7 @@ export default {
             let exp = new Date();
             exp.setTime(exp.getTime() + 1000 * 604800);
             window.document.cookie = 'closeHomeCollapse=true; expires='+exp.toUTCString()+';path=/'
-            this.visible = false
+            this.disabled = true
         },
         getCookie(name) {
             let re = new RegExp(name + "=([^;]+)");
@@ -58,7 +58,7 @@ export default {
         font-weight: normal;
         padding-bottom: 1.2em;
     }
-    button.close{
+    a.close{
         position: absolute;
         top: 0.15em;
         right: 0.15em;
@@ -67,8 +67,10 @@ export default {
         font-weight: normal;
         font-size: 1.4em;
         vertical-align: middle;
+        cursor: pointer;
         &:hover{
             color: #838b98;
+            text-decoration: none;
         }
     }
 }
@@ -76,7 +78,7 @@ export default {
     background-color: #242a36;
     color: #838b98;
     border: 1px solid rgba(255, 255, 255, 0.04);
-    button.close{
+    a.close{
         &:hover{
             color: #bec4c9;
         }

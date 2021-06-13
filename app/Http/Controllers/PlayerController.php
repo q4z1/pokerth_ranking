@@ -49,7 +49,23 @@ class PlayerController extends Controller
         foreach($stats as $stat){
             $bar_stats[] = $stat;
         }
-        return ['status' => true, 'msg' => ['player' => $res, 'last5' => $last5, 'pos' => $pos, 'games' => $games, 'stats' => $stats, 'bar_stats' => $bar_stats]];
+        // percentage value num places
+        $ag = $aGames->count();
+        $p_stats = [];
+        foreach($stats as $place => $stat){
+            $p_stats[$place] = round($stat / ($ag/100), 1) . "%";
+        }
+
+        return ['status' => true, 'msg' => ['player' => $res, 'last5' => $last5, 'pos' => $pos, 'games' => $games, 'stats' => [$stats, $p_stats], 'bar_stats' => $bar_stats]];
+    }
+
+    public function search(Request $request)
+    {
+        $nick = $request->input('username', null);
+        if(is_null($nick)){
+            return ['status' => false, 'msg' => 'Missing Parameter!'];
+        }
+        return ['success' => true, 'players' => Player::where('username', 'LIKE', $nick . '%')->get()];
     }
 
     public function games(Request $request)

@@ -615,7 +615,7 @@ ul.forums, ul.topics {
     }
 }
 .game-log{
-s    .el-input__inner{
+    .el-input__inner{
         background-color: transparent;
     }
 

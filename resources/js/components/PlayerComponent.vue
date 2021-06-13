@@ -30,7 +30,7 @@
                                 </el-card>
                             </el-col>
                             <el-col class="data" :xs="24" :md="(avatar) ? 18 : 24">
-                                <el-card class="box-card fix">
+                                <el-card class="box-card">
                                     <div slot="header" class="clearfix">
                                         <span>Season Data</span>
                                     </div>
@@ -136,15 +136,15 @@
                                     <div slot="header" class="clearfix">
                                         <span>Season Stats</span>
                                     </div>
-                                    <el-table :data="[stats]" style="width: 100%">
+                                    <el-table :data="stats" style="width: 100%">
                                         <el-table-column
                                             label="Position">
                                         </el-table-column>
-                                        <el-table-column v-for="(stat, index) in stats"
+                                        <el-table-column v-for="(stat, index) in stats[0]"
                                             :key="index"
                                             :prop="index"
                                             :label="index"
-                                            width="50px">
+                                            width="60px">
                                         </el-table-column>
                                     </el-table>
                                     <hr />
@@ -162,9 +162,32 @@
             <ul class="topiclist">
                 <li class="header">
                     <dl class="row-item">
-                        <dt><div class="list-inner">Player not found!</div></dt>
+                        <dt><div class="list-inner">Player search</div></dt>
                     </dl>
                 </li>
+            </ul>
+            <ul class="topiclist forums">
+		        <li class="row">
+                    <div class="list-inner">
+                        <el-select
+                            v-model="value"
+                            multiple
+                            filterable
+                            remote
+                            reserve-keyword
+                            placeholder="Username"
+                            :remote-method="searchPlayer"
+                            :loading="loading"
+                            @change="getSelectedPlayer">
+                            <el-option
+                                v-for="item in players"
+                                :key="item.player_id"
+                                :label="item.username"
+                                :value="item.player_id">
+                            </el-option>
+                        </el-select>
+                    </div>
+		        </li>
             </ul>
         </div>
     </div>
@@ -176,6 +199,7 @@
         data: function() { 
             return {
                 player: false,
+                players: [],
                 last5: false,
                 pos: false,
                 games: false,
@@ -184,6 +208,8 @@
                 countries: null,
                 err: false,
                 modalVisible: false,
+                loading: false,
+                value: [],
             }
         },
         computed: {
@@ -235,6 +261,43 @@
                         this.player = false
                 })
             },
+            async searchPlayer(query) {
+                if (query !== '' && query.length > 2) {
+                    this.loading = true;
+                    let queryInfo = new FormData()
+                    queryInfo.append('username', query)
+                    const res = await axios.post('/pthranking/player/search', queryInfo);
+                    console.log(res.data)
+                    if(typeof res.data.success !== 'undefined' && res.data.success === true)
+                    {
+                        this.players = res.data.players
+                    }
+                    this.loading = false
+                }else{
+                    this.players = []
+                }
+            },
+            getSelectedPlayer: function(player_id){
+                let param = 'player_id'
+                axios.get('/pthranking/player/show?' + param + '=' + player_id)
+                    .then(res => {
+                        if(res.data.status){
+                            this.player = res.data.msg.player
+                            this.last5 = res.data.msg.last5
+                            this.pos = res.data.msg.pos
+                            this.games = res.data.msg.games
+                            this.stats = res.data.msg.stats
+                            this.games_chart = res.data.msg.bar_stats
+                            this.err = false
+                        }else{
+                            this.err = res.data.msg
+                            this.player = false
+                        }
+                    }).catch(err => {
+                        this.err = err
+                        this.player = false
+                })
+            },
             tipHover: function(evt){
                 $(evt.target).tooltip('show')
             },
@@ -262,16 +325,23 @@
     }
 </script>
 <style lang="scss">
+.el-select-dropdown{
+    border-color: #EBEEF5!important;
+    li.el-select-dropdown__item{
+        background-color: #fff!important;
+    }
+}
 .player{
     .fix{
         .el-card__body{
-            min-height: 280px;
-            max-height: 280px;
-            height: 280px;
+            min-height: 300px;
+            max-height: 300px;
+            height: 300px;
             overflow-y: scroll;
             margin: 1em 0;
             padding: 0 1em;
         }
+        padding-bottom: 1em;
     }
     ul{
         margin: 0!important;
@@ -337,6 +407,7 @@
                 }
             }
         }
+        padding-bottom: 1em;
     }
     .data{
         .el-col{
@@ -369,6 +440,26 @@
                 background-color:transparent!important;
                 &:hover{
                     background-color: transparent!important;
+                }
+            }
+        }
+    }
+    .el-select{
+        .el-select__tags{
+            .el-tag{
+                display: none;
+            }
+        }
+        .el-input{
+            &.is-focus{
+                .el-input__inner{
+                    border-color: #606266!important;
+                }
+            }
+            .el-input__inner{
+                background-color: inherit!important;
+                &:hover,&:focus,&:active{
+                    border-color:#606266!important;
                 }
             }
         }
@@ -450,48 +541,59 @@
     }
 
 }
-.fd_dark .player{
-    background: #242a36 !important;
-    ul{
-        &.forums{
-            .el-card{
-                border: 1px solid #383c44;
-                background-color: inherit;
-                color: inherit;
-            }
-            .el-card__header {
-                border-bottom: 1px solid #383c44;
-            }
-        }
-    }
-    li.row:hover{
-        background: inherit!important;
-    }
-    .el-table{
-        background-color: transparent!important;
-        tr{
-            background-color: transparent!important;
-            &:hover{
-                background-color: transparent!important;
-            }
-            td{
-                background-color:transparent!important;
-                &:hover{
-                    background-color: transparent!important;
+.fd_dark{
+    .player{
+        background: #242a36 !important;
+        ul{
+            &.forums{
+                .el-card{
+                    border: 1px solid #383c44;
+                    background-color: inherit;
+                    color: inherit;
+                }
+                .el-card__header {
+                    border-bottom: 1px solid #383c44;
                 }
             }
         }
-        thead tr{
+        li.row:hover{
+            background: inherit!important;
+        }
+        .el-table{
             background-color: transparent!important;
-            &:hover{
+            tr{
                 background-color: transparent!important;
-            }
-            td{
-                background-color:transparent!important;
                 &:hover{
                     background-color: transparent!important;
                 }
+                td{
+                    background-color:transparent!important;
+                    &:hover{
+                        background-color: transparent!important;
+                    }
+                }
             }
+            thead tr{
+                background-color: transparent!important;
+                &:hover{
+                    background-color: transparent!important;
+                }
+                td{
+                    background-color:transparent!important;
+                    &:hover{
+                        background-color: transparent!important;
+                    }
+                }
+            }
+        }
+    } 
+    .el-select-dropdown{
+        border-color: #606266!important;
+        li.el-select-dropdown__item{
+            background-color: #242a36!important;
+        }
+        .popper__arrow, .popper__arrow::after, .popper__arrow *{
+            border-bottom-color: #606266!important;
         }
     }
 }

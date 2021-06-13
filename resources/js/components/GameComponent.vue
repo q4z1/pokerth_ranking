@@ -21,6 +21,7 @@
                 titles: [
                     { prop: 'place', label: 'Place'},
                     { prop: 'player', label: 'Player'},
+                    { prop: 'rank', label: 'Rank'},
                     { prop: 'average', label: 'Average Score'},
                     { prop: 'score', label: 'Final Score'},
                     { prop: 'games', label: 'Season Games'}
@@ -46,12 +47,14 @@
                                     player.score = p.player.ranking.final_score/100
                                     player.average = p.player.ranking.average_score / 100
                                     player.games = p.player.ranking.season_games
+                                    player.rank = p.player.rank
                                 }else{
                                     player.player = 'n/a'
                                     player.place = p.place
                                     player.score = 0
                                     player.average = 0
                                     player.games = 0
+                                    player.rank = 0
                                 }
 
                                 this.theGame.push(player)

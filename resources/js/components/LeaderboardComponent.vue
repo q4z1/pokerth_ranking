@@ -188,6 +188,7 @@
             }
             tr{
                 background-color: transparent!important;
+                cursor: pointer;
                 &:hover{
                     background-color: #c7cad0!important;
                 }
