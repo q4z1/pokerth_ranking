@@ -14,8 +14,13 @@ document.onreadystatechange = function () {
                     });
                     axios.post(window.location.origin + '/pthranking/account/create', data)
                     .then(res => {
-                        form_done = true
-                        $('form#register input[name=submit]').click()
+                        if(typeof res.data.status !== 'undefined' && res.data.status === true){
+                            form_done = true
+                            $('form#register input[name=submit]').click()
+                        }
+                        else if(typeof res.data.msg !== 'undefined' && res.data.msg.indexOf('suspended') != -1){
+                            $('#register .fields2 dl').first().find('dd').addClass('error').text('The username is suspended until next season.');
+                        }
                     }).catch(err => {
                         console.log(err)
                     })

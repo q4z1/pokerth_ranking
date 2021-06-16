@@ -89,6 +89,11 @@ class PlayerController extends Controller
         ->where('user_email', $request->email)
         ->first();
         if($p2) return ['status' => false, 'msg' => 'email already used in forum db'];
+        $suspended = DB::table('pokerth_ranking.suspended_nicknames')
+        ->selectRaw('*')
+        ->where('nickname', $request->username)
+        ->first();
+        if($suspended) return ['status' => false, 'msg' => 'username suspended'];
         // create player
         $p = new Player();
         $p->username = $request->username;
