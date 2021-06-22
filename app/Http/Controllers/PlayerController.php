@@ -80,20 +80,21 @@ class PlayerController extends Controller
         ->where('confirm_id', $request->confirm_id)
         ->where('code', $request->confirm_code)
         ->first();
-        if(!$phpbb_confirm) return ['status' => false, 'msg' => 'code wrong'];
-        else if($request->new_password != $request->password_confirm) return ['status' => false, 'msg' => 'Password repeat mismatch.'];
+        if(!$phpbb_confirm) return ['status' => 'success', 'msg' => 'code wrong'];
+        else if($request->new_password != $request->password_confirm) return ['status' => 'success', 'msg' => 'Password repeat mismatch.'];
+        else if(strlen($request->new_password) < 6) return ['status' => 'success', 'msg' => 'Password too short.'];
         $p = Player::where('email', $request->email)->first();
-        if($p) return ['status' => false, 'msg' => 'email already used in ranking db'];
+        if($p) return ['status' => false, 'msg' => 'The email address is already used in the ranking db - please contact a forum admin.'];
         $p2 = DB::table('pokerth.phpbb_users')
         ->selectRaw('*')
         ->where('user_email', $request->email)
         ->first();
-        if($p2) return ['status' => false, 'msg' => 'email already used in forum db'];
+        if($p2) return ['status' => 'success', 'msg' => 'email address is already used in the forum db'];
         $suspended = DB::table('pokerth_ranking.suspended_nicknames')
         ->selectRaw('*')
         ->where('nickname', $request->username)
         ->first();
-        if($suspended) return ['status' => false, 'msg' => 'username suspended'];
+        if($suspended) return ['status' => false, 'msg' => 'The username is suspended until next season.'];
         // create player
         $p = new Player();
         $p->username = $request->username;

@@ -5,6 +5,7 @@ document.onreadystatechange = function () {
         if($('input[name=password_confirm').length > 0){
             if($('#register').length > 0){
                 $('#register').submit(function( event ) {
+                    if($(event.originalEvent.submitter).attr('name') === 'refresh_vc') return
                     if(form_done) return
                     event.preventDefault()
                     let data = {}
@@ -14,12 +15,12 @@ document.onreadystatechange = function () {
                     });
                     axios.post(window.location.origin + '/pthranking/account/create', data)
                     .then(res => {
-                        if(typeof res.data.status !== 'undefined' && res.data.status === true){
+                        if(typeof res.data.status !== 'undefined' && res.data.status === 'success'){
                             form_done = true
                             $('form#register input[name=submit]').click()
                         }
-                        else if(typeof res.data.msg !== 'undefined' && res.data.msg.indexOf('suspended') != -1){
-                            $('#register .fields2 dl').first().find('dd').addClass('error').text('The username is suspended until next season.');
+                        else if(typeof res.data.msg !== 'undefined'){
+                            $('#register .fields2 dl').first().find('dd').addClass('error').text(res.data.msg);
                         }
                     }).catch(err => {
                         console.log(err)
