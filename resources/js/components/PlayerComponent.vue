@@ -69,12 +69,12 @@
                                     <img :src="avatar" :alt="player.username" :title="player.username" />
                                 </el-card>
                             </el-col>
-                            <el-col :xs="24" class="games" :md="24" v-else>
-                                <el-card class="box-card fix">
+                            <el-col :xs="24" class="games" :md="24" v-else-if="games.length">
+                                <el-card v-if="player.ranking.season_games" class="box-card fix">
                                     <div slot="header" class="clearfix">
                                         <span>Season Games</span>
                                     </div>
-                                    <div v-if="games" class="list">
+                                    <div class="list">
                                         <el-row v-for="g in games" :key="g.game_idgame" class="game">
                                             <el-col>
                                                 <el-row>
@@ -99,13 +99,13 @@
                                 </el-card>
                             </el-col>
                         </el-row>
-                        <el-row v-if="avatar" class="games">
+                        <el-row v-if="avatar && games.length" class="games">
                             <el-col>
                                 <el-card class="box-card fix">
                                     <div slot="header" class="clearfix">
                                         <span>Season Games</span>
                                     </div>
-                                    <div v-if="games" class="list">
+                                    <div class="list">
                                         <el-row v-for="g in games" :key="g.game_idgame" class="game">
                                             <el-col>
                                                 <el-row>
@@ -130,7 +130,7 @@
                                 </el-card>
                             </el-col>
                         </el-row>
-                        <el-row>
+                        <el-row v-if="player.ranking.season_games">
                             <el-col>
                                 <el-card class="box-card">
                                     <div slot="header" class="clearfix">
@@ -151,6 +151,30 @@
                                     <PieChart :chartData="games_chart"/>
                                     <hr />
                                     <BarChart :chartData="games_chart"/>
+                                </el-card>
+                            </el-col>
+                        </el-row>
+                        <el-row v-if="seasons.length">
+                            <el-col>
+                                <el-card class="box-card fix seasons">
+                                    <div slot="header" class="clearfix">
+                                        <span>Season Results</span>
+                                    </div>
+                                    <div class="list">
+                                        <el-row v-for="season in seasons" :key="season" class="season">
+                                            <el-col>
+                                                <el-row>
+                                                    <el-col>
+                                                        <el-collapse>
+                                                            <el-collapse-item :title="season">
+                                                                <season-component :season="season" :playerid="player.player_id"></season-component>
+                                                            </el-collapse-item>
+                                                        </el-collapse>
+                                                    </el-col>
+                                                </el-row>
+                                            </el-col>
+                                        </el-row>
+                                    </div>
                                 </el-card>
                             </el-col>
                         </el-row>
@@ -193,7 +217,6 @@
     </div>
 </template>
 <script>
-
     export default {
         components: {  },
         data: function() { 
@@ -205,7 +228,7 @@
                 games: false,
                 stats: false,
                 games_chart: null,
-                countries: null,
+                seasons: null,
                 err: false,
                 modalVisible: false,
                 loading: false,
@@ -214,7 +237,7 @@
         },
         computed: {
             country: function () {
-                return this.countries.filter(obj => {
+                return window.countries.filter(obj => {
                     return obj.png === this.player.country_iso.toLowerCase()
                 })[0]
             },
@@ -228,7 +251,6 @@
         },
         mounted() {
             this.getPlayer()
-            this.countries = window.countries
         },
         methods: {
             getPlayer: function(event){
@@ -245,12 +267,13 @@
                 axios.get('/pthranking/player/show?' + param + '=' + value)
                     .then(res => {
                         if(res.data.status){
-                            this.player = res.data.msg.player
-                            this.last5 = res.data.msg.last5
-                            this.pos = res.data.msg.pos
-                            this.games = res.data.msg.games
-                            this.stats = res.data.msg.stats
-                            this.games_chart = res.data.msg.bar_stats
+                            this.player = res.data.player
+                            this.last5 = res.data.last5
+                            this.pos = res.data.pos
+                            this.games = res.data.games
+                            this.stats = res.data.stats
+                            this.games_chart = res.data.bar_stats
+                            this.seasons = res.data.seasons
                             this.err = false
                         }else{
                             this.err = res.data.msg
@@ -325,6 +348,9 @@
     }
 </script>
 <style lang="scss">
+.seasons{
+    min-height: 350px;
+}
 .el-select-dropdown{
     border-color: #EBEEF5!important;
     li.el-select-dropdown__item{

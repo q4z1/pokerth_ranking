@@ -13,6 +13,21 @@ use App\Models\SuspendedNickname;
 
 class PlayerController extends Controller
 {
+    private $seasons = [];
+
+    public function __construct(){
+        $seasons = Cache::rememberForever('seasons', function () {
+            return DB::table('information_schema.tables')
+            ->selectRaw('table_name')
+            ->where('table_schema', 'pokerth_seasons')->get();
+        });
+        $seasons->map(function($season){
+            $s = explode('_', $season->table_name);
+            $season = $s[0] . "-" . $s[1];
+            if(!in_array($season, $this->seasons)) $this->seasons[] = $season;
+        });
+    }
+
     public function show(Request $request)
     {
         $u = $request->input('username', '');
@@ -56,7 +71,44 @@ class PlayerController extends Controller
             $p_stats[$place] = ($ag > 0) ? round($stat / ($ag/100), 1) . "%" : '';
         }
 
-        return ['status' => true, 'msg' => ['player' => $res, 'last5' => $last5, 'pos' => $pos, 'games' => $games, 'stats' => [$stats, $p_stats], 'bar_stats' => $bar_stats]];
+        return ['status' => true, 'player' => $res, 'last5' => $last5, 'pos' => $pos, 'games' => $games, 'stats' => [$stats, $p_stats], 'bar_stats' => $bar_stats, 'seasons' => $this->seasons];
+    }
+
+    public function getSeason(Request $request, Player $player, $season){
+        $season = str_replace("-", "_", $season);
+        Cache::flush();
+        $player->ranking = Cache::rememberForever("{$player->player_id}_{$season}_ranking", function () use($season, $player){
+            return DB::table("pokerth_seasons.{$season}_player_ranking")
+            ->selectRaw('*')
+            ->where('player_id', $player->player_id)->first();
+        });
+        $pos = Cache::rememberForever("{$player->player_id}_{$season}_pos", function () use($season, $player){
+            return DB::table("pokerth_seasons.{$season}_player_ranking")
+            ->selectRaw('*')
+            ->where('final_score', '>=', $player->ranking->final_score)->orderBy('final_score', 'DESC')->count();
+        });
+        $stats = Cache::rememberForever("{$player->player_id}_{$season}_stats", function () use($season, $player){
+            $aGames = DB::table("pokerth_seasons.{$season}_game_has_player")
+            ->selectRaw('*')
+            ->where('player_idplayer', $player->player_id)
+            ->whereNotNull('end_time')->orderBy('end_time', 'DESC')->get();
+            $stats = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0];
+            foreach($aGames as $g){
+                $stats[$g->place] += 1;
+            }
+            $bar_stats = [];
+            foreach($stats as $stat){
+                $bar_stats[] = $stat;
+            }
+            // percentage value num places
+            $ag = $aGames->count();
+            $p_stats = [];
+            foreach($stats as $place => $stat){
+                $p_stats[$place] = ($ag > 0) ? round($stat / ($ag/100), 1) . "%" : '';
+            }
+            return [$stats, $p_stats, $bar_stats];
+        });
+        return ['status' => true, 'player' => $player, 'pos' => $pos, 'stats' => [$stats[0], $stats[1]], 'bar_stats' => $stats[2]];
     }
 
     public function search(Request $request)

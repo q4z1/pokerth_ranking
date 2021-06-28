@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Console\Invokes;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class SeasonSwitch {
@@ -15,6 +16,7 @@ class SeasonSwitch {
         $this->create_tables();
         $this->copy_tables();
         $this->cleanup();
+        Cache::forget('seasons');
         echo date("Y-m-d H:i:s") . " : Ending Season {$this->season}.\n";
         return;
     }
