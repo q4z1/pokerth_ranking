@@ -83,7 +83,6 @@ export default {
                         this.stats = res.data.stats
                         this.games_chart = res.data.bar_stats
                         this.err = false
-                        console.log("season_games", this.player.ranking.season_games)
                     }else{
                         this.err = res.data.msg
                         this.player = false

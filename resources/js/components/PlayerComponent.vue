@@ -8,13 +8,17 @@
                             {{ player.username }}
                             <span class="icons">
                                 &nbsp;&nbsp;
-                                <span class="gender" v-if="player.gender">
-                                    <i v-if="player.gender === 'f'" class="icon fa-female gender" />
-                                    <i v-else-if="player.gender === 'm'" class="icon fa-male gender" />
-                                </span>
-                                <span v-if="player.country_iso && country.svg != 'n/a'" class="flag">
-                                    <img data-toggle="tooltip" :title="country.title" :src="'/images/flags/' + country.svg + '.svg'" />
-                                </span>
+                                <el-tooltip v-if="player.gender" effect="dark" placement="top-start" :content="(player.gender === 'f') ? 'female' : 'male'">
+                                    <span class="gender">
+                                        <i v-if="player.gender === 'f'" class="icon fa-female gender" />
+                                        <i v-else-if="player.gender === 'm'" class="icon fa-male gender" />
+                                    </span>
+                                </el-tooltip>
+                                <el-tooltip v-if="player.country_iso && country.svg != 'n/a'" effect="dark" placement="top-start" :content="country.title">
+                                    <span class="flag">
+                                        <img data-toggle="tooltip" :title="country.title" :src="'/images/flags/' + country.svg + '.svg'" />
+                                    </span>
+                                </el-tooltip>
                             </span>
                         </div></dt>
                     </dl>
@@ -396,6 +400,7 @@
     span{
         &.icons{
             line-height: 1.11em;
+            cursor: pointer;
             span{
                 &.gender{
                     background: transparent;
