@@ -48,13 +48,17 @@
                                     <el-table-column prop="gender_country" label="Gender/Country">
                                         <template #default="{ row }">
                                             <div class="icons">
-                                                <span class="gender" v-if="row.gender_country.gender">
-                                                    <i v-if="row.gender_country.gender === 'f'" class="icon fa-female gender" />
-                                                    <i v-else-if="row.gender_country.gender === 'm'" class="icon fa-male gender" />
-                                                </span>
-                                                <span v-if="row.gender_country.country && country(row.gender_country.country).svg != 'n/a'" class="flag">
-                                                    <img :alt="country(row.gender_country.country).title" :title="country(row.gender_country.country).title" :src="'/images/flags/' + country(row.gender_country.country).svg + '.svg'" />
-                                                </span>
+                                                <el-tooltip v-if="row.gender_country.gender" effect="dark" placement="top-start" :content="(row.gender_country.gender === 'f') ? 'female' : 'male'">
+                                                    <span class="gender">
+                                                        <i v-if="row.gender_country.gender === 'f'" class="icon fa-female gender" />
+                                                        <i v-else-if="row.gender_country.gender === 'm'" class="icon fa-male gender" />
+                                                    </span>
+                                                </el-tooltip>
+                                                <el-tooltip v-if="row.gender_country.country && country(row.gender_country.country).svg != 'n/a'" effect="dark" placement="top-start" :content="country(row.gender_country.country).title">
+                                                    <span class="flag">
+                                                        <img :alt="country(row.gender_country.country).title" :title="country(row.gender_country.country).title" :src="'/images/flags/' + country(row.gender_country.country).svg + '.svg'" />
+                                                    </span>
+                                                </el-tooltip>
                                             </div>
                                         </template>
                                     </el-table-column>

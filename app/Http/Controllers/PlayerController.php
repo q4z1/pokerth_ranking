@@ -357,7 +357,9 @@ class PlayerController extends Controller
         $query = DB::table('player_ranking')
         ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
         ->selectRaw('player_ranking.*, player.country_iso, player.gender');
-        if(empty($filters)){
+        // dd("filters", $filters, "value", $filters['value']);
+        if(empty($filters) || is_null($filters['value'])){
+            if($total === 0) return ['total' => $total, 'data' => []];
             $query ->where([
                 ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
                 ['player_ranking.season_games', '>', 3],
