@@ -53,7 +53,7 @@ class PlayerController extends Controller
         $ag = $aGames->count();
         $p_stats = [];
         foreach($stats as $place => $stat){
-            $p_stats[$place] = round($stat / ($ag/100), 1) . "%";
+            $p_stats[$place] = ($ag > 0) ? round($stat / ($ag/100), 1) . "%" : '';
         }
 
         return ['status' => true, 'msg' => ['player' => $res, 'last5' => $last5, 'pos' => $pos, 'games' => $games, 'stats' => [$stats, $p_stats], 'bar_stats' => $bar_stats]];
@@ -83,13 +83,14 @@ class PlayerController extends Controller
         if(!$phpbb_confirm) return ['status' => 'success', 'msg' => 'code wrong'];
         else if($request->new_password != $request->password_confirm) return ['status' => 'success', 'msg' => 'Password repeat mismatch.'];
         else if(strlen($request->new_password) < 6) return ['status' => 'success', 'msg' => 'Password too short.'];
-        $p = Player::where('email', $request->email)->first();
-        if($p) return ['status' => false, 'msg' => 'The email address is already used in the ranking db - please contact a forum admin.'];
+        $p = Player::where('email', $request->email)->orWhere('username', $request->username)->first();
+        if($p) return ['status' => false, 'msg' => 'The email address and/or username is already used in the ranking db - please contact a forum admin.'];
         $p2 = DB::table('pokerth.phpbb_users')
         ->selectRaw('*')
         ->where('user_email', $request->email)
+        ->orWhere('username', $request->username)
         ->first();
-        if($p2) return ['status' => 'success', 'msg' => 'email address is already used in the forum db'];
+        if($p2) return ['status' => 'success', 'msg' => 'email address and/or username is already used in the forum db'];
         $suspended = DB::table('pokerth_ranking.suspended_nicknames')
         ->selectRaw('*')
         ->where('nickname', $request->username)
@@ -355,12 +356,14 @@ class PlayerController extends Controller
         ])->count();
         $query = DB::table('player_ranking')
         ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
-        ->selectRaw('player_ranking.*, player.country_iso, player.gender')
-        ->where([
-            ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
-            ['player_ranking.season_games', '>', 3],
-        ])
-        ->orderBy($sort['prop'], (($sort['order'] == 'descending') ? 'DESC' : 'ASC'))
+        ->selectRaw('player_ranking.*, player.country_iso, player.gender');
+        if(empty($filters)){
+            $query ->where([
+                ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
+                ['player_ranking.season_games', '>', 3],
+            ]);
+        }
+        $query->orderBy($sort['prop'], (($sort['order'] == 'descending') ? 'DESC' : 'ASC'))
         ->offset(($page-1)*$pagesize)->limit($pagesize);
         if(!empty($filters)){
             $query->where('player_ranking.username', 'LIKE', $filters['value'] . '%');
