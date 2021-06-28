@@ -26,6 +26,7 @@
                                     :loading="loading" 
                                     :table-props="tableProps"
                                     :filters="filters"
+                                    :page-size="25"
                                     @query-change="loadData"
                                     @current-page-change="handleCurrentPageChange"
                                     @current-change="handleCurrentChange"

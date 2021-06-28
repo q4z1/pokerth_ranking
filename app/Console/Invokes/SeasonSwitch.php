@@ -20,6 +20,10 @@ class SeasonSwitch {
     }
 
     private function create_tables(){
+        DB::statement(
+            "DELETE FROM `pokerth_ranking`.`player` WHERE `player_id` NOT IN(SELECT `player_id` FROM `pokerth_ranking`.`player_ranking`) AND `created` < ?",
+            [date('Y-m-d H:i:s', strtotime('-12 hours'))]
+        );
         foreach($this->tables as $table){
             DB::statement("CREATE TABLE `pokerth_seasons`.`{$this->season}_{$table}` LIKE `pokerth_ranking`.`{$table}`;");
         }

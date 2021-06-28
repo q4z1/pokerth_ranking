@@ -346,7 +346,7 @@ class PlayerController extends Controller
     public function getLeaderboard(Request $request){
         $filters = $request->input('filters');
         $page = $request->input('page', 1);
-        $pagesize = $request->input('pageSize', 50);
+        $pagesize = $request->input('pageSize', 25);
         $sort = $request->input('sort');
         if($sort['prop'] === 'rank_pos') $sort['prop'] = 'final_score';
         $total = PlayerRanking::where([
