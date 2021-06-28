@@ -38,7 +38,7 @@
                                     <div slot="header" class="clearfix">
                                         <span>Season Data</span>
                                     </div>
-                                    <el-row>
+                                    <el-row v-if="player.ranking.season_games">
                                         <el-col :span="12">Ranking position:</el-col>
                                         <el-col :span="12">{{ pos }}</el-col>
                                     </el-row>
@@ -54,11 +54,7 @@
                                         <el-col :span="12">Total Points:</el-col>
                                         <el-col :span="12">{{ player.ranking.points_sum }}</el-col>
                                     </el-row>
-                                    <el-row>
-                                        <el-col :span="12">Number of games:</el-col>
-                                        <el-col :span="12">{{ player.ranking.season_games }}</el-col>
-                                    </el-row>
-                                    <el-row>
+                                    <el-row v-if="player.ranking.season_games">
                                         <el-col :span="12">Last 5 games place:</el-col>
                                         <el-col :span="12">{{ last5.join(', ') }}</el-col>
                                     </el-row>
@@ -73,7 +69,7 @@
                                     <img :src="avatar" :alt="player.username" :title="player.username" />
                                 </el-card>
                             </el-col>
-                            <el-col :xs="24" class="games" :md="24" v-else-if="games.length">
+                            <el-col :xs="24" class="games" :md="24" v-else-if="games && games.length">
                                 <el-card v-if="player.ranking.season_games" class="box-card fix">
                                     <div slot="header" class="clearfix">
                                         <span>Season Games</span>
@@ -103,7 +99,7 @@
                                 </el-card>
                             </el-col>
                         </el-row>
-                        <el-row v-if="avatar && games.length" class="games">
+                        <el-row v-if="avatar && games && games.length" class="games">
                             <el-col>
                                 <el-card class="box-card fix">
                                     <div slot="header" class="clearfix">
@@ -158,7 +154,7 @@
                                 </el-card>
                             </el-col>
                         </el-row>
-                        <el-row v-if="seasons.length">
+                        <el-row v-if="seasons && seasons.length">
                             <el-col>
                                 <el-card class="box-card fix seasons">
                                     <div slot="header" class="clearfix">
@@ -305,24 +301,25 @@
                 }
             },
             getSelectedPlayer: function(player_id){
+                player_id = player_id[0]
                 let param = 'player_id'
                 axios.get('/pthranking/player/show?' + param + '=' + player_id)
-                    .then(res => {
-                        if(res.data.status){
-                            this.player = res.data.msg.player
-                            this.last5 = res.data.msg.last5
-                            this.pos = res.data.msg.pos
-                            this.games = res.data.msg.games
-                            this.stats = res.data.msg.stats
-                            this.games_chart = res.data.msg.bar_stats
-                            this.err = false
-                        }else{
-                            this.err = res.data.msg
-                            this.player = false
-                        }
-                    }).catch(err => {
-                        this.err = err
+                .then(res => {
+                    if(res.data.status){
+                        this.player = res.data.player
+                        this.last5 = res.data.last5
+                        this.pos = res.data.pos
+                        this.games = res.data.games
+                        this.stats = res.data.stats
+                        this.games_chart = res.data.bar_stats
+                        this.err = false
+                    }else{
+                        this.err = res.data.msg
                         this.player = false
+                    }
+                }).catch(err => {
+                    this.err = err
+                    this.player = false
                 })
             },
             tipHover: function(evt){

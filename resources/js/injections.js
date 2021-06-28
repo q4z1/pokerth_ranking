@@ -54,9 +54,12 @@ document.onreadystatechange = function () {
                 axios.get(window.location.origin + '/pthranking/player/gender-country?u=' + $(item).find('a[class^=username]').text())
                 .then(res => {
                     if(res.data.country_iso != ""){
+                        country = window.countries.filter(obj => {
+                            return obj.png === res.data.country_iso
+                        })[0]
                         $(item).find('a[class^=username]').parent().append(
                             $('<br/>'),
-                            $('<img/>').attr('src', '/images/flags/' + res.data.country_iso + '.svg').css('width', '24px').css('height', '14px').css('margin-top', '2px')
+                            $('<img/>').attr('src', '/images/flags/' + res.data.country_iso + '.svg').css('width', '24px').css('height', '14px').css('margin-top', '2px').attr('alt', country.title).attr('title', country.title)
                         )
                     }
                 }).catch(err => {
@@ -123,6 +126,9 @@ document.onreadystatechange = function () {
                     $('<div/>').addClass('pth_select').append(function(){
                         return $('<select/>').attr('name', 'pth_country').attr('id', 'pth_country').append(function(){
                             let ops = []
+                            ops.push(
+                                $('<option/>').val('').text('none')
+                            )
                             for(let i=0; i<window.countries.length; i++){
                                 let c = window.countries[i]
                                 ops.push(
@@ -184,9 +190,12 @@ document.onreadystatechange = function () {
             axios.get(window.location.origin + '/pthranking/player/gender-country?u=' + $('#username_logged_in span[class^=username]').text())
             .then(res => {
                 if(res.data.country_iso != ""){
+                    country = window.countries.filter(obj => {
+                        return obj.png === res.data.country_iso
+                    })[0]
                     $('.pth_country li.dd-item').removeClass('selected')
                     $('.pth_country input.value[value=' + res.data.country_iso + ']').parent().addClass('selected')
-                    $('.pth_country .current .content img.image').attr('src', '/images/flags/' + res.data.country_iso + '.svg')
+                    $('.pth_country .current .content img.image').attr('src', '/images/flags/' + res.data.country_iso + '.svg').attr('alt', country.title).attr('title', country.title)
                     $('.pth_country .current .content div.text').text($('.pth_country input.value[value=' + res.data.country_iso + ']').parent().find('div.text').text())
                     $('.pth_gender input[value="'+res.data.gender+'"]').prop('checked', true)
                 }
