@@ -40,3 +40,5 @@ Route::post('/account/create', [App\Http\Controllers\PlayerController::class, 'a
 Route::post('/account/change', [App\Http\Controllers\PlayerController::class, 'account_change']);
 Route::post('/account/validate', [App\Http\Controllers\PlayerController::class, 'account_validate']);
 Route::post('/account/delete', [App\Http\Controllers\PlayerController::class, 'account_delete']);
+
+Route::get('/downloads', [App\Http\Controllers\DownloadsController::class, 'files']);
