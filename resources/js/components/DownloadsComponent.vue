@@ -81,6 +81,9 @@
 </script>
 <style lang="scss">
 .downloads{
+    .forums li{
+        margin-bottom: 1em !important;
+    }
     .el-collapse{
         background: transparent !important;
         border-bottom: 0!important;
