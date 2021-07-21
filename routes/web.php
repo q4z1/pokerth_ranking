@@ -42,3 +42,4 @@ Route::post('/account/validate', [App\Http\Controllers\PlayerController::class, 
 Route::post('/account/delete', [App\Http\Controllers\PlayerController::class, 'account_delete']);
 
 Route::get('/downloads', [App\Http\Controllers\DownloadsController::class, 'files']);
+Route::get('/styles', [App\Http\Controllers\DownloadsController::class, 'styles']);

@@ -30,4 +30,32 @@ class DownloadsController extends Controller
         }
         return ['status' => false];
     }
+
+    public function styles(Request $request){
+        $path = base_path() . "/../download/styles/cards/";
+        if(is_dir($path)){
+            $cards = [];
+            $dir = array_diff(scandir($path), array('..', '.'));
+            foreach($dir as $file){
+                if(strpos($file, '.zip') !== false){
+                    $preview = (!file_exists($path . str_replace("zip", "png", $file))) ? null : "/download/styles/cards/" . str_replace("zip", "png", $file); 
+                    $f = ['filename' => $file, 'url' => "/download/styles/cards/" . $file, 'preview' => $preview];
+                    $cards[] = $f;
+                }
+            }
+        }
+        $path = base_path() . "/../download/styles/table/";
+        if(is_dir($path)){
+            $tables = [];
+            $dir = array_diff(scandir($path), array('..', '.'));
+            foreach($dir as $file){
+                if(strpos($file, '.zip') !== false){
+                    $preview = (!file_exists($path . str_replace("zip", "png", $file))) ? null : "/download/styles/table/" . str_replace("zip", "png", $file); 
+                    $f = ['filename' => $file, 'url' => "/download/styles/table/" . $file, 'preview' => $preview];
+                    $tables[] = $f;
+                }
+            }
+        }
+        return ['status' => true, 'cards' => $cards, 'tables' => $tables];
+    }
 }
