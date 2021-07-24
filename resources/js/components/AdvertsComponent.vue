@@ -2,8 +2,8 @@
   <div class="a-s" v-if="adverts">
     <!--googleoff: all-->
     <!--noindex-->
-    <p>advert</p>
     <el-row v-for="(advert) in adverts" :key="advert.id">
+      <p>advert</p>
       <el-col>
         <el-row class="noindex robots-nocontent robots-noindex">
           <el-col v-html="advert.content"></el-col>
