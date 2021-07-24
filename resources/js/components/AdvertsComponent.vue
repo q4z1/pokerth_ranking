@@ -2,7 +2,7 @@
   <div class="a-s" v-if="adverts">
     <!--googleoff: all-->
     <!--noindex-->
-    <el-row v-for="(advert) in adverts" :key="advert.id">
+    <el-row v-for="advert in adverts" :key="advert.id">
       <p>advert</p>
       <el-col>
         <el-row class="noindex robots-nocontent robots-noindex">
@@ -26,23 +26,31 @@ export default {
     };
   },
   mounted() {
-    this.getAdverts(this.position);
+    if (this.isAllowed()) this.getAdverts(this.position);
   },
   methods: {
     getAdverts: function (position) {
       axios
         .get("/pthranking/a/" + position)
         .then((res) => {
-          if(res.data.success === true){
+          if (res.data.success === true) {
             this.adverts = res.data.adverts.length ? res.data.adverts : false;
           }
-
-          console.log(this.adverts);
         })
         .catch((err) => {
           console.log(err);
           this.adverts = false;
         });
+    },
+    isAllowed: function () {
+      let allowed = false;
+      let path = location.pathname;
+      if (
+        (this.position === "home" && path === "/") ||
+        path.indexOf("/index.php", 0) == 0
+      )
+        allowed = true;
+      return allowed;
     },
   },
 };
