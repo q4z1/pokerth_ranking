@@ -130,7 +130,7 @@
                                 </el-card>
                             </el-col>
                         </el-row>
-                        <el-row v-if="player.ranking.season_games">
+                        <el-row v-if="player.ranking.season_games" class="stats">
                             <el-col>
                                 <el-card class="box-card">
                                     <div slot="header" class="clearfix">
@@ -437,7 +437,7 @@
         }
         padding-bottom: 1em;
     }
-    .data{
+    .data, .stats{
         .el-col{
             padding-bottom: 1em;
         }
