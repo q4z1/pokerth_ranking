@@ -49,7 +49,7 @@ window.countries = [
     {svg: 'ai', title: 'Anguilla', png: 'ai'},
     {svg: 'al', title: 'Albania', png: 'al'},
     {svg: 'am', title: 'Armenia', png: 'am'},
-    {svg: 'n/a', title: 'Netherlands Antilles', png: 'an'},
+    {svg: 'an', title: 'Netherlands Antilles', png: 'an'},
     {svg: 'ao', title: 'Angola', png: 'ao'},
     {svg: 'ar', title: 'Argentina', png: 'ar'},
     {svg: 'as', title: 'American Samoa', png: 'as'},
