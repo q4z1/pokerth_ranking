@@ -192,8 +192,6 @@ document.onreadystatechange = function () {
         .then(res => {
           $('.pth_country li.dditem').removeClass('selected')
           if (res.data.country_iso != "") {
-            console.log('country_iso', res.data.country_iso)
-            console.log('countries', window.countries)
             let country = window.countries.filter(obj => {
               return obj.png === res.data.country_iso
             })[0]
