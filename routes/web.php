@@ -28,6 +28,7 @@ Route::get('/player/season/get/{player}/{season}', [App\Http\Controllers\PlayerC
 Route::get('/html/{title}', [App\Http\Controllers\HtmlBlockController::class, 'getBlock']);
 Route::get('/a/{position}', [App\Http\Controllers\AdvertController::class, 'getAdverts']);
 
+
 Route::post('/gametable/show', [App\Http\Controllers\GameController::class, 'show_table']);
 
 Route::get('/game/get', [App\Http\Controllers\GameController::class, 'get']);

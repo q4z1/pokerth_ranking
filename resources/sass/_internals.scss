@@ -1,0 +1,64 @@
+html.internals{
+  height: 100%;
+  body{
+    height: 100%;
+    margin: 0;
+    background-color: $internals_bg;
+    font-family: $font-family-sans-serif;
+    color: $internals_color;
+    .base {
+      section.el-container {
+        header.el-header {
+          padding: 0px;
+        }
+      }
+    }
+    .el-menu--popup{
+      background-color: lighten($internals_bg, 20%);
+      .el-menu-item{
+        background-color: lighten($internals_bg, 20%);
+        &.is-active{
+          border-bottom-color: lighten($internals_bg, 50%);
+          color: lighten($internals_color, 50%);
+        }
+        &:hover{
+          background-color: lighten($internals_bg, 10%);
+          color: lighten($internals_color, 40%);
+        }
+        &:focus{
+          background-color: inherit;
+        }
+      }
+    }
+    .el-menu.el-menu--horizontal {
+      border-bottom: solid 1px lighten($internals_bg, 30%);
+      background-color: lighten($internals_bg, 20%);
+      .el-menu-item, .el-submenu, .el-submenu__title{
+        &.is-active{
+          border-bottom-color: lighten($internals_bg, 50%);
+          color: lighten($internals_color, 50%);
+        }
+        &:hover{
+          background-color: lighten($internals_bg, 10%);
+          color: lighten($internals_color, 40%);
+        }
+        &:focus{
+          background-color: inherit;
+        }
+      }
+    }
+    .el-menu--horizontal>.el-submenu.is-active .el-submenu__title {
+      border-bottom: 2px solid lighten($internals_bg, 50%);
+      color: lighten($internals_color, 50%);
+    }
+    .el-button {
+      background: lighten($internals_bg, 50%);
+      border: 1px solid lighten($internals_bg, 30%);
+      color: lighten($internals_color, 40%);
+      &:hover{
+        background: lighten($internals_bg, 10%);
+        color: lighten($internals_color, 50%);
+      }
+    }
+  }
+}
