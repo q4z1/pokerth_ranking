@@ -25,6 +25,9 @@ Route::get('/player/gender-country', [App\Http\Controllers\PlayerController::cla
 Route::get('/player/games/get', [App\Http\Controllers\PlayerController::class, 'games']);
 Route::get('/player/season/get/{player}/{season}', [App\Http\Controllers\PlayerController::class, 'getSeason']);
 
+Route::post('/login', [App\Http\Controllers\AdminController::class, 'login']);
+Route::get('/logout', [App\Http\Controllers\AdminController::class, 'logout']);
+
 Route::get('/html/{title}', [App\Http\Controllers\HtmlBlockController::class, 'getBlock']);
 Route::get('/a/{position}', [App\Http\Controllers\AdvertController::class, 'getAdverts']);
 

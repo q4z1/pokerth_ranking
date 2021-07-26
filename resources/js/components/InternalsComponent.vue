@@ -4,41 +4,41 @@
       <el-header>
         <el-row v-if="auth">
           <el-col>
-            <el-menu
-              :default-active="activeIndex"
-              mode="horizontal"
-              @select="handleSelect"
-            >
-              <el-menu-item class="logo"
-                ><img
+            <el-menu :default-active="activeIndex" mode="horizontal">
+              <li class="logo">
+                <img
                   src="/images/pokerth-template-logo_light.png"
                   alt="PokerTH"
-              /></el-menu-item>
-              <el-submenu index="1">
+                />
+              </li>
+              <el-submenu index="2">
                 <template slot="title">Reports</template>
-                <el-menu-item index="1-1">Avatar Reports</el-menu-item>
-                <el-menu-item index="1-2">Gametable Name Reports</el-menu-item>
+                <el-menu-item index="3-1">Avatar Reports</el-menu-item>
+                <el-menu-item index="3-2">Gametable Name Reports</el-menu-item>
               </el-submenu>
-              <el-menu-item index="2">Banlist</el-menu-item>
-              <el-menu-item class="auth"
-                ><el-row
+              <el-menu-item index="4">Banlist</el-menu-item>
+              <li class="auth">
+                <el-row
                   ><el-col
-                    ><el-button size="medium">Logout</el-button></el-col
+                    ><el-button size="medium" @click="logout"
+                      >Logout</el-button
+                    ></el-col
                   ></el-row
-                ></el-menu-item
-              >
+                >
+              </li>
             </el-menu>
           </el-col>
         </el-row>
         <el-row v-else>
           <el-col>
             <el-menu mode="horizontal">
-              <el-menu-item class="logo"
-                ><img
+              <li class="logo">
+                <img
                   src="/images/pokerth-template-logo_light.png"
                   alt="PokerTH"
-              /></el-menu-item>
-              <el-menu-item class="auth">
+                />
+              </li>
+              <li class="auth">
                 <el-row>
                   <el-col>
                     <el-input
@@ -61,7 +61,7 @@
                     <el-button size="medium" @click="login">Login</el-button>
                   </el-col>
                 </el-row>
-              </el-menu-item>
+              </li>
             </el-menu>
           </el-col>
         </el-row>
@@ -82,15 +82,18 @@
 </template>
 <script>
 export default {
+  props: ["authenticated"],
   data() {
     return {
       auth: false,
       username: null,
       password: null,
-      activeIndex: "1-1",
+      activeIndex: "3-1",
     };
   },
-  mounted() {},
+  mounted() {
+    this.auth = this.authenticated;
+  },
   methods: {
     login() {
       if (
@@ -99,12 +102,42 @@ export default {
         this.password.length < 1 ||
         this.username.length < 3
       ) {
-        this.notice('Username and/or Password too short', 'error');
-      }else{
-        this.notice('Logging in ...', 'warning');
+        this.notice("Username and/or Password too short", "error");
+      } else {
+        let queryInfo = new FormData();
+        queryInfo.append("username", this.username);
+        queryInfo.append("password", this.password);
+        axios
+          .post("/pthranking/login", queryInfo)
+          .then((res) => {
+            if (res.data.success === true) {
+              this.auth = true;
+              this.notice(res.data.msg);
+            } else {
+              this.notice(res.data.msg, "error");
+            }
+          })
+          .catch((err) => {
+            this.notice("Login failed.", "error");
+          });
       }
     },
-    notice(msg, type = 'success') {
+    logout() {
+      axios
+        .get("/pthranking/logout")
+        .then((res) => {
+          if (res.data.success === true) {
+            this.auth = false;
+            this.notice(res.data.msg, "default");
+          } else {
+            this.notice(res.data.msg, "error");
+          }
+        })
+        .catch((err) => {
+          this.notice("Logout failed.", "error");
+        });
+    },
+    notice(msg, type = "success") {
       this.$message({ message: msg, type: type, offset: 75 });
     },
   },
@@ -116,12 +149,15 @@ export default {
     display: flex;
   }
   .auth {
+    border-bottom: 0;
+    margin-top: 10px;
     margin-left: 20px;
-    padding: 0;
+    height: 50px;
     background-color: transparent !important;
     cursor: default;
     &:hover,
-    &:focus {
+    &:focus,
+    &:click {
       background-color: transparent !important;
     }
     .el-row {
@@ -140,10 +176,15 @@ export default {
   .logo {
     flex-grow: 1;
     padding-right: 20px;
+    border-bottom: 0;
+    margin-top: 10px;
+    margin-left: 20px;
+    height: 50px;
     background-color: transparent !important;
     cursor: default;
     &:hover,
-    &:focus {
+    &:focus,
+    &:click {
       background-color: transparent !important;
     }
     img {
@@ -189,9 +230,32 @@ export default {
   .base {
     .el-menu {
       .logo {
-        display: none;
+        height: 40px;
       }
       justify-content: flex-end;
+    }
+  }
+}
+@media only screen and (max-width: 425px) {
+  .base {
+    .auth {
+      margin-left: 0px;
+    }
+    .el-menu {
+      .logo {
+        padding-right: 5px;
+        height: 30px;
+      }
+    }
+  }
+}
+@media only screen and (max-width: 355px) {
+  .base {
+    .el-menu {
+      justify-content: center;
+      .logo {
+        display: none;
+      }
     }
   }
 }

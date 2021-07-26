@@ -7,7 +7,7 @@
         <title>PokerTH Internal</title>
     </head>
     <body>
-      <div id="vue1"><internals-component></internals-component></div>
+      <div id="vue1"><internals-component :authenticated="{{json_encode(!is_null(auth()->user()), true)}}"></internals-component></div>
     </body>
     <script type="text/javascript" src="/pthranking/js/pth.js"></script>
 </html>
