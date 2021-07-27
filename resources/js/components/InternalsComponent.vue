@@ -4,19 +4,25 @@
       <el-header>
         <el-row v-if="auth">
           <el-col>
-            <el-menu :default-active="activeIndex" mode="horizontal">
+            <el-menu
+              :default-active="activeIndex"
+              mode="horizontal"
+              @select="navigate"
+            >
               <li class="logo">
-                <img
-                  src="/images/pokerth-template-logo_light.png"
-                  alt="PokerTH"
-                />
+                <a href="/" title="PokerTH" target="_blank">
+                  <img
+                    src="/images/pokerth-template-logo_light.png"
+                    alt="PokerTH"
+                  />
+                </a>
               </li>
-              <el-submenu index="2">
+              <!-- <el-submenu index="1">
                 <template slot="title">Reports</template>
-                <el-menu-item index="3-1">Avatar Reports</el-menu-item>
-                <el-menu-item index="3-2">Gametable Name Reports</el-menu-item>
-              </el-submenu>
-              <el-menu-item index="4">Banlist</el-menu-item>
+                <el-menu-item index="2-1">Avatar Reports</el-menu-item>
+                <el-menu-item index="2-2">Gametable Name Reports</el-menu-item>
+              </el-submenu> -->
+              <el-menu-item index="3">Banlist</el-menu-item>
               <li class="auth">
                 <el-row
                   ><el-col
@@ -74,7 +80,11 @@
           </el-col>
         </el-row>
         <el-row v-else>
-          <el-col><h3>Content</h3></el-col>
+          <el-col>
+            <avatar-reports v-if="activeIndex === '2-1'"></avatar-reports>
+            <game-name-reports v-if="activeIndex === '2-2'"></game-name-reports>
+            <ban-list v-if="activeIndex === '3'"></ban-list>
+          </el-col>
         </el-row>
       </el-main>
     </el-container>
@@ -88,7 +98,7 @@ export default {
       auth: false,
       username: null,
       password: null,
-      activeIndex: "3-1",
+      activeIndex: "3",
     };
   },
   mounted() {
@@ -139,6 +149,10 @@ export default {
     },
     notice(msg, type = "success") {
       this.$message({ message: msg, type: type, offset: 75 });
+    },
+    navigate(index, indexPath) {
+      console.log("index", index);
+      this.activeIndex = index;
     },
   },
 };
@@ -231,28 +245,18 @@ export default {
     .el-menu {
       .logo {
         height: 40px;
+        margin-top: 15px;
       }
       justify-content: flex-end;
     }
   }
 }
-@media only screen and (max-width: 425px) {
+@media only screen and (max-width: 455px) {
   .base {
     .auth {
-      margin-left: 0px;
+      margin-left: 20px;
     }
     .el-menu {
-      .logo {
-        padding-right: 5px;
-        height: 30px;
-      }
-    }
-  }
-}
-@media only screen and (max-width: 355px) {
-  .base {
-    .el-menu {
-      justify-content: center;
       .logo {
         display: none;
       }

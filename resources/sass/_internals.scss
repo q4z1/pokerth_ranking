@@ -11,6 +11,17 @@ html.internals{
         header.el-header {
           padding: 0px;
         }
+        main.el-main{
+          .el-row{
+            &.add{
+              .el-col{
+                background-color: lighten($internals_bg, 10%);
+                border: 1px solid lighten($internals_bg, 20%);
+                color: lighten($internals_color, 50%);
+              }
+            }
+          }
+        }
       }
     }
     .el-menu--popup{
@@ -52,13 +63,72 @@ html.internals{
       color: lighten($internals_color, 50%);
     }
     .el-button {
-      background: lighten($internals_bg, 50%);
       border: 1px solid lighten($internals_bg, 30%);
-      color: lighten($internals_color, 40%);
-      &:hover{
-        background: lighten($internals_bg, 10%);
-        color: lighten($internals_color, 50%);
+      &.el-button--default{
+        background: lighten($internals_bg, 50%);
+        color: lighten($internals_color, 40%);
+        &:hover{
+          background: lighten($internals_bg, 55%);
+          color: lighten($internals_color, 50%);
+        }
       }
     }
+    .el-table{
+      background-color: lighten($internals_bg, 20%);
+      color: lighten($internals_color, 30%);
+      &.el-table--border::after, &.el-table--group::after, &::before{
+        background-color: lighten($internals_bg, 35%)!important;
+      }
+      *{
+        border-color: lighten($internals_bg, 35%)!important;
+      }
+      &.el-table--striped .el-table__body tr.el-table__row--striped td {
+        background-color: lighten($internals_bg, 15%);
+      }
+      th, tr{
+        background-color: lighten($internals_bg, 10%);
+      }
+      tr:hover>td{
+        background-color: transparent;
+        color: lighten($internals_color, 40%);
+      }
+    }
+    .el-message-box{
+      background-color: $internals_bg;
+      border-color: lighten($internals_bg, 20%);
+      color: lighten($internals_color, 30%);
+      .el-message-box__header{
+        .el-message-box__title{
+          color: lighten($internals_color, 25%);
+        }
+      }
+      .el-message-box__content{
+        color: lighten($internals_color, 30%);
+      }
+    }
+    .el-input{
+      .el-input__inner{
+        color: lighten($internals_color, 40%);
+        background-color: lighten($internals_bg, 20%);
+        border-color: lighten($internals_bg, 10%);
+      }
+    }
+    .el-popper[x-placement^=bottom] .popper__arrow{
+      border-bottom-color: lighten($internals_bg, 20%);
+      &::after{
+        border-bottom-color: lighten($internals_bg, 20%);
+      }
+    }
+
+    .el-autocomplete-suggestion {
+      border: 1px solid lighten($internals_bg, 10%);
+      background-color: lighten($internals_bg, 20%);
+      li{
+        color: lighten($internals_color, 30%);
+        &:hover{
+          background-color: lighten($internals_bg, 25%);
+        }
+      }
+  }
   }
 }

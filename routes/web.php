@@ -28,6 +28,10 @@ Route::get('/player/season/get/{player}/{season}', [App\Http\Controllers\PlayerC
 Route::post('/login', [App\Http\Controllers\AdminController::class, 'login']);
 Route::get('/logout', [App\Http\Controllers\AdminController::class, 'logout']);
 
+Route::post('/banlist/{player}', [App\Http\Controllers\AdminController::class, 'banlist']);
+Route::get('/banlist', [App\Http\Controllers\AdminController::class, 'banlist']);
+
+
 Route::get('/html/{title}', [App\Http\Controllers\HtmlBlockController::class, 'getBlock']);
 Route::get('/a/{position}', [App\Http\Controllers\AdvertController::class, 'getAdverts']);
 
