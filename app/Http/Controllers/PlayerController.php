@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use App\Models\Game;
 use App\Models\GameHasPlayer;
 use App\Models\Player;
 use App\Models\PlayerRanking;
@@ -396,6 +395,15 @@ class PlayerController extends Controller
     return ['status' => 'success', 'gender' => $p->gender, 'country_iso' => strtolower($p->country_iso)];
   }
 
+  private function searchForPlayerId($id, $array) {
+    foreach ($array as $key => $val) {
+        if ($val['player_id'] === $id) {
+            return $key;
+        }
+    }
+    return null;
+  }
+
   public function getLeaderboard(Request $request)
   {
     $filters = $request->input('filters');
@@ -403,14 +411,14 @@ class PlayerController extends Controller
     $pagesize = $request->input('pageSize', 25);
     $sort = $request->input('sort');
     if ($sort['prop'] === 'rank_pos') $sort['prop'] = 'final_score';
-    $total = PlayerRanking::where([
+    $players = PlayerRanking::where([
       ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
       ['player_ranking.season_games', '>', 3],
-    ])->count();
+    ])->orderBy('final_score', 'DESC')->orderBy('points_sum', 'DESC')->get();
+    $total = $players->count();
     $query = DB::table('player_ranking')
       ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
       ->selectRaw('player_ranking.*, player.country_iso, player.gender');
-    // dd("filters", $filters, "value", $filters['value']);
     if (empty($filters) || is_null($filters['value'])) {
       if ($total === 0) return ['total' => $total, 'data' => []];
       $query->where([
@@ -423,17 +431,13 @@ class PlayerController extends Controller
     if (!empty($filters)) {
       $query->where('player_ranking.username', 'LIKE', $filters['value'] . '%');
     }
-    $leaderboard = $query->get()->map(function ($player, $index) use ($request, $filters) {
+    $leaderboard = $query->get()->map(function ($player, $index) use ($request, $filters, $players) {
       if (empty($filters)) {
         $page = $request->input('page', 1);
         $pagesize = $request->input('pageSize', 50);
         $player->rank_pos = ($page - 1) * $pagesize + $index + 1;
       } else {
-        $player->rank_pos = DB::table('player_ranking')->where([
-          ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
-          ['player_ranking.season_games', '>', 3],
-          ['player_ranking.final_score', '>=', $player->final_score],
-        ])->count();
+        $player->rank_pos = $this->searchForPlayerId($player->player_id, $players) + 1;
       }
       $player->gender_country = ['gender' => $player->gender, 'country' => $player->country_iso];
       $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
