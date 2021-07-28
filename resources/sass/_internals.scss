@@ -24,6 +24,12 @@ html.internals{
         }
       }
     }
+    a{
+      color: lighten($internals_color, 10%);
+      &:hover, &:active, &:visited, &:focus{
+        color: lighten($internals_color, 20%);
+      }
+    }
     .el-menu--popup{
       background-color: lighten($internals_bg, 20%);
       .el-menu-item{

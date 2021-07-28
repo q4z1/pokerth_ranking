@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use App\Models\AdminPlayer;
+use App\Models\Advert;
 use App\Models\Player;
 use App\Models\PlayerRanking;
 use App\Models\User;
@@ -43,6 +44,10 @@ class AdminController extends Controller
   {
     Auth::logout();
     return ['success' => true, 'msg' => 'Logged out.'];
+  }
+
+  public function adverts(Request $request){
+    if ($request->isMethod('GET')) return ['success' => true, 'list' => Advert::selectRaw('`id`, `position`, `content`, `order`, `start`, `end`')->orderBy('created_at', 'DESC')->get()];
   }
 
   public function banlist(Request $request, Player $player)

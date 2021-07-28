@@ -17,12 +17,13 @@
                   />
                 </a>
               </li>
-              <!-- <el-submenu index="1">
+              <el-menu-item index="1">Adverts</el-menu-item>
+              <el-menu-item index="2">Banlist</el-menu-item>
+              <el-submenu index="3">
                 <template slot="title">Reports</template>
-                <el-menu-item index="2-1">Avatar Reports</el-menu-item>
-                <el-menu-item index="2-2">Gametable Name Reports</el-menu-item>
-              </el-submenu> -->
-              <el-menu-item index="3">Banlist</el-menu-item>
+                <el-menu-item index="3-1">Avatar Reports</el-menu-item>
+                <el-menu-item index="3-2">Gametable Name Reports</el-menu-item>
+              </el-submenu>
               <li class="auth">
                 <el-row
                   ><el-col
@@ -81,9 +82,10 @@
         </el-row>
         <el-row v-else>
           <el-col>
-            <avatar-reports v-if="activeIndex === '2-1'"></avatar-reports>
-            <game-name-reports v-if="activeIndex === '2-2'"></game-name-reports>
-            <ban-list v-if="activeIndex === '3'"></ban-list>
+            <adverts v-if="activeIndex === '1'"></adverts>
+            <ban-list v-if="activeIndex === '2'"></ban-list>
+            <avatar-reports v-if="activeIndex === '3-1'"></avatar-reports>
+            <game-name-reports v-if="activeIndex === '3-2'"></game-name-reports>
           </el-col>
         </el-row>
       </el-main>
@@ -98,7 +100,7 @@ export default {
       auth: false,
       username: null,
       password: null,
-      activeIndex: "3",
+      activeIndex: "2",
     };
   },
   mounted() {
