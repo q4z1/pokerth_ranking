@@ -18,7 +18,7 @@
       <el-table-column prop="avatar" label="Avatar">
         <template slot-scope="scope">
           <el-row>
-            <el-col><img :src="'/images/avatars/client/' + scope.row.avatar_hash + '.' + scope.row.avatar_type" :alt="'Owner: ' + scope.row.creator.username"></el-col>
+            <el-col><img :src="'/images/avatars/game/' + scope.row.avatar_hash + '.' + scope.row.avatar_type" :alt="'Owner: ' + scope.row.creator.username"></el-col>
           </el-row>
         </template>
       </el-table-column>
