@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class ReportedAvatar extends Model
 {
     use HasFactory;
+
+    protected $table = "reported_avatar";
 }

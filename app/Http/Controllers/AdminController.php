@@ -10,6 +10,8 @@ use App\Models\AdminPlayer;
 use App\Models\Advert;
 use App\Models\Player;
 use App\Models\PlayerRanking;
+use App\Models\ReportedAvatar;
+use App\Models\ReportedGamename;
 use App\Models\User;
 
 class AdminController extends Controller
@@ -46,7 +48,31 @@ class AdminController extends Controller
     return ['success' => true, 'msg' => 'Logged out.'];
   }
 
-  public function adverts(Request $request){
+  public function reports(Request $request, $type = null)
+  {
+    if ($request->isMethod('GET')) {
+      $list = [];
+      if (!is_null($type) && $type === 'avatar') {
+        $list = ReportedAvatar::orderBy('timestamp', 'DESC')->get()->map(function ($avatar) {
+          $avatar->creator = Player::where('player_id', $avatar->idplayer)->first();
+          $avatar->reporter = Player::where('player_id', $avatar->by_idplayer)->first();
+          return $avatar;
+        });
+      } else if (!is_null($type) && $type === 'gamename') {
+        $list = ReportedGamename::orderBy('timestamp', 'DESC')->get()->map(function ($gamename) {
+          $gamename->creator = Player::where('player_id', $gamename->game_creator_idplayer)->first();
+          $gamename->reporter = Player::where('player_id', $gamename->by_idplayer)->first();
+          return $gamename;
+        });
+      } else {
+        return ['success' => false, 'msg' => 'Unknown Type.'];
+      }
+      return ['success' => true, 'list' => $list];
+    }
+  }
+
+  public function adverts(Request $request)
+  {
     if ($request->isMethod('GET')) return ['success' => true, 'list' => Advert::selectRaw('`id`, `position`, `content`, `order`, `start`, `end`')->orderBy('created_at', 'DESC')->get()];
   }
 
@@ -61,8 +87,7 @@ class AdminController extends Controller
       $player->active = 1;
       $player->save();
       return ['success' => true, 'msg' => 'Player unbanned.'];
-    }
-    else if ($action === 'ban') {
+    } else if ($action === 'ban') {
       $player->active = 4;
       $player->save();
       return ['success' => true, 'msg' => 'Player banned.'];

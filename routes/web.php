@@ -32,7 +32,8 @@ Route::post('/banlist/{player}', [App\Http\Controllers\AdminController::class, '
 Route::get('/banlist', [App\Http\Controllers\AdminController::class, 'banlist']);
 Route::post('/adverts', [App\Http\Controllers\AdminController::class, 'adverts']);
 Route::get('/adverts', [App\Http\Controllers\AdminController::class, 'adverts']);
-
+Route::post('/reports', [App\Http\Controllers\AdminController::class, 'reports']);
+Route::get('/reports/{type}', [App\Http\Controllers\AdminController::class, 'reports']);
 
 Route::get('/html/{title}', [App\Http\Controllers\HtmlBlockController::class, 'getBlock']);
 Route::get('/a/{position}', [App\Http\Controllers\AdvertController::class, 'getAdverts']);

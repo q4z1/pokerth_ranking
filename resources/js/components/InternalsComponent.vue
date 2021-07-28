@@ -153,7 +153,6 @@ export default {
       this.$message({ message: msg, type: type, offset: 75 });
     },
     navigate(index, indexPath) {
-      console.log("index", index);
       this.activeIndex = index;
     },
   },
