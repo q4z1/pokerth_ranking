@@ -11,6 +11,8 @@ class SeasonSwitch {
 
     public function __invoke()
     {
+        // @TODO: parameter: --test=true - test run
+        // @TODO: parameter: --season=2021-03 - die vorige season
         $this->season = $this->get_season(intval(date("Y")), intval(date("m")));
         $this->tables = ['game', 'game_has_player', 'player_ranking'];
         $this->create_tables();
@@ -38,10 +40,10 @@ class SeasonSwitch {
     }
 
     private function cleanup(){
-        DB::statement("TRUNCATE `pokerth_ranking`.`suspended_nicknames`;");
-        DB::statement("UPDATE `pokerth_ranking`.`player_ranking` SET `final_score` = 0, `points_sum` = 0, `average_score` = 0, `season_games` = 0;");
-        DB::statement("DELETE FROM `pokerth_ranking`.`game` WHERE `end_time` IS NOT NULL");
-        DB::statement("DELETE FROM `pokerth_ranking`.`game_has_player` WHERE `end_time` IS NOT NULL");
+        DB::statement("TRUNCATE `pokerth_ranking`.`suspended_nicknames`;"); // @TODO: delete vor letzter season
+        DB::statement("UPDATE `pokerth_ranking`.`player_ranking` SET `final_score` = 0, `points_sum` = 0, `average_score` = 0, `season_games` = 0;"); // @TODO: calc der points seit beginn der season und rückwirkend für die ganze letzte season
+        DB::statement("DELETE FROM `pokerth_ranking`.`game` WHERE `end_time` IS NOT NULL"); // @TODO: delete vor letzter season
+        DB::statement("DELETE FROM `pokerth_ranking`.`game_has_player` WHERE `end_time` IS NOT NULL"); // @TODO: delete vor letzter season
     }
 
     private function get_season($year, $month){
