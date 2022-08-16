@@ -53,7 +53,10 @@ class PlayerController extends Controller
       });
     $pr = PlayerRanking::find($res->player_id);
 
-    $pos = PlayerRanking::where('final_score', '>=', $pr->final_score)->orderBy('final_score', 'DESC')->count();
+    $pos = PlayerRanking::where([
+      ['username', 'NOT LIKE', 'deleted_%'],
+      ['final_score', '>=', $pr->final_score]
+    ])->orderBy('final_score', 'DESC')->count();
     $games = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(40)->get();
     $aGames = GameHasPlayer::where('player_idplayer', $res->player_id)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->get();
     $stats = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0];
@@ -86,7 +89,10 @@ class PlayerController extends Controller
     $pos = Cache::rememberForever("{$player->player_id}_{$season}_pos", function () use ($season, $player) {
       return DB::table("pokerth_seasons.{$season}_player_ranking")
         ->selectRaw('*')
-        ->where('final_score', '>=', $player->ranking->final_score)->orderBy('final_score', 'DESC')->count();
+        ->where([
+          ['username', 'NOT LIKE', 'deleted_%'],
+          ['final_score', '>=', $player->ranking->final_score],
+        ])->orderBy('final_score', 'DESC')->count();
     });
     $stats = Cache::rememberForever("{$player->player_id}_{$season}_stats", function () use ($season, $player) {
       $aGames = DB::table("pokerth_seasons.{$season}_game_has_player")
