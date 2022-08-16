@@ -138,6 +138,7 @@ class PlayerController extends Controller
     else if (strlen($request->new_password) < 6) return ['status' => 'success', 'msg' => 'Password too short.'];
     $p = Player::where('email', $request->email)->orWhere('username', $request->username)->first();
     if ($p) return ['status' => false, 'msg' => 'The email address and/or username is already used in the ranking db - please contact a forum admin.'];
+    // @TODO: prüfen auf double entries mit groß-/Kleinschreibung
     $p2 = DB::table('pokerth.phpbb_users')
       ->selectRaw('*')
       ->where('user_email', $request->email)

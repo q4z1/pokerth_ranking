@@ -26,6 +26,7 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->call(new SeasonSwitch)->cron('0 0 01 */3 *'); // M H d m Y
+        //$schedule->call(new SeasonSwitch)->cron('* * * * *'); // M H d m Y
     }
 
     /**
