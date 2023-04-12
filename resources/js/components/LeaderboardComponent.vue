@@ -222,7 +222,7 @@
                                 img{
                                     margin-top: 0;
                                     margin-bottom: 0.3em;
-                                    width: 35px;
+                                    // width: 35px;
                                     height: 18px;
                                 }
                             }
