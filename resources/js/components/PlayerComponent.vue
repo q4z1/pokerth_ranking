@@ -163,15 +163,7 @@
                                     <div class="list">
                                         <el-row v-for="season in seasons" :key="season" class="season">
                                             <el-col>
-                                                <el-row>
-                                                    <el-col>
-                                                        <el-collapse>
-                                                            <el-collapse-item :title="season">
-                                                                <season-component :season="season" :playerid="player.player_id"></season-component>
-                                                            </el-collapse-item>
-                                                        </el-collapse>
-                                                    </el-col>
-                                                </el-row>
+                                                <season-component :season="season" :playerid="player.player_id"></season-component>
                                             </el-col>
                                         </el-row>
                                     </div>
@@ -273,7 +265,7 @@
                             this.games = res.data.games
                             this.stats = res.data.stats
                             this.games_chart = res.data.bar_stats
-                            this.seasons = res.data.seasons
+                            this.seasons = res.data.seasons.reverse()
                             this.err = false
                         }else{
                             this.err = res.data.msg
