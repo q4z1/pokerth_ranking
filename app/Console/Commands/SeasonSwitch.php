@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use App\Console\Invokes\SeasonSwitch as SeasonSwitch2;
 
 class SeasonSwitch extends Command
 {
@@ -11,7 +12,7 @@ class SeasonSwitch extends Command
      *
      * @var string
      */
-    protected $signature = 'command:name';
+    protected $signature = 'season:switch';
 
     /**
      * The console command description.
@@ -28,6 +29,8 @@ class SeasonSwitch extends Command
     public function __construct()
     {
         parent::__construct();
+        //$sw = new SeasonSwitch2;
+        //$sw->run();
     }
 
     /**

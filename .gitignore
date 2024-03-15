@@ -5,6 +5,8 @@ public/js
 public/css
 public/fonts
 /storage/*.key
+storage/framework/sessions/*
+storage/framework/cache/*
 /vendor
 .env
 .env.backup

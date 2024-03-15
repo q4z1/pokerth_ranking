@@ -1,4 +1,5 @@
 #!/bin/sh
-cd /home/coder/project/www/pokerth/pthranking
+cd /var/www/pokerth/pthranking
 /usr/bin/pkill -f schedule:work
-/usr/bin/php artisan schedule:work
+/usr/local/bin/php artisan schedule:work
+echo 'Done.'

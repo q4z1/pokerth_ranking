@@ -14,7 +14,21 @@ class SeasonSwitch {
         // @TODO: parameter: --test=true - test run
         // @TODO: parameter: --season=2021-03 - die vorige season
         $this->season = $this->get_season(intval(date("Y")), intval(date("m")));
-        $this->tables = ['game', 'game_has_player', 'player_ranking'];
+        $this->tables = ['game', 'game_has_player', 'player_ranking', 'suspended_nicknames'];
+        $this->create_tables();
+        $this->copy_tables();
+        $this->cleanup();
+        Cache::forget('seasons');
+        echo date("Y-m-d H:i:s") . " : Ending Season {$this->season}.\n";
+        return;
+    }
+
+    public function run()
+    {
+        // @TODO: parameter: --test=true - test run
+        // @TODO: parameter: --season=2021-03 - die vorige season
+        $this->season = $this->get_season(intval(date("Y")), intval(date("m")));
+        $this->tables = ['game', 'game_has_player', 'player_ranking', 'suspended_nicknames'];
         $this->create_tables();
         $this->copy_tables();
         $this->cleanup();
