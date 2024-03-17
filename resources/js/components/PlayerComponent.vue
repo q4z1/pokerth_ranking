@@ -265,7 +265,7 @@
                             this.games = res.data.games
                             this.stats = res.data.stats
                             this.games_chart = res.data.bar_stats
-                            this.seasons = res.data.seasons.reverse()
+                            this.seasons = res.data.seasons.sort().reverse()
                             this.err = false
                         }else{
                             this.err = res.data.msg
