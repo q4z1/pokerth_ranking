@@ -312,7 +312,11 @@ class PlayerController extends Controller
     $auth_provider = DB::table('pokerth.phpbb_config')->where('config_name', 'auth_method')->pluck('config_value')->toArray()[0];
     if ($auth_provider !== 'db') {
       // @TODO: if oauth is used for example
-    }
+    }    $p = Cache::rememberForever('gender.prof.' . $request->u, function () use ($request) {
+      return Player::selectRaw('gender, country_iso')
+        ->where('username', $request->u)
+        ->first();
+    });
     // update num_users
     DB::statement('UPDATE pokerth.phpbb_config SET config_value=(config_value-1) WHERE config_name = ?', ['num_users']);
     // When we delete these users and retain the posts, we must assign all the data to the guest user
@@ -404,54 +408,108 @@ class PlayerController extends Controller
 
   private function searchForPlayerId($id, $array) {
     foreach ($array as $key => $val) {
-        if ($val['player_id'] === $id) {
+        if(is_array($val)){
+          if ($val['player_id'] === $id) {
             return $key;
+          }
+        }else{
+          if ($val->player_id === $id) {
+            return $key;
+          }
         }
+
     }
     return null;
   }
 
-  public function getLeaderboard(Request $request)
+  public function getLeaderboard(Request $request, $season)
   {
+    $seasons = Cache::rememberForever('gseasons', function () {
+      $seasons_raw = DB::connection('seasons')->select("SHOW TABLES LIKE '%_player_ranking';");
+      $s = [];
+      foreach($seasons_raw as $season){
+        $s[] = substr($season->{'Tables_in_pokerth_seasons (%_player_ranking)'}, 0, 6);
+      }
+      rsort($s);
+      return $s;
+    });
+
     $filters = $request->input('filters');
     $page = $request->input('page', 1);
     $pagesize = $request->input('pageSize', 25);
     $sort = $request->input('sort');
     if ($sort['prop'] === 'rank_pos') $sort['prop'] = 'final_score';
-    $players = PlayerRanking::where([
-      ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
-      ['player_ranking.season_games', '>', 3],
-    ])->orderBy('final_score', 'DESC')->orderBy('points_sum', 'DESC')->get();
-    $total = $players->count();
-    $query = DB::table('player_ranking')
-      ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
-      ->selectRaw('player_ranking.*, player.country_iso, player.gender');
-    if (empty($filters) || is_null($filters['value'])) {
-      if ($total === 0) return ['total' => $total, 'data' => []];
-      $query->where([
+
+    if($season === "current" || $season === $seasons[0]){
+      $players = PlayerRanking::where([
         ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
         ['player_ranking.season_games', '>', 3],
-      ]);
-    }
-    $query->orderBy($sort['prop'], (($sort['order'] == 'descending') ? 'DESC' : 'ASC'))
-      ->offset(($page - 1) * $pagesize)->limit($pagesize);
-    if (!empty($filters)) {
-      $query->where('player_ranking.username', 'LIKE', $filters['value'] . '%');
-    }
-    $leaderboard = $query->get()->map(function ($player, $index) use ($request, $filters, $players) {
-      if (empty($filters)) {
-        $page = $request->input('page', 1);
-        $pagesize = $request->input('pageSize', 50);
-        $player->rank_pos = ($page - 1) * $pagesize + $index + 1;
-      } else {
-        $player->rank_pos = $this->searchForPlayerId($player->player_id, $players) + 1;
+      ])->orderBy('final_score', 'DESC')->orderBy('points_sum', 'DESC')->get();
+      $total = $players->count();
+      $query = DB::table('player_ranking')
+        ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
+        ->selectRaw('player_ranking.*, player.country_iso, player.gender');
+      if (empty($filters) || is_null($filters['value'])) {
+        if ($total === 0) return ['total' => $total, 'data' => []];
+        $query->where([
+          ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
+          ['player_ranking.season_games', '>', 3],
+        ]);
       }
-      $player->gender_country = ['gender' => $player->gender, 'country' => $player->country_iso];
-      $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
-      $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
-      return $player;
-    });
-    $seasons = [];
+      $query->orderBy($sort['prop'], (($sort['order'] == 'descending') ? 'DESC' : 'ASC'))
+        ->offset(($page - 1) * $pagesize)->limit($pagesize);
+      if (!empty($filters)) {
+        $query->where('player_ranking.username', 'LIKE', $filters['value'] . '%');
+      }
+      $leaderboard = $query->get()->map(function ($player, $index) use ($request, $filters, $players) {
+        if (empty($filters)) {
+          $page = $request->input('page', 1);
+          $pagesize = $request->input('pageSize', 50);
+          $player->rank_pos = ($page - 1) * $pagesize + $index + 1;
+        } else {
+          $player->rank_pos = $this->searchForPlayerId($player->player_id, $players) + 1;
+        }
+        $player->gender_country = ['gender' => $player->gender, 'country' => $player->country_iso];
+        $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
+        $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
+        return $player;
+      });
+    }
+    else{
+      $players = DB::connection('seasons')->select("SELECT * from {$season}_player_ranking WHERE username NOT LIKE 'deleted_%' AND season_games > 3 ORDER BY final_score DESC, points_sum DESC;");
+
+      $total = count($players);
+      $query = DB::table("pokerth_seasons.{$season}_player_ranking")
+        ->join('player', 'player.player_id', '=', "pokerth_seasons.{$season}_player_ranking.player_id")
+        ->selectRaw("pokerth_seasons.{$season}_player_ranking.*, player.country_iso, player.gender");
+      if (empty($filters) || is_null($filters['value'])) {
+        if ($total === 0) return ['total' => $total, 'data' => []];
+        $query->where([
+          ["pokerth_seasons.{$season}_player_ranking.username", 'NOT LIKE', 'deleted_%'],
+          ["pokerth_seasons.{$season}_player_ranking.season_games", '>', 3],
+        ]);
+      }
+      $query->orderBy($sort['prop'], (($sort['order'] == 'descending') ? 'DESC' : 'ASC'))
+        ->offset(($page - 1) * $pagesize)->limit($pagesize);
+      if (!empty($filters)) {
+        $query->where("pokerth_seasons.{$season}_player_ranking.username", 'LIKE', $filters['value'] . '%');
+      }
+      $leaderboard = $query->get();
+
+      foreach($leaderboard as $key => $player){
+        if (empty($filters)) {
+          $page = $request->input('page', 1);
+          $pagesize = $request->input('pageSize', 50);
+          $player->rank_pos = ($page - 1) * $pagesize + $index + 1;
+        } else {
+          $player->rank_pos = $this->searchForPlayerId($player->player_id, $players) + 1;
+        }
+        $player->gender_country = ['gender' => $player->gender, 'country' => $player->country_iso];
+        $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
+        $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
+        $leaderboard[$key] = $player;
+      }
+    }
 
     return ['total' => $total, 'data' => $leaderboard, 'seasons' => $seasons];
   }

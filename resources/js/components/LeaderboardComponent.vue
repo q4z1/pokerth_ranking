@@ -15,14 +15,14 @@
                     <div class="list-inner">
                         <el-row>
                             <el-col :span="6">
-                                <el-input label="Search:" size="small" v-model="filters.value" placeholder="Username"></el-input>
+                                <el-input class="username" label="Search:" size="small" v-model="filters.value" placeholder="Username"></el-input>
                             </el-col>
-                            <!--
                             <el-col :span="12">
                                 &nbsp;
                             </el-col>
-                            <el-col :span="6">
-                                <el-select v-model="season" placeholder="Current Season">
+                            <el-col :span="6" class="season">
+                                <span class="season">Season:&nbsp;</span>
+                                <el-select @change="handleSelectSeason" size="small" v-model="season" placeholder="Select a Season">
                                     <el-option
                                     v-for="season in seasons"
                                     :key="season"
@@ -30,7 +30,6 @@
                                     :value="season"></el-option>
                                 </el-select>
                             </el-col>
-                            -->
                         </el-row>
                         <el-row>
                             <el-col>
@@ -131,7 +130,7 @@
                         'value': '',
                     }]
                 },
-                season: null,
+                season: "current",
                 seasons: null,
                 customButtonsForRow(row) {
                     return [
@@ -152,19 +151,29 @@
         computed: {
 
         },
+        created() {
+            let season_param = window.location.search.substr(1)
+            if(season_param !== ''){
+                this.season = season_param.substring(7);
+            }
+            console.log("season=" + this.season)
+        },
         mounted() {
             this.countries = window.countries
         },
         methods: {
             async loadData(queryInfo) {
                 this.loading = true
-                const res = await axios.post('/pthranking/ranking/leaderboard', queryInfo);
+                const res = await axios.post('/pthranking/ranking/leaderboard/'+this.season, queryInfo);
                 let { data, total, seasons } = {data: res.data.data, total: res.data.total, seasons: res.data.seasons}
                 this.data = data
                 this.total = total
                 this.seasons = seasons
                 this.loading = false
                 this.queryInfo = queryInfo
+            },
+            handleSelectSeason(){ 
+                window.location.href = '/app.php/leaderboard?season=' + this.season
             },
             handleCurrentPageChange(page) {},
             handleCurrentChange(currentRow) {},
@@ -200,8 +209,17 @@
         background-color: transparent!important;
         color: inherit;
     }
+    .el-input.username{
+        width: 50%;
+    }
     .el-row{
         padding-bottom: 1em;
+    }
+    .el-col.season{
+        text-align: right;
+    }
+    span.season{
+        font-size: 0.9em;
     }
     .sc-table{
         .el-table{
