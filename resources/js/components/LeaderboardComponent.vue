@@ -14,14 +14,15 @@
 		        <li class="row">
                     <div class="list-inner">
                         <el-row>
-                            <el-col :span="6">
+                            <el-col :span="8">
+                                Search:
                                 <el-input class="username" label="Search:" size="small" v-model="filters.value" placeholder="Username"></el-input>
                             </el-col>
-                            <el-col :span="12">
+                            <el-col :span="10">
                                 &nbsp;
                             </el-col>
-                            <el-col :span="6" class="season">
-                                <span class="season">Season:&nbsp;</span>
+                            <el-col :span="6">
+                                <div class="season">Season:</div>
                                 <el-select @change="handleSelectSeason" size="small" v-model="season" placeholder="Select a Season">
                                     <el-option
                                     v-for="season in seasons"
@@ -209,17 +210,12 @@
         background-color: transparent!important;
         color: inherit;
     }
-    .el-input.username{
-        width: 50%;
-    }
     .el-row{
         padding-bottom: 1em;
     }
-    .el-col.season{
-        text-align: right;
-    }
-    span.season{
+    div.season{
         font-size: 0.9em;
+        text-align: left;
     }
     .sc-table{
         .el-table{
