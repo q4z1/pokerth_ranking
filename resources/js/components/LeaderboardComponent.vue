@@ -17,6 +17,20 @@
                             <el-col :span="6">
                                 <el-input label="Search:" size="small" v-model="filters.value" placeholder="Username"></el-input>
                             </el-col>
+                            <!--
+                            <el-col :span="12">
+                                &nbsp;
+                            </el-col>
+                            <el-col :span="6">
+                                <el-select v-model="season" placeholder="Current Season">
+                                    <el-option
+                                    v-for="season in seasons"
+                                    :key="season"
+                                    :label="season"
+                                    :value="season"></el-option>
+                                </el-select>
+                            </el-col>
+                            -->
                         </el-row>
                         <el-row>
                             <el-col>
@@ -117,6 +131,8 @@
                         'value': '',
                     }]
                 },
+                season: null,
+                seasons: null,
                 customButtonsForRow(row) {
                     return [
                     ]
@@ -143,9 +159,10 @@
             async loadData(queryInfo) {
                 this.loading = true
                 const res = await axios.post('/pthranking/ranking/leaderboard', queryInfo);
-                let { data, total } = {data: res.data.data, total: res.data.total}
+                let { data, total, seasons } = {data: res.data.data, total: res.data.total, seasons: res.data.seasons}
                 this.data = data
                 this.total = total
+                this.seasons = seasons
                 this.loading = false
                 this.queryInfo = queryInfo
             },

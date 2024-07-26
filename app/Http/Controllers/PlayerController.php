@@ -451,6 +451,52 @@ class PlayerController extends Controller
       $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
       return $player;
     });
+    $seasons = [];
+
+    return ['total' => $total, 'data' => $leaderboard, 'seasons' => $seasons];
+  }
+
+  public function getSeasonLeaderboard(Request $request)
+  {
+    $filters = $request->input('filters');
+    $page = $request->input('page', 1);
+    $pagesize = $request->input('pageSize', 25);
+    $sort = $request->input('sort');
+    if ($sort['prop'] === 'rank_pos') $sort['prop'] = 'final_score';
+    // @TODO: use the selected season for PlayerRanking
+    $players = PlayerRanking::where([
+      ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
+      ['player_ranking.season_games', '>', 3],
+    ])->orderBy('final_score', 'DESC')->orderBy('points_sum', 'DESC')->get();
+    $total = $players->count();
+    $query = DB::table('player_ranking')
+      ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
+      ->selectRaw('player_ranking.*, player.country_iso, player.gender');
+    if (empty($filters) || is_null($filters['value'])) {
+      if ($total === 0) return ['total' => $total, 'data' => []];
+      $query->where([
+        ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
+        ['player_ranking.season_games', '>', 3],
+      ]);
+    }
+    $query->orderBy($sort['prop'], (($sort['order'] == 'descending') ? 'DESC' : 'ASC'))
+      ->offset(($page - 1) * $pagesize)->limit($pagesize);
+    if (!empty($filters)) {
+      $query->where('player_ranking.username', 'LIKE', $filters['value'] . '%');
+    }
+    $leaderboard = $query->get()->map(function ($player, $index) use ($request, $filters, $players) {
+      if (empty($filters)) {
+        $page = $request->input('page', 1);
+        $pagesize = $request->input('pageSize', 50);
+        $player->rank_pos = ($page - 1) * $pagesize + $index + 1;
+      } else {
+        $player->rank_pos = $this->searchForPlayerId($player->player_id, $players) + 1;
+      }
+      $player->gender_country = ['gender' => $player->gender, 'country' => $player->country_iso];
+      $player->final_score = number_format((float)($player->final_score / 100), 2, '.', '');
+      $player->average_score = number_format((float)($player->average_score / 100), 2, '.', '');
+      return $player;
+    });
     return ['total' => $total, 'data' => $leaderboard];
   }
 }
