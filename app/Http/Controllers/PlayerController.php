@@ -440,7 +440,7 @@ class PlayerController extends Controller
     $sort = $request->input('sort');
     if ($sort['prop'] === 'rank_pos') $sort['prop'] = 'final_score';
 
-    if($season === "current" || $season === $seasons[0]){
+    if($season === "current"){
       $players = PlayerRanking::where([
         ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
         ['player_ranking.season_games', '>', 3],

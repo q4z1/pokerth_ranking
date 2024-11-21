@@ -153,11 +153,12 @@
 
         },
         created() {
-            let season_param = window.location.search.substr(1)
-            if(season_param !== ''){
-                this.season = season_param.substring(7);
+            let params = new URLSearchParams(window.location.search);
+            let season_param = params.get('season'); 
+            if(season_param !== null){
+                this.season = season_param
             }
-            console.log("season=" + this.season)
+            // console.log("season=" + season_param)
         },
         mounted() {
             this.countries = window.countries
@@ -170,6 +171,7 @@
                 this.data = data
                 this.total = total
                 this.seasons = seasons
+                this.seasons.unshift("current")
                 this.loading = false
                 this.queryInfo = queryInfo
             },
