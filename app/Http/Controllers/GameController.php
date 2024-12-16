@@ -49,7 +49,7 @@ class GameController extends Controller
         $table = [];
         for($i=1;$i<=10;$i++)
         {
-            $p = PlayerRanking::where('username', $request->input('u' . $i))->first();
+            $p = PlayerRanking::where(DB::raw('BINARY `username`'), $request->input('u' . $i))->first();
             if($p){
                 $p->rank_pos = PlayerRanking::where('final_score', '>=', $p->final_score)->orderBy('final_score', 'DESC')->count();
                 $table[] = $p;
