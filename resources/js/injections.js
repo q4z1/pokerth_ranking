@@ -6,28 +6,28 @@ document.onreadystatechange = function () {
   if (document.readyState === "complete") {
     if ($('input[name=password_confirm').length > 0) {
       if ($('#register').length > 0) {
-        $('#register').submit(function (event) {
-          if ($(event.originalEvent.submitter).attr('name') === 'refresh_vc') return
-          if (form_done) return
-          event.preventDefault()
-          let data = {}
-          $("form#register :input").each(function () {
-            var input = $(this)
-            data[$(input).attr('name')] = $(input).val()
-          });
-          axios.post(window.location.origin + '/pthranking/account/create', data)
-            .then(res => {
-              if (typeof res.data.status !== 'undefined' && res.data.status === 'success') {
-                form_done = true
-                $('form#register input[name=submit]').click()
-              }
-              else if (typeof res.data.msg !== 'undefined') {
-                $('#register .fields2 dl').first().find('dd').addClass('error').text(res.data.msg);
-              }
-            }).catch(err => {
-              console.log(err)
-            })
-        });
+        // $('#register').submit(function (event) {
+        //   if ($(event.originalEvent.submitter).attr('name') === 'refresh_vc') return
+        //   if (form_done) return
+        //   event.preventDefault()
+        //   let data = {}
+        //   $("form#register :input").each(function () {
+        //     var input = $(this)
+        //     data[$(input).attr('name')] = $(input).val()
+        //   });
+        //   axios.post(window.location.origin + '/pthranking/account/create', data)
+        //     .then(res => {
+        //       if (typeof res.data.status !== 'undefined' && res.data.status === 'success') {
+        //         form_done = true
+        //         $('form#register input[name=submit]').click()
+        //       }
+        //       else if (typeof res.data.msg !== 'undefined') {
+        //         $('#register .fields2 dl').first().find('dd').addClass('error').text(res.data.msg);
+        //       }
+        //     }).catch(err => {
+        //       console.log(err)
+        //     })
+        // });
       } else if ($('#ucp').length > 0) {
         $('#ucp').submit(function (event) {
           if (form_done) return
@@ -252,24 +252,24 @@ document.onreadystatechange = function () {
       });
     }
 
-    if (location.href.includes('mode=activate')) {
-      // disable redirect - check out response and then redirect
-      window.stop()
-      let data = {}
-      $("body :input").each(function () {
-        var input = $(this)
-        data[$(input).attr('name')] = $(input).val()
-      })
-      data.href = window.location.href
-      axios.post(window.location.origin + '/pthranking/account/validate', data)
-        .then(res => {
-          // @TODO: redirect to board index here
-          console.log(res.data)
+    // if (location.href.includes('mode=activate')) {
+    //   // disable redirect - check out response and then redirect
+    //   window.stop()
+    //   let data = {}
+    //   $("body :input").each(function () {
+    //     var input = $(this)
+    //     data[$(input).attr('name')] = $(input).val()
+    //   })
+    //   data.href = window.location.href
+    //   axios.post(window.location.origin + '/pthranking/account/validate', data)
+    //     .then(res => {
+    //       // @TODO: redirect to board index here
+    //       console.log(res.data)
 
-        }).catch(err => {
-          console.log(err)
-        })
-    }
+    //     }).catch(err => {
+    //       console.log(err)
+    //     })
+    // }
 
   }
 }
