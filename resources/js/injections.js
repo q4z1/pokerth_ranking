@@ -233,23 +233,23 @@ document.onreadystatechange = function () {
     }
 
     if ($('input[name=new_password_confirm').length > 0) {
-      $('#reset_password').submit(function (event) {
-        if (form_done) return
-        event.preventDefault()
-        let data = {}
-        $("form#reset_password :input").each(function () {
-          var input = $(this)
-          data[$(input).attr('name')] = $(input).val()
-        })
-        axios.post(window.location.origin + '/pthranking/account/reset', data)
-          .then(res => {
-            // console.log(res)
-            form_done = true
-            $("form#reset_password input[name=submit]").click() // @FIXME: has to be triggered twice, or with a timeout?
-          }).catch(err => {
-            console.log(err)
-          })
-      });
+      // $('#reset_password').submit(function (event) {
+      //   if (form_done) return
+      //   event.preventDefault()
+      //   let data = {}
+      //   $("form#reset_password :input").each(function () {
+      //     var input = $(this)
+      //     data[$(input).attr('name')] = $(input).val()
+      //   })
+      //   axios.post(window.location.origin + '/pthranking/account/reset', data)
+      //     .then(res => {
+      //       // console.log(res)
+      //       form_done = true
+      //       $("form#reset_password input[name=submit]").click() // @FIXME: has to be triggered twice, or with a timeout?
+      //     }).catch(err => {
+      //       console.log(err)
+      //     })
+      // });
     }
 
     // if (location.href.includes('mode=activate')) {
