@@ -33,10 +33,29 @@ class AttackCheck extends Command
         $log = "visitor_log.txt";
         $limit = 2000;
         $enabled_limit = 1800;
-        $rule_json = shell_exec("curl -s --request GET https://api.cloudflare.com/client/v4/zones/" . env('CF_ZONE_ID') . "/rulesets/" . env('CF_RULESET_ID')
-                . " --header 'Content-Type: application/json' --header \"X-Auth-Email: " . env('CF_EMAIL') . "\" --header \"X-Auth-Key: " . env('CF_API_KEY') . "\"");
 
-        $rule = json_decode($rule_json, true)['result']['rules'][1];
+        $url = "https://api.cloudflare.com/client/v4/zones/" . env('CF_ZONE_ID') . "/rulesets/" . env('CF_RULESET_ID');
+        $headers = array('Content-Type: application/json', 'X-Auth-Email: ' . env('CF_EMAIL'), 'X-Auth-Key: ' . env('CF_API_KEY'));
+        $curl = curl_init();
+        curl_setopt($curl, CURLOPT_URL, $url);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'GET');
+        $response = curl_exec($curl);
+        $rules = json_decode($response, true);
+        curl_close($curl);
+
+        $rule = null;
+        foreach($rules['result']['rules'] as $tRule){
+            if($tRule['id'] == env('CF_RULE_ID')){
+                $rule = $tRule;
+            }
+        }
+
+        if(is_null($rule)){
+            dd("Rule not found!");
+        }
+
         $last_update = strtotime($rule['last_updated']);
 
         unset($rule['last_updated']);
