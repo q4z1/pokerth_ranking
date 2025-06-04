@@ -31,12 +31,12 @@ class AttackCheck extends Command
     {
         $file = "visitors.txt";
         $log = "visitor_log.txt";
-        $limit = 200;
+        $limit = 2000;
         $enabled_limit = 1800;
         $rule_json = shell_exec("curl -s --request GET https://api.cloudflare.com/client/v4/zones/" . env('CF_ZONE_ID') . "/rulesets/" . env('CF_RULESET_ID')
                 . " --header 'Content-Type: application/json' --header \"X-Auth-Email: " . env('CF_EMAIL') . "\" --header \"X-Auth-Key: " . env('CF_API_KEY') . "\"");
 
-        $rule = json_decode($rule_json, true)['result']['rules'][0];
+        $rule = json_decode($rule_json, true)['result']['rules'][1];
         $last_update = strtotime($rule['last_updated']);
 
         unset($rule['last_updated']);
@@ -51,7 +51,7 @@ class AttackCheck extends Command
         date_default_timezone_set('UTC');
         $last5min = date("c", strtotime("-5 minutes"));
 
-        $command =  "cat /var/log/nginx/pokerth_access.log | awk '$4 > \"[$last5min]\"' | awk '{a[$1]} END {print length(a)}'";
+        $command =  "cat /var/log/nginx/pokerth_access.log | awk '$4 > \"[$last5min]\"' | wc -l";
         $total = trim(shell_exec($command));
 
         $diff = 0;
@@ -68,7 +68,7 @@ class AttackCheck extends Command
 
         Storage::append($log, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
 
-        if($is_enabled && (time() - $last_updated) > $enabled_limit){
+        if($is_enabled && (time() - $last_update) > $enabled_limit){
             Storage::append($log, date("Y-m-d H:i:s") . "|Filter disabled.");
 
             $data = json_encode($rule_enable);
@@ -113,7 +113,7 @@ class AttackCheck extends Command
             $response = curl_exec($curl);
             curl_close($curl);
 
-            $data = "{\"embeds\": [{ \"title\": \"".date("Y-m-d H:i:s")." - Critical - last 5 min unique IP diff >$limit ... Filter activated!\", \"color\": 14177041 }]}";
+            $data = "{\"embeds\": [{ \"title\": \"".date("Y-m-d H:i:s")." - Critical - last 5 min Hits >$limit ... Filter activated!\", \"color\": 14177041 }]}";
             $headers = array('Content-Type: application/json', 'Accept: application/json');
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_URL, env('DISCORD_ATTACK_WEBHOOK'));
