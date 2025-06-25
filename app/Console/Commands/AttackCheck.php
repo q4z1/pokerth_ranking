@@ -6,6 +6,9 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
+use Amenadiel\JpGraph\Graph;
+use Amenadiel\JpGraph\Plot;
+
 class AttackCheck extends Command
 {
     /**
@@ -22,6 +25,12 @@ class AttackCheck extends Command
      */
     protected $description = 'Command description';
 
+
+    protected $last_state_file = 'visitors.txt';
+    protected $log_file = 'visitor_log.txt';
+    protected $graph_file = "visitors.png";
+
+
     /**
      * Execute the console command.
      *
@@ -29,9 +38,7 @@ class AttackCheck extends Command
      */
     public function handle()
     {
-        $file = "visitors.txt";
-        $log = "visitor_log.txt";
-        $limit = 2000;
+        $limit = 1500;
         $enabled_limit = 1800;
 
         $url = "https://api.cloudflare.com/client/v4/zones/" . env('CF_ZONE_ID') . "/rulesets/" . env('CF_RULESET_ID');
@@ -65,7 +72,8 @@ class AttackCheck extends Command
         $is_enabled = $rule['enabled'];
 
         $rule_disable = $rule_enable = $rule;
-        $rule_disable['enabled'] = true;
+        $rule_disable['enabled'] = false;
+        $rule_enable['enabled'] = true;
 
         date_default_timezone_set('UTC');
         $last5min = date("c", strtotime("-5 minutes"));
@@ -75,22 +83,24 @@ class AttackCheck extends Command
 
         $diff = 0;
 
-        if (!Storage::disk('local')->exists($file)){
-             Storage::disk('local')->put($file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
+        if (!Storage::disk('local')->exists($this->last_state_file)){
+            Storage::disk('local')->put($this->last_state_file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
         }
 
-        $last = explode("|", Storage::disk('local')->get($file));
+        $last = explode("|", Storage::disk('local')->get($this->last_state_file));
         $lastTotal = $last[1];
         $diff = $total - $lastTotal;
 
-        Storage::disk('local')->put($file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
+        Storage::disk('local')->put($this->last_state_file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
 
-        Storage::append($log, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
+        Storage::append($this->log_file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
+
+        $this->updateGraph();
 
         if($is_enabled && (time() - $last_update) > $enabled_limit){
-            Storage::append($log, date("Y-m-d H:i:s") . "|Filter disabled.");
+            // Storage::append($this->log_file, date("Y-m-d H:i:s") . "|Filter disabled.");
 
-            $data = json_encode($rule_enable);
+            $data = json_encode($rule_disable);
             $url = "https://api.cloudflare.com/client/v4/zones/" . env('CF_ZONE_ID') . "/rulesets/" . env('CF_RULESET_ID') . "/rules/" . env('CF_RULE_ID');
             $headers = array('Content-Type: application/json', 'X-Auth-Email: ' . env('CF_EMAIL'), 'X-Auth-Key: ' . env('CF_API_KEY'));
             $curl = curl_init();
@@ -118,9 +128,9 @@ class AttackCheck extends Command
         }
 
         if($diff > $limit){
-            Storage::append($log, date("Y-m-d H:i:s") . "|Under Attack!");
+            // Storage::append($this->log_file, date("Y-m-d H:i:s") . "|Under Attack!");
 
-            $data = json_encode($rule_disable);
+            $data = json_encode($rule_enable);
             $url = "https://api.cloudflare.com/client/v4/zones/" . env('CF_ZONE_ID') . "/rulesets/" . env('CF_RULESET_ID') . "/rules/" . env('CF_RULE_ID');
             $headers = array('Content-Type: application/json', 'X-Auth-Email: ' . env('CF_EMAIL'), 'X-Auth-Key: ' . env('CF_API_KEY'));
             $curl = curl_init();
@@ -145,5 +155,47 @@ class AttackCheck extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    public function updateGraph()
+    {
+        // dd('updateGraph');
+        $last24h = date("Y-m-d H:i:s", strtotime("-12 hours"));
+
+        $command =  "cat /var/www/pokerth/pthranking/storage/app/" . $this->log_file . " | awk -F  '|' '$1 > \"$last24h\"'";
+        $lines = explode("\n", trim(shell_exec($command)));
+        $log = [];
+        $datay = [];
+        foreach($lines as $line){
+            $log[] = explode("|", $line);
+            $datay[] = explode("|", $line)[1];
+        }
+        // Create the Line Graph.
+        // $datay    = [1.23, 1.9, 1.6, 3.1, 3.4, 2.8, 2.1, 1.9];
+        $__width  = 1440;
+        $__height = 800;
+        $graph    = new Graph\Graph($__width, $__height);
+        $graph->SetScale('textlin');
+
+        $graph->img->SetMargin(40, 40, 40, 40);
+        $graph->SetShadow();
+
+        $graph->title->Set('Webserver Hits last 12 hours');
+        $graph->title->SetFont(FF_FONT1, FS_BOLD);
+
+        $p1 = new Plot\LinePlot($datay);
+        $p1->SetFillColor('orange');
+        $p1->mark->SetType(MARK_FILLEDCIRCLE);
+        $p1->mark->SetFillColor('red');
+        $p1->mark->SetWidth(4);
+        $graph->Add($p1);
+
+        ob_start();
+        $graph->Stroke();
+        $data = ob_get_contents();
+        ob_end_clean();
+
+        Storage::disk('public')->put($this->graph_file, $data);
+
     }
 }
