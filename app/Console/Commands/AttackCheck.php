@@ -30,6 +30,9 @@ class AttackCheck extends Command
     protected $log_file = 'visitor_log.txt';
     protected $graph_file = "visitors.png";
 
+    protected $hours = 96;
+    protected $limit = 1500;
+    protected $enabled_limit = 86400;
 
     /**
      * Execute the console command.
@@ -38,8 +41,6 @@ class AttackCheck extends Command
      */
     public function handle()
     {
-        $limit = 1500;
-        $enabled_limit = 1800;
 
         $url = "https://api.cloudflare.com/client/v4/zones/" . env('CF_ZONE_ID') . "/rulesets/" . env('CF_RULESET_ID');
         $headers = array('Content-Type: application/json', 'X-Auth-Email: ' . env('CF_EMAIL'), 'X-Auth-Key: ' . env('CF_API_KEY'));
@@ -70,6 +71,7 @@ class AttackCheck extends Command
         unset($rule['version']);
 
         $is_enabled = $rule['enabled'];
+        // $is_enabled = false; // debug
 
         $rule_disable = $rule_enable = $rule;
         $rule_disable['enabled'] = false;
@@ -97,7 +99,7 @@ class AttackCheck extends Command
 
         $this->updateGraph();
 
-        if($is_enabled && (time() - $last_update) > $enabled_limit){
+        if($is_enabled && (time() - $last_update) > ($this->enabled_limit - 300)){
             // Storage::append($this->log_file, date("Y-m-d H:i:s") . "|Filter disabled.");
 
             $data = json_encode($rule_disable);
@@ -112,7 +114,8 @@ class AttackCheck extends Command
             $response = curl_exec($curl);
             curl_close($curl);
 
-            $data = "{\"embeds\": [{ \"title\": \"".date("Y-m-d H:i:s")." - Normal - filter was active for $enabled_limit sec ... Filter deactivated.\", \"color\": 1127128 }]}";
+            $data = "{\"embeds\": [{ \"title\": \"" . date("Y-m-d H:i:s") . " - Normal - filter was active for "
+                . ($this->enabled_limit/60) . " min ... Filter deactivated.\", \"color\": 1127128 }]}";
             $headers = array('Content-Type: application/json', 'Accept: application/json');
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_URL, env('DISCORD_ATTACK_WEBHOOK'));
@@ -127,7 +130,7 @@ class AttackCheck extends Command
 
         }
 
-        if($diff > $limit){
+        if($diff > $this->limit){
             // Storage::append($this->log_file, date("Y-m-d H:i:s") . "|Under Attack!");
 
             $data = json_encode($rule_enable);
@@ -142,7 +145,7 @@ class AttackCheck extends Command
             $response = curl_exec($curl);
             curl_close($curl);
 
-            $data = "{\"embeds\": [{ \"title\": \"".date("Y-m-d H:i:s")." - Critical - last 5 min Hits >$limit ... Filter activated!\", \"color\": 14177041 }]}";
+            $data = "{\"embeds\": [{ \"title\": \"".date("Y-m-d H:i:s")." - Critical - last 5 min Hits diff: $diff ... Filter activated!\", \"color\": 14177041 }]}";
             $headers = array('Content-Type: application/json', 'Accept: application/json');
             $curl = curl_init();
             curl_setopt($curl, CURLOPT_URL, env('DISCORD_ATTACK_WEBHOOK'));
@@ -160,9 +163,9 @@ class AttackCheck extends Command
     public function updateGraph()
     {
         // dd('updateGraph');
-        $last24h = date("Y-m-d H:i:s", strtotime("-12 hours"));
+        $lastHours = date("Y-m-d H:i:s", strtotime("-" . $this->hours . " hours"));
 
-        $command =  "cat /var/www/pokerth/pthranking/storage/app/" . $this->log_file . " | awk -F  '|' '$1 > \"$last24h\"'";
+        $command =  "cat /var/www/pokerth/pthranking/storage/app/" . $this->log_file . " | awk -F  '|' '$1 > \"$lastHours\"'";
         $lines = explode("\n", trim(shell_exec($command)));
         $log = [];
         $datay = [];
@@ -172,15 +175,18 @@ class AttackCheck extends Command
         }
         // Create the Line Graph.
         // $datay    = [1.23, 1.9, 1.6, 3.1, 3.4, 2.8, 2.1, 1.9];
-        $__width  = 1440;
+        $__width  = 1640;
         $__height = 800;
-        $graph    = new Graph\Graph($__width, $__height);
+        $graph = new Graph\Graph($__width, $__height);
+        // $graph->ygrid->Show(false, false);
         $graph->SetScale('textlin');
+
+        $graph->SetColor($aTxtColor='black', $aFillColor='grey', $aBorderColor='black');
 
         $graph->img->SetMargin(40, 40, 40, 40);
         $graph->SetShadow();
 
-        $graph->title->Set('Webserver Hits last 12 hours');
+        $graph->title->Set('Webserver Hits last ' . $this->hours . ' hours');
         $graph->title->SetFont(FF_FONT1, FS_BOLD);
 
         $p1 = new Plot\LinePlot($datay);
