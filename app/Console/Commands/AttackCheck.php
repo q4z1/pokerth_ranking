@@ -32,7 +32,7 @@ class AttackCheck extends Command
 
     protected $hours = 96;
     protected $limit = 1500;
-    protected $enabled_limit = 86400;
+    protected $enabled_limit = 604800; // 604800 => 7 days
 
     /**
      * Execute the console command.

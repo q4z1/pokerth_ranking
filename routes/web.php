@@ -56,3 +56,5 @@ Route::post('/account/delete', [App\Http\Controllers\PlayerController::class, 'a
 
 Route::get('/downloads', [App\Http\Controllers\DownloadsController::class, 'files']);
 Route::get('/styles', [App\Http\Controllers\DownloadsController::class, 'styles']);
+
+Route::get('/teaser/weekly', [App\Http\Controllers\TeaserController::class, 'weekly']);
