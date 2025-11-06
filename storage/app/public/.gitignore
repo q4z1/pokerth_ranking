@@ -1,5 +1,5 @@
 *
 !.gitignore
-!teaser/
+!teaser/*
 blacklist.txt
 

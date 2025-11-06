@@ -11,23 +11,22 @@ class TeaserController extends Controller
 {
     public function weekly(Request $request)
     {
+        // $this->reset_weekly();
         $weeknumber = Carbon::now()->format("W");
         $files = Storage::disk('public')->files('teaser');
+        $random_list = $files;
+        shuffle($random_list);
         $random_list = Cache::rememberForever("random_weekly_teaser", function () use ($files) {
             $list = $files; 
             shuffle($list);
             return $list;
         });
-        if(count($files) != count($random_list)) {
-            Cache::forget("random_weekly_teaser");
-            $random_list = Cache::rememberForever("random_weekly_teaser", function () use ($files) {
-                $list = $files; 
-                shuffle($list);
-                return $list;
-            });
-        }
         $index = $weeknumber % count($random_list);
         $file = $random_list[$index];
         return response()->file(storage_path('app/public/' . $file), ['Content-type','image/png']);
+    }
+
+    public function reset_weekly(){
+        Cache::forget("random_weekly_teaser");
     }
 }
