@@ -11,22 +11,26 @@ class TeaserController extends Controller
 {
     public function weekly(Request $request)
     {
-        // $this->reset_weekly();
-        $weeknumber = Carbon::now()->format("W");
+        $now = Carbon::now();
+        $weekKey = $now->format('oW');
         $files = Storage::disk('public')->files('teaser');
-        $random_list = $files;
-        shuffle($random_list);
-        $random_list = Cache::rememberForever("random_weekly_teaser", function () use ($files) {
-            $list = $files; 
+
+        $nextWeekStart = $now->copy()->startOfWeek(Carbon::MONDAY)->addWeek();
+        $seconds = $nextWeekStart->diffInSeconds($now);
+
+        $cacheKey = "random_weekly_teaser_{$weekKey}";
+        $random_list = Cache::remember($cacheKey, $seconds, function () use ($files) {
+            $list = $files;
             shuffle($list);
             return $list;
         });
-        $index = $weeknumber % count($random_list);
-        $file = $random_list[$index];
-        return response()->file(storage_path('app/public/' . $file), ['Content-type','image/png']);
-    }
 
-    public function reset_weekly(){
-        Cache::forget("random_weekly_teaser");
+        $index = intval($now->format('W')) % max(1, count($random_list));
+        $file = $random_list[$index] ?? ($files[0] ?? null);
+        if (! $file) {
+            abort(404);
+        }
+
+        return response()->file(storage_path('app/public/' . $file), ['Content-Type' => 'image/png']);
     }
 }
