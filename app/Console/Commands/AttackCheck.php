@@ -31,8 +31,8 @@ class AttackCheck extends Command
     protected $graph_file = "visitors.png";
 
     protected $hours = 96;
-    protected $limit = 1500;
-    protected $enabled_limit = 604800; // 604800 => 7 days
+    protected $limit = 2500;
+    protected $enabled_limit = 18000; // 604800 => 7 days
 
     /**
      * Execute the console command.
