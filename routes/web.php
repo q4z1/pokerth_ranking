@@ -54,7 +54,8 @@ Route::post('/account/change', [App\Http\Controllers\PlayerController::class, 'a
 Route::post('/account/validate', [App\Http\Controllers\PlayerController::class, 'account_validate']);
 Route::post('/account/delete', [App\Http\Controllers\PlayerController::class, 'account_delete']);
 
-Route::get('/downloads', [App\Http\Controllers\DownloadsController::class, 'files']);
+Route::get('/downloads/old', [App\Http\Controllers\DownloadsController::class, 'oldfiles']);
+Route::get('/downloads/current', [App\Http\Controllers\DownloadsController::class, 'currentfiles']);
 Route::get('/styles', [App\Http\Controllers\DownloadsController::class, 'styles']);
 
 Route::get('/teaser/weekly', [App\Http\Controllers\TeaserController::class, 'weekly']);
