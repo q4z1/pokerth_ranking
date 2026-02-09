@@ -38,7 +38,7 @@
                                     <template slot-scope="scope">
                                         <el-row style="display: flex; align-items: center">
                                             <el-col :span="2"><img v-if="scope.row.icon" :src="scope.row.icon" width="48"></el-col>
-                                            <el-col :span="22" style="margin-left: 0.4em;"><a :href="'/download/client/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a></el-col>
+                                            <el-col :span="22" style="margin-left: 0.4em;"><a :href="'/download/client/current/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a></el-col>
                                         </el-row>
                                         
                                     </template>
@@ -72,7 +72,7 @@
                                     <template slot-scope="scope">
                                         <el-row style="display: flex; align-items: center">
                                             <el-col :span="2"><img v-if="scope.row.icon" :src="scope.row.icon" width="48"></el-col>
-                                            <el-col :span="22" style="margin-left: 0.4em;"><a :href="'/download/client/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a></el-col>
+                                            <el-col :span="22" style="margin-left: 0.4em;"><a :href="'/download/client/old/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a></el-col>
                                         </el-row>
                                         
                                     </template>
