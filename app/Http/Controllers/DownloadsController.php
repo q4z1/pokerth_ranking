@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 class DownloadsController extends Controller
 {
     public function oldfiles(Request $request){
-        $icons = ['zip' => 'windows.svg', 'exe' => 'windows.svg', 'dmg' => 'mac.svg', 'apk' => 'android.svg', 'bz2' => 'linux.svg', 'run' => 'linux.svg'];
+        $icons = ['zip' => 'windows.svg', 'exe' => 'windows.svg', 'dmg' => 'mac.svg', 'apk' => 'android.svg', 'bz2' => 'linux.svg', 'run' => 'linux.svg', 'AppImage' => 'linux.svg'];
         $path = base_path() . "/../download/client/old/";
         if(is_dir($path)){
             $files = [];
@@ -32,7 +32,7 @@ class DownloadsController extends Controller
     }
 
     public function currentfiles(Request $request){
-        $icons = ['zip' => 'linux.svg', 'exe' => 'windows.svg', 'dmg' => 'mac.svg', 'apk' => 'android.svg', 'bz2' => 'linux.svg', 'run' => 'linux.svg'];
+        $icons = ['zip' => 'linux.svg', 'exe' => 'windows.svg', 'dmg' => 'mac.svg', 'apk' => 'android.svg', 'bz2' => 'linux.svg', 'run' => 'linux.svg', 'AppImage' => 'linux.svg'];
         $path = base_path() . "/../download/client/current/";
         if(is_dir($path)){
             $files = [];
