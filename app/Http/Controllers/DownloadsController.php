@@ -55,7 +55,7 @@ class DownloadsController extends Controller
     }
 
     public function allversions(Request $request){
-        $icons = ['zip' => 'windows.svg', 'exe' => 'windows.svg', 'dmg' => 'mac.svg', 'apk' => 'android.svg', 'bz2' => 'linux.svg', 'run' => 'linux.svg', 'AppImage' => 'linux.svg'];
+        $icons = ['zip' => 'linux.svg', 'exe' => 'windows.svg', 'dmg' => 'mac.svg', 'apk' => 'android.svg', 'bz2' => 'linux.svg', 'run' => 'linux.svg', 'AppImage' => 'linux.svg'];
         $clientPath = base_path() . "/../download/client/";
         
         if(!is_dir($clientPath)){
