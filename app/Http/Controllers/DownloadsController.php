@@ -67,7 +67,7 @@ class DownloadsController extends Controller
         
         foreach($dirs as $versionDir){
             $versionPath = $clientPath . $versionDir . "/";
-            if(is_dir($versionPath)){
+            if(is_dir($versionPath) && substr($versionDir, 0, 1) !== '_'){
                 $files = [];
                 $md5sums = "n/a";
                 $dirFiles = array_diff(scandir($versionPath), array('..', '.'));
