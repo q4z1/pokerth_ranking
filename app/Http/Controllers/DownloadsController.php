@@ -70,24 +70,46 @@ class DownloadsController extends Controller
             if(is_dir($versionPath) && substr($versionDir, 0, 1) !== '_'){
                 $files = [];
                 $md5sums = "n/a";
+                $readme = null;
                 $dirFiles = array_diff(scandir($versionPath), array('..', '.'));
                 
                 foreach($dirFiles as $file){
+                    $filePath = $versionPath . $file;
+                    
+                    // MD5SUMS Datei
                     if(strpos($file, "MD5SUMS") !== false){
-                        $md5sums = str_replace("\n", "<br>", file_get_contents($versionPath . $file));
+                        $md5sums = str_replace("\n", "<br>", file_get_contents($filePath));
                         continue;
                     }
+                    
+                    // README.txt Datei
+                    if(strtoupper($file) === 'README.TXT'){
+                        $readme = nl2br(htmlspecialchars(file_get_contents($filePath)));
+                        continue;
+                    }
+                    
                     $ext = substr(strrchr($file, '.'), 1);
-                    $f = ['filename' => $file, 'url' => "/download/client/" . $versionDir . "/" . $file];
+                    $mtime = filemtime($filePath);
+                    $f = [
+                        'filename' => $file, 
+                        'url' => "/download/client/" . $versionDir . "/" . $file,
+                        'date' => date('Y-m-d H:i', $mtime),
+                        'timestamp' => $mtime
+                    ];
                     if(array_key_exists($ext, $icons)) $f['icon'] = "/images/" . $icons[$ext];
                     $files[] = $f;
                 }
                 
-                rsort($files);
+                // Sortiere nach Timestamp absteigend
+                usort($files, function($a, $b) {
+                    return $b['timestamp'] - $a['timestamp'];
+                });
+                
                 $versions[] = [
                     'version' => $versionDir,
                     'files' => $files,
-                    'md5' => $md5sums
+                    'md5' => $md5sums,
+                    'readme' => $readme
                 ];
             }
         }

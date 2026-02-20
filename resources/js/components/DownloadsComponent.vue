@@ -22,26 +22,45 @@
                             <el-row :key="'md5-' + index">
                                 <el-col>
                                     <el-collapse>
-                                        <el-collapse-item title="MD5SUMS" :name="index">
+                                        <el-collapse-item title="MD5SUMS" :name="'md5-' + index">
                                             <div v-html="version.md5"></div>
                                         </el-collapse-item>
                                     </el-collapse>                                
                                 </el-col>
                             </el-row>
+                            <el-row :key="'readme-' + index" v-if="version.readme">
+                                <el-col>
+                                    <el-collapse>
+                                        <el-collapse-item title="README" :name="'readme-' + index">
+                                            <div v-html="version.readme"></div>
+                                        </el-collapse-item>
+                                    </el-collapse>                                
+                                </el-col>
+                            </el-row>
                             <el-row :key="'files-' + index">
-                                <el-col v-if="version.files">
+                                <el-col v-if="version.files && version.files.length > 0">
                                     <el-table
                                         :data="version.files"
                                         :show-header="false"
                                         style="width: 100%">
                                         <el-table-column
-                                        label="File">
+                                        label="File"
+                                        width="auto">
                                         <template slot-scope="scope">
                                             <el-row style="display: flex; align-items: center">
                                                 <el-col :span="2"><img v-if="scope.row.icon" :src="scope.row.icon" width="48"></el-col>
-                                                <el-col :span="22" style="margin-left: 0.4em;"><a :href="'/download/client/' + version.version + '/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a></el-col>
+                                                <el-col :span="22" style="margin-left: 0.4em;">
+                                                    <a :href="'/download/client/' + version.version + '/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a>
+                                                </el-col>
                                             </el-row>
-                                            
+                                        </template>
+                                        </el-table-column>
+                                        <el-table-column
+                                        label="Datum"
+                                        width="140"
+                                        align="right">
+                                        <template slot-scope="scope">
+                                            <span class="file-date">{{ scope.row.date }}</span>
                                         </template>
                                         </el-table-column>
                                     </el-table>
@@ -106,6 +125,9 @@
             .el-collapse-item__content {
                 padding-bottom: 0.6em !important;
                 color: inherit !important;
+                font-family: monospace;
+                font-size: 0.95em;
+                line-height: 1.4;
             }
             .el-collapse-item__wrap {
                 border-bottom: 0!important;
@@ -155,8 +177,15 @@
         margin-top: 1em;
         text-align: center;
     }
+    .file-date {
+        color: #999;
+        font-size: 0.9em;
+    }
 }
 .fd_dark .downloads{
+    .file-date {
+        color: #aaa;
+    }
     .el-table{
         background-color: transparent!important;
         tr{
