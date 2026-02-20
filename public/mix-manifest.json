@@ -1,8 +1,8 @@
 {
-    "/js/pth.js": "/js/pth.js",
-    "/js/injections.js": "/js/injections.js",
-    "/css/app.css": "/css/app.css",
-    "/css/countryflags.css": "/css/countryflags.css",
-    "/js/dd.js": "/js/dd.js",
-    "/css/dd.css": "/css/dd.css"
+    "/js/pth.js": "/js/pth.js?id=255d522a6c1bc3f970a08817bea64889",
+    "/js/injections.js": "/js/injections.js?id=6b5e054019f77efa2c39eda1dafc627b",
+    "/css/app.css": "/css/app.css?id=e867450708032cf4f1aa7184beb951c4",
+    "/css/countryflags.css": "/css/countryflags.css?id=e0b22dc0e54d4fe974cca61c41f715e7",
+    "/js/dd.js": "/js/dd.js?id=d516bf7b64afad0c94f1dca6903e8954",
+    "/css/dd.css": "/css/dd.css?id=27197321b22f606d48bbe410e071933d"
 }
