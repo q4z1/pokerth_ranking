@@ -68,9 +68,25 @@
                             </el-row>
                             <hr :key="'hr-' + index" v-if="index < versions.length - 1" />
                         </template>
-                        <el-row>
-                            <el-col>
+                        <hr style="margin-top: 1em;" />
+                        <el-row :gutter="20">
+                            <el-col :span="8" style="margin-top: 0.8em; margin-bottom: 0;">
                                 <p>Checkout <a title="sourceforge" href="https://sourceforge.net/projects/pokerth/files/pokerth/" target="_blank"><i>sourceforge</i></a> for other Versions.</p>
+                            </el-col>
+                            <el-col :span="8">
+                                <p>
+                                    <a href="https://flathub.org/apps/net.pokerth.PokerTH" target="_blank">
+                                    <img height="56" alt="Get it on Flathub"
+                                        src="https://flathub.org/api/badge?locale=en"/>
+                                    </a>
+                                </p>
+                            </el-col>
+                            <el-col :span="8">
+                                <p>
+                                    <a href="https://snapcraft.io/pokerth" target="_blank">
+                                        <img height="56" alt="Get it from the Snap Store" src="https://snapcraft.io/en/dark/install.svg" />
+                                    </a>
+                                </p>
                             </el-col>
                         </el-row>
                     </div>
