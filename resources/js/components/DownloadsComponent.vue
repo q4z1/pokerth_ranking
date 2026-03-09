@@ -109,11 +109,11 @@
                                     font-family:system-ui, sans-serif;
                                 ">
 
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+                                    <svg width="36" height="36" viewBox="0 0 24 24" fill="white">
                                         <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 4h8v4h-8v-4z"/>
                                     </svg>
 
-                                    <div style="flex:1;text-align:left;margin-left:10px">
+                                    <div style="flex:1;text-align:left;margin-left:10px;margin-top:3px;">
                                         <div style="font-size:10px;opacity:.75;line-height:1;letter-spacing:.05em;">
                                             INSTALL WITH
                                         </div>
