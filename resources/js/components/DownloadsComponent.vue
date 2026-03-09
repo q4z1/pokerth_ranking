@@ -74,7 +74,7 @@
                                 <a href="https://sourceforge.net/projects/pokerth/files/pokerth/" target="_blank">
                                     <img alt="Download PokerTH"
                                         src="https://a.fsdn.com/con/app/sf-download-button"
-                                        width="280" height="56" />
+                                        width="280" height="52" />
                                 </a>
                             </el-col>
 
