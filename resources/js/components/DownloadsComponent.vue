@@ -69,28 +69,77 @@
                             <hr :key="'hr-' + index" v-if="index < versions.length - 1" />
                         </template>
                         <hr style="margin-top: 1em;" />
-                        <el-row :gutter="20">
-                            <el-col :span="8">
-                                <p>
-                                    <a href="https://sourceforge.net/projects/pokerth/files/pokerth/" target="_blank">
-                                        <img alt="Download PokerTH" src="https://a.fsdn.com/con/app/sf-download-button" width="276" height="48" />
-                                    </a>
-                                </p>
+                        <el-row :gutter="20" align="middle">
+                            <el-col :span="6" style="display:flex;justify-content:center;">
+                                <a href="https://sourceforge.net/projects/pokerth/files/pokerth/" target="_blank">
+                                    <img alt="Download PokerTH"
+                                        src="https://a.fsdn.com/con/app/sf-download-button"
+                                        width="280" height="56" />
+                                </a>
                             </el-col>
-                            <el-col :span="8">
-                                <p>
-                                    <a href="https://flathub.org/apps/net.pokerth.PokerTH" target="_blank">
-                                    <img height="56" alt="Get it on Flathub"
+
+                            <el-col :span="6" style="display:flex;justify-content:center;">
+                                <a href="https://flathub.org/apps/net.pokerth.PokerTH" target="_blank">
+                                    <img height="56"
+                                        alt="Get it on Flathub"
                                         src="https://flathub.org/api/badge?locale=en"/>
-                                    </a>
-                                </p>
+                                </a>
                             </el-col>
-                            <el-col :span="8">
-                                <p>
-                                    <a href="https://snapcraft.io/pokerth" target="_blank">
-                                        <img height="56" alt="Get it from the Snap Store" src="https://snapcraft.io/en/dark/install.svg" />
-                                    </a>
-                                </p>
+
+                            <el-col :span="6" style="display:flex;justify-content:center;">
+                                <a href="https://snapcraft.io/pokerth" target="_blank">
+                                    <img height="56"
+                                        alt="Get it from the Snap Store"
+                                        src="https://snapcraft.io/en/dark/install.svg" />
+                                </a>
+                            </el-col>
+
+                            <el-col :span="6" style="display:flex;justify-content:center;">
+                                <div style="
+                                    display:inline-flex;
+                                    align-items:center;
+                                    justify-content:space-between;
+                                    background:#111;
+                                    color:#fff;
+                                    border-radius:8px;
+                                    padding:8px 14px;
+                                    width:230px;
+                                    height:56px;
+                                    box-sizing:border-box;
+                                    font-family:system-ui, sans-serif;
+                                ">
+
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+                                        <path d="M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 4h8v4h-8v-4z"/>
+                                    </svg>
+
+                                    <div style="flex:1;text-align:left;margin-left:10px">
+                                        <div style="font-size:10px;opacity:.75;line-height:1;letter-spacing:.05em;">
+                                            INSTALL WITH
+                                        </div>
+                                        <div style="font-size:17px;font-weight:600;line-height:1.2">
+                                            <el-tooltip content="Install PokerTH via Windows Package Manager">
+                                                <a href="https://github.com/microsoft/winget-pkgs" target="_blank">winget</a>
+                                            </el-tooltip>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        @click="copyWinget"
+                                        style="
+                                            background:#2a2a2a;
+                                            border:none;
+                                            color:#fff;
+                                            padding:5px 10px;
+                                            border-radius:5px;
+                                            font-size:11px;
+                                            cursor:pointer;
+                                        "
+                                    >
+                                        {{ wingetCopied ? '✔ copied' : 'copy' }}
+                                    </button>
+
+                                </div>
                             </el-col>
                         </el-row>
                     </div>
@@ -103,7 +152,8 @@
     export default {
         data: function() { 
             return {
-                versions: []
+                versions: [],
+                wingetCopied: false
             }
         },
         mounted() {
@@ -119,6 +169,13 @@
                 }).catch(err => {
                     console.log(err)
                 })
+            },
+              copyWinget() {
+                navigator.clipboard.writeText('winget install PokerTH.PokerTH')
+                this.wingetCopied = true
+                setTimeout(() => {
+                this.wingetCopied = false
+                }, 1500)
             }
         }
     }
