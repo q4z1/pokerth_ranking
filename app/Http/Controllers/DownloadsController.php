@@ -122,6 +122,74 @@ class DownloadsController extends Controller
         return ['status' => true, 'versions' => $versions];
     }
 
+   public function tracker(Request $request){
+        $icons = ['zip' => 'linux.svg', 'exe' => 'windows.svg', 'dmg' => 'mac.svg', 'apk' => 'android.svg', 'bz2' => 'linux.svg', 'run' => 'linux.svg', 'AppImage' => 'linux.svg', 'deb' => 'deb.svg'];
+        $trackerPath = base_path() . "/../download/tracker/";
+        
+        if(!is_dir($trackerPath)){
+            return ['status' => false, 'message' => 'Tracker directory not found'];
+        }
+        
+        $versions = [];
+        $dirs = array_diff(scandir($trackerPath), array('..', '.'));
+        
+        foreach($dirs as $versionDir){
+            $versionPath = $trackerPath . $versionDir . "/";
+            if(is_dir($versionPath) && substr($versionDir, 0, 1) !== '_'){
+                $files = [];
+                $md5sums = "n/a";
+                $readme = null;
+                $dirFiles = array_diff(scandir($versionPath), array('..', '.'));
+                
+                foreach($dirFiles as $file){
+                    $filePath = $versionPath . $file;
+                    
+                    // MD5SUMS Datei
+                    if(strpos($file, "MD5SUMS") !== false){
+                        $md5sums = str_replace("\n", "<br>", file_get_contents($filePath));
+                        continue;
+                    }
+                    
+                    // README.txt Datei
+                    if(strtoupper($file) === 'README.TXT'){
+                        $readme = nl2br(htmlspecialchars(file_get_contents($filePath)));
+                        continue;
+                    }
+                    
+                    $ext = substr(strrchr($file, '.'), 1);
+                    $mtime = filemtime($filePath);
+                    $f = [
+                        'filename' => $file, 
+                        'url' => "/download/tracker/" . $versionDir . "/" . $file,
+                        'date' => date('Y-m-d H:i', $mtime),
+                        'timestamp' => $mtime
+                    ];
+                    if(array_key_exists($ext, $icons)) $f['icon'] = "/images/" . $icons[$ext];
+                    $files[] = $f;
+                }
+                
+                // Sortiere nach Timestamp absteigend
+                usort($files, function($a, $b) {
+                    return $b['timestamp'] - $a['timestamp'];
+                });
+                
+                $versions[] = [
+                    'version' => $versionDir,
+                    'files' => $files,
+                    'md5' => $md5sums,
+                    'readme' => $readme
+                ];
+            }
+        }
+        
+        // Sortiere Versionen absteigend (neuere zuerst)
+        usort($versions, function($a, $b) {
+            return version_compare($b['version'], $a['version']);
+        });
+        
+        return ['status' => true, 'versions' => $versions];
+    }
+
     public function styles(Request $request){
         $path = base_path() . "/../download/styles/cards/";
         if(is_dir($path)){

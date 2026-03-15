@@ -142,7 +142,62 @@
                                 </div>
                             </el-col>
                         </el-row>
-                    </div>
+                        <hr style="margin-top: 1em; margin-bottom: 1.5em;" />
+                       <template v-for="(version, index) in tracker">
+                            <el-row :key="'title-' + index">
+                                <el-col :style="index > 0 ? 'margin-top: 0.4em;' : ''">
+                                    <h3>PokerTH Tracker {{ version.version }} (by ollika) - see <a href="https://www.pokerth.net/viewtopic.php?t=1138" target="_blank">forum thread</a>:</h3>
+                                </el-col>
+                            </el-row>
+                            <el-row :key="'md5-' + index">
+                                <el-col>
+                                    <el-collapse>
+                                        <el-collapse-item title="MD5SUMS" :name="'md5-' + index">
+                                            <div v-html="version.md5"></div>
+                                        </el-collapse-item>
+                                    </el-collapse>                                
+                                </el-col>
+                            </el-row>
+                            <el-row :key="'readme-' + index" v-if="version.readme">
+                                <el-col>
+                                    <el-collapse>
+                                        <el-collapse-item title="README" :name="'readme-' + index">
+                                            <div v-html="version.readme"></div>
+                                        </el-collapse-item>
+                                    </el-collapse>                                
+                                </el-col>
+                            </el-row>
+                            <el-row :key="'files-' + index">
+                                <el-col v-if="version.files && version.files.length > 0">
+                                    <el-table
+                                        :data="version.files"
+                                        :show-header="false"
+                                        style="width: 100%">
+                                        <el-table-column
+                                        label="File"
+                                        width="auto">
+                                        <template slot-scope="scope">
+                                            <el-row style="display: flex; align-items: center">
+                                                <el-col :span="2"><img v-if="scope.row.icon" :src="scope.row.icon" width="48"></el-col>
+                                                <el-col :span="22" style="margin-left: 0.4em;">
+                                                    <a :href="'/download/tracker/' + version.version + '/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a>
+                                                </el-col>
+                                            </el-row>
+                                        </template>
+                                        </el-table-column>
+                                        <el-table-column
+                                        label="Datum"
+                                        width="140"
+                                        align="right">
+                                        <template slot-scope="scope">
+                                            <span class="file-date">{{ scope.row.date }}</span>
+                                        </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </el-col>
+                            </el-row>
+                            <hr :key="'hr-' + index" v-if="index < versions.length - 1" />
+                        </template>
 		        </li>
             </ul>
         </div>
@@ -153,11 +208,13 @@
         data: function() { 
             return {
                 versions: [],
+                tracker: [],
                 wingetCopied: false
             }
         },
         mounted() {
             this.getAllVersions()
+            this.getTrackerVersions()
         },
         methods: {
             getAllVersions: function(){
@@ -165,6 +222,16 @@
                 .then(res => {
                     if(res.data.status){
                         this.versions = res.data.versions
+                    }
+                }).catch(err => {
+                    console.log(err)
+                })
+            },
+            getTrackerVersions: function(){
+                axios.get('/pthranking/downloads/tracker')
+                .then(res => {
+                    if(res.data.status){
+                        this.tracker = res.data.versions
                     }
                 }).catch(err => {
                     console.log(err)
