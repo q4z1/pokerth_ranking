@@ -26,6 +26,6 @@ const playerName = computed(() =>
 const avatarUrl = computed(() => {
   const fn = playerData.value?.avatarFileName
   if (fn) return AVATAR_SERVER_URL + fn
-  return '/pthranking/gfx/pokerTH_50x50_alpha50.png'
+  return '/pthranking/storage/gfx/pokerTH_50x50_alpha50.png'
 })
 </script>

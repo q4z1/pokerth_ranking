@@ -14,7 +14,7 @@ const props = defineProps({
 })
 
 const src = computed(() =>
-  props.allowSpectators ? '/pthranking/gfx/lobby/spectator.png' : '/pthranking/gfx/lobby/no_spectator.png'
+  props.allowSpectators ? '/pthranking/storage/gfx/lobby/spectator.png' : '/pthranking/storage/gfx/lobby/no_spectator.png'
 )
 const title = computed(() =>
   props.allowSpectators ? 'Allow spectators' : 'No spectators allowed'

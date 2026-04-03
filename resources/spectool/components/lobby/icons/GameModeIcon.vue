@@ -12,8 +12,8 @@ const props = defineProps({
 })
 
 const src = computed(() => {
-  if (props.gameMode === 1) return '/pthranking/gfx/lobby/open_game.png'
-  if (props.gameMode === 2) return '/pthranking/gfx/lobby/running_game.png'
+  if (props.gameMode === 1) return '/pthranking/storage/gfx/lobby/open_game.png'
+  if (props.gameMode === 2) return '/pthranking/storage/gfx/lobby/running_game.png'
   return ''
 })
 

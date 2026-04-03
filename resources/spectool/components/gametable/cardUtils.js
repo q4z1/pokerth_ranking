@@ -11,7 +11,7 @@ function getCardSizeForHeight(canvasHeight) {
 }
 
 export function getCardSrcPath(cardValue, canvasHeight) {
-  if (cardValue === 'flipside' || cardValue == null) return '/pthranking/gfx/cards/flipside.png'
+  if (cardValue === 'flipside' || cardValue == null) return '/pthranking/storage/gfx/cards/flipside.png'
   const size = canvasHeight ? getCardSizeForHeight(canvasHeight) : 170
-  return `/pthranking/gfx/cards/${cardValue}_${size}px.png`
+  return `/pthranking/storage/gfx/cards/${cardValue}_${size}px.png`
 }

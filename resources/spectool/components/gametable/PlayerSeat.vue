@@ -87,7 +87,7 @@ const isTopSeat = computed(() => props.seatIndex >= 3 && props.seatIndex <= 7)
 const avatarUrl = computed(() => {
   const fn = playerData.value?.avatarFileName
   if (fn) return AVATAR_SERVER_URL + fn
-  return '/pthranking/gfx/pokerth.png'
+  return '/pthranking/storage/gfx/pokerth.png'
 })
 
 const nickName = computed(() =>
