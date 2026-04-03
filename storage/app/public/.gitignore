@@ -1,5 +1,10 @@
 *
 !.gitignore
 !teaser/*
+!teaser/
+!gfx/
+!gfx/**
+!sounds/
+!sounds/**
 blacklist.txt
 
