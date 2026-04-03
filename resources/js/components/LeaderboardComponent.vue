@@ -48,17 +48,17 @@
                                     <el-table-column prop="gender_country" label="Gender/Country">
                                         <template #default="{ row }">
                                             <div class="icons">
-                                                <el-tooltip
-                                                    v-if="row.gender_country.gender"
-                                                    effect="dark"
-                                                    placement="top-start"
-                                                    :content="row.gender_country.gender === 'f' ? 'female' : 'male'"
-                                                >
-                                                    <span class="gender">
+                                                <span class="gender">
+                                                    <el-tooltip
+                                                        v-if="row.gender_country.gender"
+                                                        effect="dark"
+                                                        placement="top-start"
+                                                        :content="row.gender_country.gender === 'f' ? 'female' : 'male'"
+                                                    >
                                                         <i v-if="row.gender_country.gender === 'f'" class="icon fa-female" />
                                                         <i v-else-if="row.gender_country.gender === 'm'" class="icon fa-male" />
-                                                    </span>
-                                                </el-tooltip>
+                                                    </el-tooltip>
+                                                </span>
                                                 <el-tooltip
                                                     v-if="row.gender_country.country && country(row.gender_country.country) && country(row.gender_country.country).svg !== 'n/a'"
                                                     effect="dark"
@@ -199,5 +199,6 @@
 .leaderboard .sc-table .el-table tr { cursor: pointer; }
 .leaderboard .sc-table .el-table .icons { display: flex; align-items: center; gap: 4px; }
 .leaderboard .sc-table .el-table .icons span.flag img { height: 18px; vertical-align: middle; }
+.leaderboard .sc-table .el-table .icons span.gender { display: inline-block; width: 14px; text-align: center; }
 .leaderboard .sc-table .el-table .icons span.gender i { color: inherit; }
 </style>

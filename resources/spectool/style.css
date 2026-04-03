@@ -1,5 +1,6 @@
 @import "./styles/colors.css";
-@import "tailwindcss";
+@import "tailwindcss/theme.css";
+@import "tailwindcss/utilities.css";
 
 @theme {
   /* Poker-spezifisch (theme-unabhängig) */
@@ -33,12 +34,19 @@
   --color-pth-border-subtle: var(--pth-border-subtle);
 }
 
-body {
-  @apply bg-pth-base text-pth-text m-0 p-0 font-sans;
+/* ── Basis-Styles, auf #spectator-app gescoped ──────────────────────── */
+#spectator-app {
+  background-color: var(--color-pth-base);
+  color: var(--color-pth-text);
+  font-family: var(--font-sans);
 }
 
-a {
-  @apply text-pth-accent hover:text-pth-accent-hover no-underline;
+#spectator-app a {
+  color: var(--color-pth-accent);
+  text-decoration: none;
+}
+#spectator-app a:hover {
+  color: var(--color-pth-accent-hover);
 }
 
 /* ── phpBB-Reset ─────────────────────────────────────────────────────────

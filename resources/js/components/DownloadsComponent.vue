@@ -47,20 +47,12 @@
                                         label="File"
                                         width="auto">
                                         <template #default="scope">
-                                            <el-row style="display: flex; align-items: center">
-                                                <el-col :span="2"><img v-if="scope.row.icon" :src="scope.row.icon" width="48"></el-col>
-                                                <el-col :span="22" style="margin-left: 0.4em;">
-                                                    <a :href="'/download/client/' + version.version + '/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a>
-                                                </el-col>
-                                            </el-row>
-                                        </template>
-                                        </el-table-column>
-                                        <el-table-column
-                                        label="Datum"
-                                        width="140"
-                                        align="right">
-                                        <template #default="scope">
-                                            <span class="file-date">{{ scope.row.date }}</span>
+                                            <div style="display:flex;align-items:center;gap:0.6em;">
+                                                <img v-if="scope.row.icon" :src="scope.row.icon" style="width:36px;height:36px;object-fit:contain;flex-shrink:0;" />
+                                                <span v-else style="width:36px;flex-shrink:0;"></span>
+                                                <a :href="'/download/client/' + version.version + '/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a>
+                                                <span style="margin-left:auto;white-space:nowrap;opacity:.7;font-size:.9em;">{{ scope.row.date }}</span>
+                                            </div>
                                         </template>
                                         </el-table-column>
                                     </el-table>
@@ -70,31 +62,31 @@
                         </template>
                         <hr style="margin-top: 1em;" />
                         <el-row :gutter="20" align="middle">
-                            <el-col :span="6" style="display:flex;justify-content:center;">
+                            <el-col :span="6" style="display:flex;justify-content:center;align-items:center;">
                                 <a href="https://sourceforge.net/projects/pokerth/files/pokerth/" target="_blank">
                                     <img alt="Download PokerTH"
                                         src="https://a.fsdn.com/con/app/sf-download-button"
-                                        width="280" height="52" />
+                                        style="height:52px;width:auto;" />
                                 </a>
                             </el-col>
 
-                            <el-col :span="6" style="display:flex;justify-content:center;">
+                            <el-col :span="6" style="display:flex;justify-content:center;align-items:center;">
                                 <a href="https://flathub.org/apps/net.pokerth.PokerTH" target="_blank">
-                                    <img height="56"
+                                    <img style="height:52px;width:auto;"
                                         alt="Get it on Flathub"
                                         src="https://flathub.org/api/badge?locale=en"/>
                                 </a>
                             </el-col>
 
-                            <el-col :span="6" style="display:flex;justify-content:center;">
+                            <el-col :span="6" style="display:flex;justify-content:center;align-items:center;">
                                 <a href="https://snapcraft.io/pokerth" target="_blank">
-                                    <img height="56"
+                                    <img style="height:52px;width:auto;"
                                         alt="Get it from the Snap Store"
                                         src="https://snapcraft.io/en/dark/install.svg" />
                                 </a>
                             </el-col>
 
-                            <el-col :span="6" style="display:flex;justify-content:center;">
+                            <el-col :span="6" style="display:flex;justify-content:center;align-items:center;">
                                 <div style="
                                     display:inline-flex;
                                     align-items:center;
@@ -104,7 +96,7 @@
                                     border-radius:8px;
                                     padding:8px 14px;
                                     width:230px;
-                                    height:56px;
+                                    height:52px;
                                     box-sizing:border-box;
                                     font-family:system-ui, sans-serif;
                                 ">
@@ -177,20 +169,12 @@
                                         label="File"
                                         width="auto">
                                         <template #default="scope">
-                                            <el-row style="display: flex; align-items: center">
-                                                <el-col :span="2"><img v-if="scope.row.icon" :src="scope.row.icon" width="48"></el-col>
-                                                <el-col :span="22" style="margin-left: 0.4em;">
-                                                    <a :href="'/download/tracker/' + version.version + '/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a>
-                                                </el-col>
-                                            </el-row>
-                                        </template>
-                                        </el-table-column>
-                                        <el-table-column
-                                        label="Datum"
-                                        width="140"
-                                        align="right">
-                                        <template #default="scope">
-                                            <span class="file-date">{{ scope.row.date }}</span>
+                                            <div style="display:flex;align-items:center;gap:0.6em;">
+                                                <img v-if="scope.row.icon" :src="scope.row.icon" style="width:36px;height:36px;object-fit:contain;flex-shrink:0;" />
+                                                <span v-else style="width:36px;flex-shrink:0;"></span>
+                                                <a :href="'/download/tracker/' + version.version + '/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a>
+                                                <span style="margin-left:auto;white-space:nowrap;opacity:.7;font-size:.9em;">{{ scope.row.date }}</span>
+                                            </div>
                                         </template>
                                         </el-table-column>
                                     </el-table>
