@@ -15,17 +15,19 @@
                     <div class="list-inner">
                         <el-row>
                             <el-col>
-                                <data-tables v-if="game" 
-                                    :data="game" 
-                                    layout="tool, table"
+                                <el-table
+                                    v-if="game"
+                                    :data="game"
+                                    style="width:100%"
                                     @row-click="handleRowClick">
-                                    <el-table-column v-for="title in titles"
-                                    :prop="title.prop"
-                                    :label="title.label"
-                                    :key="title.label"
-                                    sortable="custom">
-                                    </el-table-column>
-                                </data-tables>
+                                    <el-table-column
+                                        v-for="title in titles"
+                                        :prop="title.prop"
+                                        :label="title.label"
+                                        :key="title.label"
+                                        sortable
+                                    />
+                                </el-table>
                             </el-col>
                         </el-row>
                     </div>

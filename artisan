@@ -3,6 +3,8 @@
 
 define('LARAVEL_START', microtime(true));
 
+use Symfony\Component\Console\Input\ArgvInput;
+
 /*
 |--------------------------------------------------------------------------
 | Register The Auto Loader
@@ -30,24 +32,5 @@ $app = require_once __DIR__.'/bootstrap/app.php';
 |
 */
 
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+exit($app->handleCommand(new ArgvInput));
 
-$status = $kernel->handle(
-    $input = new Symfony\Component\Console\Input\ArgvInput,
-    new Symfony\Component\Console\Output\ConsoleOutput
-);
-
-/*
-|--------------------------------------------------------------------------
-| Shutdown The Application
-|--------------------------------------------------------------------------
-|
-| Once Artisan has finished running, we will fire off the shutdown events
-| so that any final work may be done by the application before we shut
-| down the process. This is the last thing to happen to the request.
-|
-*/
-
-$kernel->terminate($input, $status);
-
-exit($status);

@@ -20,7 +20,7 @@
               <el-menu-item index="1">Adverts</el-menu-item>
               <el-menu-item index="2">Banlist</el-menu-item>
               <el-submenu index="3">
-                <template slot="title">Reports</template>
+                <template #title>Reports</template>
                 <el-menu-item index="3-1">Avatar Reports</el-menu-item>
                 <el-menu-item index="3-2">Gametable Name Reports</el-menu-item>
               </el-submenu>
@@ -158,110 +158,80 @@ export default {
   },
 };
 </script>
-<style lang="scss" scoped>
-.base {
-  .el-menu--horizontal.el-menu {
-    display: flex;
-  }
-  .auth {
-    border-bottom: 0;
-    margin-top: 10px;
-    margin-left: 20px;
-    height: 50px;
-    background-color: transparent !important;
-    cursor: default;
-    &:hover,
-    &:focus,
-    &:click {
-      background-color: transparent !important;
-    }
-    .el-row {
-      margin-left: auto;
-      .el-col {
-        width: auto;
-        .el-input {
-          width: calc(100% - 10px);
-        }
-        .el-button {
-          margin-right: 20px;
-        }
-      }
-    }
-  }
-  .logo {
-    flex-grow: 1;
-    padding-right: 20px;
-    border-bottom: 0;
-    margin-top: 10px;
-    margin-left: 20px;
-    height: 50px;
-    background-color: transparent !important;
-    cursor: default;
-    &:hover,
-    &:focus,
-    &:click {
-      background-color: transparent !important;
-    }
-    img {
-      height: 80%;
-    }
-  }
+<style scoped>
+.base .el-menu--horizontal.el-menu {
+  display: flex;
 }
+
+.base .auth {
+  border-bottom: 0;
+  margin-top: 10px;
+  margin-left: 20px;
+  height: 50px;
+  background-color: transparent !important;
+  cursor: default;
+}
+
+.base .auth:hover,
+.base .auth:focus {
+  background-color: transparent !important;
+}
+
+.base .auth .el-row {
+  margin-left: auto;
+}
+
+.base .auth .el-col {
+  width: auto;
+}
+
+.base .auth .el-input {
+  width: calc(100% - 10px);
+}
+
+.base .auth .el-button {
+  margin-right: 20px;
+}
+
+.base .logo {
+  flex-grow: 1;
+  padding-right: 20px;
+  border-bottom: 0;
+  margin-top: 10px;
+  margin-left: 20px;
+  height: 50px;
+  background-color: transparent !important;
+  cursor: default;
+}
+
+.base .logo:hover,
+.base .logo:focus {
+  background-color: transparent !important;
+}
+
+.base .logo img {
+  height: 80%;
+}
+
 @media only screen and (max-width: 896px) {
-  .base {
-    .auth {
-      .el-row {
-        .el-col {
-          max-width: 150px;
-          .el-input {
-            max-width: 140px;
-          }
-          .el-button {
-            padding: 10px;
-          }
-        }
-      }
-    }
-  }
+  .base .auth .el-col { max-width: 150px; }
+  .base .auth .el-input { max-width: 140px; }
+  .base .auth .el-button { padding: 10px; }
 }
+
 @media only screen and (max-width: 662px) {
-  .base {
-    .auth {
-      .el-row {
-        .el-col {
-          max-width: 100px;
-          .el-input {
-            max-width: 90px;
-          }
-          .el-button {
-            padding: 10px 5px;
-          }
-        }
-      }
-    }
-  }
+  .base .auth .el-col { max-width: 100px; }
+  .base .auth .el-input { max-width: 90px; }
+  .base .auth .el-button { padding: 10px 5px; }
 }
+
 @media only screen and (max-width: 575px) {
-  .base {
-    .el-menu {
-      .logo {
-        height: 40px;
-        margin-top: 15px;
-      }
-      justify-content: flex-end;
-    }
-  }
+  .base .el-menu { justify-content: flex-end; }
+  .base .el-menu .logo { height: 40px; margin-top: 15px; }
 }
+
 @media only screen and (max-width: 455px) {
-  .base {
-    .auth {
-      margin-left: 20px;
-    }
-    .el-menu {
-      .logo {
-        display: none;
-      }
-    }
-  }
+  .base .auth { margin-left: 20px; }
+  .base .el-menu .logo { display: none; }
 }
 </style>

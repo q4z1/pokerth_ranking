@@ -16,16 +16,19 @@ class PlayerController extends Controller
 
   public function __construct()
   {
-    $seasons = Cache::rememberForever('seasons', function () {
+    $seasonsDb = config('database.connections.seasons.database');
+    $seasons = Cache::rememberForever('player_seasons_' . $seasonsDb, function () use ($seasonsDb) {
       return DB::table('information_schema.tables')
         ->selectRaw('table_name')
-        ->where('table_schema', 'pokerth_seasons')->get();
+        ->where('table_schema', $seasonsDb)
+        ->where('table_name', 'LIKE', '%_player_ranking')
+        ->get();
     });
-    $seasons->map(function ($season) {
-      $s = explode('_', $season->table_name);
-      $season = $s[0] . "-" . $s[1];
-      if (!in_array($season, $this->seasons)) $this->seasons[] = $season;
+    $seasons->map(function ($row) {
+      $name = str_replace('_player_ranking', '', $row->table_name); // e.g. 2021_1
+      if (!in_array($name, $this->seasons)) $this->seasons[] = $name;
     });
+    rsort($this->seasons);
   }
 
   public function show(Request $request)
@@ -43,7 +46,8 @@ class PlayerController extends Controller
     if (!$res) {
       return ['status' => false, 'msg' => 'Player not found!'];
     }
-    $last5 = DB::table('pokerth_ranking.game_has_player')
+    $mainDb = DB::getDatabaseName();
+    $last5 = DB::table($mainDb . '.game_has_player')
       ->selectRaw('place')
       ->where('player_idplayer', $res->player_id)
       ->orderBy('start_time', 'DESC')
@@ -80,43 +84,52 @@ class PlayerController extends Controller
   public function getSeason(Request $request, Player $player, $season)
   {
     $season = str_replace("-", "_", $season);
+    $seasonsDb = config('database.connections.seasons.database');
     Cache::flush();
-    $player->ranking = Cache::rememberForever("{$player->player_id}_{$season}_ranking", function () use ($season, $player) {
-      return DB::table("pokerth_seasons.{$season}_player_ranking")
-        ->selectRaw('*')
-        ->where('player_id', $player->player_id)->first();
-    });
-    if(!is_null($player->ranking)){
-      $pos = Cache::rememberForever("{$player->player_id}_{$season}_pos", function () use ($season, $player) {
-          return DB::table("pokerth_seasons.{$season}_player_ranking")
-            ->selectRaw('*')
-            ->where([
-              ['username', 'NOT LIKE', 'deleted_%'],
-              ['final_score', '>=', $player->ranking->final_score],
-            ])->orderBy('final_score', 'DESC')->count();
-      });
-      $stats = Cache::rememberForever("{$player->player_id}_{$season}_stats", function () use ($season, $player) {
-        $aGames = DB::table("pokerth_seasons.{$season}_game_has_player")
+    try {
+      $player->ranking = Cache::rememberForever("{$player->player_id}_{$season}_ranking", function () use ($season, $player, $seasonsDb) {
+        return DB::table("{$seasonsDb}.{$season}_player_ranking")
           ->selectRaw('*')
-          ->where('player_idplayer', $player->player_id)
-          ->whereNotNull('end_time')->orderBy('end_time', 'DESC')->get();
-        $stats = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0];
-        foreach ($aGames as $g) {
-          $stats[$g->place] += 1;
-        }
-        $bar_stats = [];
-        foreach ($stats as $stat) {
-          $bar_stats[] = $stat;
-        }
-        // percentage value num places
-        $ag = $aGames->count();
-        $p_stats = [];
-        foreach ($stats as $place => $stat) {
-          $p_stats[$place] = ($ag > 0) ? round($stat / ($ag / 100), 1) . "%" : '';
-        }
-        return [$stats, $p_stats, $bar_stats];
+          ->where('player_id', $player->player_id)->first();
       });
-      return ['status' => true, 'player' => $player, 'pos' => $pos, 'stats' => [$stats[0], $stats[1]], 'bar_stats' => $stats[2]];
+    } catch (\Exception $e) {
+      return ['status' => false, 'player' => $player, 'msg' => 'Season data unavailable'];
+    }
+    if(!is_null($player->ranking) && $player->ranking->season_games > 0){
+      try {
+        $pos = Cache::rememberForever("{$player->player_id}_{$season}_pos", function () use ($season, $player, $seasonsDb) {
+            return DB::table("{$seasonsDb}.{$season}_player_ranking")
+              ->selectRaw('*')
+              ->where([
+                ['username', 'NOT LIKE', 'deleted_%'],
+                ['final_score', '>=', $player->ranking->final_score],
+              ])->orderBy('final_score', 'DESC')->count();
+        });
+        $stats = Cache::rememberForever("{$player->player_id}_{$season}_stats", function () use ($season, $player, $seasonsDb) {
+          $aGames = DB::table("{$seasonsDb}.{$season}_game_has_player")
+            ->selectRaw('*')
+            ->where('player_idplayer', $player->player_id)
+            ->whereNotNull('end_time')->orderBy('end_time', 'DESC')->get();
+          $stats = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0];
+          foreach ($aGames as $g) {
+            $stats[$g->place] += 1;
+          }
+          $bar_stats = [];
+          foreach ($stats as $stat) {
+            $bar_stats[] = $stat;
+          }
+          // percentage value num places
+          $ag = $aGames->count();
+          $p_stats = [];
+          foreach ($stats as $place => $stat) {
+            $p_stats[$place] = ($ag > 0) ? round($stat / ($ag / 100), 1) . "%" : '';
+          }
+          return [$stats, $p_stats, $bar_stats];
+        });
+        return ['status' => true, 'player' => $player, 'pos' => $pos, 'stats' => [$stats[0], $stats[1]], 'bar_stats' => $stats[2]];
+      } catch (\Exception $e) {
+        return ['status' => false, 'player' => $player, 'msg' => 'Season stats unavailable'];
+      }
     }
  
     return ['status' => false, 'player' => $player];
@@ -155,7 +168,8 @@ class PlayerController extends Controller
       ->orWhere('username', $request->username)
       ->first();
     if ($p2) return ['status' => 'success', 'msg' => 'email address and/or username is already used in the forum db'];
-    $suspended = DB::table('pokerth_ranking.suspended_nicknames')
+    $mainDb = DB::getDatabaseName();
+    $suspended = DB::table($mainDb . '.suspended_nicknames')
       ->selectRaw('*')
       ->where('nickname', $request->username)
       ->first();
@@ -428,11 +442,13 @@ class PlayerController extends Controller
 
   public function getLeaderboard(Request $request, $season)
   {
-    $seasons = Cache::rememberForever('gseasons', function () {
+    $seasonsDb = DB::connection('seasons')->getDatabaseName();
+    $seasons = Cache::rememberForever('gseasons_' . $seasonsDb, function () use ($seasonsDb) {
       $seasons_raw = DB::connection('seasons')->select("SHOW TABLES LIKE '%_player_ranking';");
       $s = [];
-      foreach($seasons_raw as $season){
-        $s[] = substr($season->{'Tables_in_pokerth_seasons (%_player_ranking)'}, 0, 6);
+      $key = 'Tables_in_' . $seasonsDb . ' (%_player_ranking)';
+      foreach($seasons_raw as $row){
+        $s[] = str_replace('_player_ranking', '', $row->$key);
       }
       rsort($s);
       return $s;
@@ -454,7 +470,7 @@ class PlayerController extends Controller
         ->join('player', 'player.player_id', '=', 'player_ranking.player_id')
         ->selectRaw('player_ranking.*, player.country_iso, player.gender');
       if (empty($filters) || is_null($filters['value'])) {
-        if ($total === 0) return ['total' => $total, 'data' => []];
+        if ($total === 0) return ['total' => $total, 'data' => [], 'seasons' => $seasons];
         $query->where([
           ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
           ['player_ranking.season_games', '>', 3],
@@ -483,28 +499,27 @@ class PlayerController extends Controller
       $players = DB::connection('seasons')->select("SELECT * from {$season}_player_ranking WHERE username NOT LIKE 'deleted_%' AND season_games > 3 ORDER BY final_score DESC, points_sum DESC;");
 
       $total = count($players);
-      $query = DB::table("pokerth_seasons.{$season}_player_ranking")
-        ->join('player', 'player.player_id', '=', "pokerth_seasons.{$season}_player_ranking.player_id")
-        ->selectRaw("pokerth_seasons.{$season}_player_ranking.*, player.country_iso, player.gender");
+      $seasonTable = "{$seasonsDb}.{$season}_player_ranking";
+      $query = DB::table($seasonTable)
+        ->join('player', 'player.player_id', '=', "{$seasonTable}.player_id")
+        ->selectRaw("{$seasonTable}.*, player.country_iso, player.gender");
       if (empty($filters) || is_null($filters['value'])) {
-        if ($total === 0) return ['total' => $total, 'data' => []];
+        if ($total === 0) return ['total' => $total, 'data' => [], 'seasons' => $seasons];
         $query->where([
-          ["pokerth_seasons.{$season}_player_ranking.username", 'NOT LIKE', 'deleted_%'],
-          ["pokerth_seasons.{$season}_player_ranking.season_games", '>', 3],
+          ["{$seasonTable}.username", 'NOT LIKE', 'deleted_%'],
+          ["{$seasonTable}.season_games", '>', 3],
         ]);
       }
       $query->orderBy($sort['prop'], (($sort['order'] == 'descending') ? 'DESC' : 'ASC'))
         ->offset(($page - 1) * $pagesize)->limit($pagesize);
       if (!empty($filters)) {
-        $query->where("pokerth_seasons.{$season}_player_ranking.username", 'LIKE', $filters['value'] . '%');
+        $query->where("{$seasonTable}.username", 'LIKE', $filters['value'] . '%');
       }
       $leaderboard = $query->get();
 
       foreach($leaderboard as $key => $player){
         if (empty($filters)) {
-          $page = $request->input('page', 1);
-          $pagesize = $request->input('pageSize', 50);
-          $player->rank_pos = ($page - 1) * $pagesize + $index + 1;
+          $player->rank_pos = ($page - 1) * $pagesize + $key + 1;
         } else {
           $player->rank_pos = $this->searchForPlayerId($player->player_id, $players) + 1;
         }

@@ -38,7 +38,7 @@
       <el-table-column prop="last_login" label="Last Login"> </el-table-column>
       <el-table-column prop="created" label="Created"> </el-table-column>
       <el-table-column prop="action" label="Action">
-        <template slot-scope="scope">
+        <template #default="scope">
           <el-row>
             <el-col>
               <el-button

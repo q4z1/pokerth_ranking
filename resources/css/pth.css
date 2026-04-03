@@ -1,0 +1,257 @@
+/* Google Fonts – muss vor allen CSS-Regeln stehen */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600&display=swap');
+
+@import "./colors.css";
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────
+   pth Tailwind v4 Theme
+   Mapped from the shared colors.css palette
+   ───────────────────────────────────────────── */
+@theme {
+    /* Poker-spezifisch */
+    --color-pth-green:           var(--pth-green);
+    --color-pth-green-hover:     var(--pth-green-hover);
+    --color-pth-brown:           var(--pth-brown);
+    --color-pth-brown-hover:     var(--pth-brown-hover);
+    --color-pth-gold:            var(--pth-gold);
+    --color-pth-pot:             var(--pth-pot);
+
+    /* Akzent */
+    --color-pth-accent:          var(--pth-accent);
+    --color-pth-accent-hover:    var(--pth-accent-hover);
+
+    /* Hintergründe */
+    --color-pth-base:            var(--pth-base);
+    --color-pth-elevated:        var(--pth-elevated);
+    --color-pth-surface:         var(--pth-surface);
+    --color-pth-surface-alt:     var(--pth-surface-alt);
+    --color-pth-surface-hover:   var(--pth-surface-hover);
+
+    /* Text */
+    --color-pth-text:            var(--pth-text);
+    --color-pth-text-secondary:  var(--pth-text-secondary);
+    --color-pth-text-muted:      var(--pth-text-muted);
+    --color-pth-text-dimmed:     var(--pth-text-dimmed);
+    --color-pth-text-inverse:    var(--pth-text-inverse);
+    --color-pth-text-danger:     var(--pth-text-danger);
+    --color-pth-text-cash:       var(--pth-text-cash);
+
+    /* Rahmen */
+    --color-pth-border:          var(--pth-border);
+    --color-pth-border-subtle:   var(--pth-border-subtle);
+
+    /* Font */
+    --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ─────────────────────────────────────────────
+   Internals page (admin UI) – Element Plus dark mode
+   Aktiviert durch class="dark" auf <html>
+   ───────────────────────────────────────────── */
+html.internals {
+    height: 100%;
+    color-scheme: dark;
+}
+
+html.internals body {
+    height: 100%;
+    margin: 0;
+    background-color: var(--pth-elevated);
+    color: var(--pth-text-secondary);
+    font-family: var(--font-sans);
+}
+
+html.internals a {
+    color: var(--pth-accent);
+}
+
+html.internals a:hover,
+html.internals a:focus {
+    color: var(--pth-accent-hover);
+}
+
+/* ─────────────────────────────────────────────
+   Country flag dropdown (UCP/injections)
+   ───────────────────────────────────────────── */
+.pth_country {
+    padding: 4px 0;
+}
+
+.pth_country .pth_label {
+    float: left;
+    width: 41%;
+}
+
+.pth_country .pth_label label {
+    color: #84bd00;
+    font-weight: 500;
+}
+
+.pth_country .pth_label label:hover {
+    color: #425700;
+}
+
+.pth_country .pth_select .content {
+    cursor: pointer;
+    min-height: auto;
+}
+
+.pth_country .pth_select .container .image {
+    width: 24px;
+    height: 14px;
+}
+
+.pth_country .pth_select .dditem,
+.pth_country .pth_select .current {
+    cursor: pointer;
+}
+
+.pth_country .pth_select .current:hover {
+    border-color: #777 !important;
+}
+
+.pth_gender {
+    padding: 4px 0;
+}
+
+.pth_gender .pth_label {
+    float: left;
+    width: 41%;
+}
+
+.pth_gender .pth_label label {
+    color: #84bd00;
+    font-weight: 500;
+}
+
+.pth_gender .pth_label label:hover {
+    color: #425700;
+}
+
+.pth_gender span {
+    padding: 4px;
+    margin: 0 4px;
+}
+
+/* ─────────────────────────────────────────────
+   El-Table transparent styling – alle phpBB-Seiten
+   (Leaderboard, Emoticons, etc.)
+   ───────────────────────────────────────────── */
+.leaderboard .sc-table .el-table,
+.leaderboard .sc-table .el-table__inner-wrapper,
+.leaderboard .sc-table .el-table__header-wrapper,
+.leaderboard .sc-table .el-table__body-wrapper,
+.leaderboard .sc-table .el-scrollbar,
+.leaderboard .sc-table .el-scrollbar__wrap,
+.leaderboard .sc-table .el-scrollbar__view,
+.emoticons .el-table,
+.emoticons .el-table__inner-wrapper,
+.emoticons .el-table__header-wrapper,
+.emoticons .el-table__body-wrapper,
+.emoticons .el-scrollbar,
+.emoticons .el-scrollbar__wrap,
+.emoticons .el-scrollbar__view,
+.leaderboard .sc-table .el-table th,
+.leaderboard .sc-table .el-table tr,
+.leaderboard .sc-table .el-table td,
+.emoticons .el-table th,
+.emoticons .el-table tr,
+.emoticons .el-table td {
+    background-color: transparent !important;
+}
+
+/* Element Plus setzt border-bottom auf table header -- passend einfärben */
+.leaderboard .sc-table .el-table th.el-table__cell,
+.emoticons .el-table th.el-table__cell {
+    color: var(--pth-text);
+    border-bottom-color: var(--pth-border) !important;
+}
+.leaderboard .sc-table .el-table td.el-table__cell,
+.emoticons .el-table td.el-table__cell {
+    color: var(--pth-text);
+    border-bottom-color: var(--pth-border) !important;
+}
+/* Sort-Pfeile in header: sichtbar machen */
+.leaderboard .sc-table .el-table .caret-wrapper .sort-caret.ascending {
+    border-bottom-color: var(--pth-text-muted) !important;
+}
+.leaderboard .sc-table .el-table .caret-wrapper .sort-caret.descending {
+    border-top-color: var(--pth-text-muted) !important;
+}
+
+.leaderboard .sc-table .el-table tr {
+    cursor: pointer;
+}
+
+.leaderboard .sc-table .el-table tr:hover > td {
+    background-color: var(--pth-surface-hover) !important;
+}
+
+.leaderboard .sc-table .el-table .icons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.leaderboard .sc-table .el-table .icons span.flag img {
+    height: 18px;
+    vertical-align: middle;
+}
+
+.leaderboard .sc-table .el-table .icons span.gender i {
+    color: inherit;
+}
+
+.leaderboard div.season {
+    font-size: 0.9em;
+}
+
+/* ─────────────────────────────────────────────
+   HomeCollapse
+   ───────────────────────────────────────────── */
+#home-collapse {
+    background-color: var(--pth-elevated);
+    margin: 1em 0;
+    padding: 1em;
+    position: relative;
+    color: var(--pth-text);
+}
+
+#home-collapse h1,
+#home-collapse h2,
+#home-collapse h3,
+#home-collapse h4,
+#home-collapse h5,
+#home-collapse h6 {
+    font-weight: normal;
+    padding-bottom: 1.2em;
+}
+
+#home-collapse a.close {
+    position: absolute;
+    top: 0.15em;
+    right: 0.5em;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: var(--pth-text-muted);
+}
+
+#home-collapse a.close:hover {
+    color: var(--pth-text);
+}
+
+/* Discord widget: iframe an Seitenbreite anpassen */
+#rightcolumn iframe,
+#sidebar_right iframe {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box;
+    display: block;
+}
+
+/* Discord widget: rechteckige Ecken des iframes abschneiden */
+#discw {
+    overflow: hidden;
+    border-radius: 8px;
+}

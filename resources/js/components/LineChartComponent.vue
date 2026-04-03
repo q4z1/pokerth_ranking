@@ -1,18 +1,20 @@
+<template>
+  <Line :data="chartData" :options="options" />
+</template>
+
 <script>
-import { Line, mixins } from 'vue-chartjs'
-const { reactiveProp } = mixins
+import { Line } from 'vue-chartjs'
+import {
+    Chart as ChartJS, LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend,
+} from 'chart.js'
+
+ChartJS.register(LineElement, PointElement, CategoryScale, LinearScale, Title, Tooltip, Legend)
+
 export default {
-    extends: Line,
+    components: { Line },
     props: {
-        chartData: null,
-        options: null,
+        chartData: { type: Object, required: true },
+        options: { type: Object, default: () => ({}) },
     },
-    mixins: [reactiveProp],
-    mounted () {
-        this.renderChart(this.chartData, this.options)
-    }
 }
 </script>
-<style lang="scss" scoped>
-
-</style>

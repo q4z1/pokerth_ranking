@@ -23,7 +23,7 @@
       <el-table-column prop="id" label="ID"> </el-table-column>
       <el-table-column prop="position" label="Position"> </el-table-column>
       <el-table-column prop="content" label="Content" width="400"> 
-        <template slot-scope="scope">
+        <template #default="scope">
           <el-row>
             <el-col v-html="scope.row.content" class="content">
 
@@ -35,7 +35,7 @@
       <el-table-column prop="start" label="Start"> </el-table-column>
       <el-table-column prop="end" label="End"> </el-table-column>
       <el-table-column prop="action" label="Action">
-        <template slot-scope="scope">
+        <template #default="scope">
           <el-row>
             <el-col>
             </el-col>

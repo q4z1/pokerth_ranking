@@ -1,0 +1,153 @@
+@import "./styles/colors.css";
+@import "tailwindcss";
+
+@theme {
+  /* Poker-spezifisch (theme-unabhängig) */
+  --color-pth-green: var(--pth-green);
+  --color-pth-green-hover: var(--pth-green-hover);
+  --color-pth-brown: var(--pth-brown);
+  --color-pth-brown-hover: var(--pth-brown-hover);
+  --color-pth-gold: var(--pth-gold);
+  --color-pth-pot: var(--pth-pot);
+
+  /* Akzent (Titanium) */
+  --color-pth-accent: var(--pth-accent);
+  --color-pth-accent-hover: var(--pth-accent-hover);
+
+  /* Theme-abhängige Farben */
+  --color-pth-base: var(--pth-base);
+  --color-pth-elevated: var(--pth-elevated);
+  --color-pth-surface: var(--pth-surface);
+  --color-pth-surface-alt: var(--pth-surface-alt);
+  --color-pth-surface-hover: var(--pth-surface-hover);
+
+  --color-pth-text: var(--pth-text);
+  --color-pth-text-secondary: var(--pth-text-secondary);
+  --color-pth-text-muted: var(--pth-text-muted);
+  --color-pth-text-dimmed: var(--pth-text-dimmed);
+  --color-pth-text-inverse: var(--pth-text-inverse);
+  --color-pth-text-danger: var(--pth-text-danger);
+  --color-pth-text-cash: var(--pth-text-cash);
+
+  --color-pth-border: var(--pth-border);
+  --color-pth-border-subtle: var(--pth-border-subtle);
+}
+
+body {
+  @apply bg-pth-base text-pth-text m-0 p-0 font-sans;
+}
+
+a {
+  @apply text-pth-accent hover:text-pth-accent-hover no-underline;
+}
+
+/* ── phpBB-Reset ─────────────────────────────────────────────────────────
+   spectool.css wird als letztes im <head> geladen (nach allen phpBB-CSS).
+   !important schlägt jede phpBB-Regel unabhängig von Spezifität.
+*/
+#spectator-app ul,
+#spectator-app ol {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#spectator-app li {
+  background: none !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+#spectator-app li::before,
+#spectator-app li::after {
+  content: none !important;
+  display: none !important;
+}
+
+#spectator-app h3 {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  color: inherit !important;
+  border: none !important;
+  background: none !important;
+}
+
+#spectator-app button {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  text-align: inherit !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+
+#spectator-app nav {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* ── Gezielter Display-Fix: nur li-Elemente die flex sein sollen ─────────────────────────---- */
+/* v-show setzt display:none inline → blanket .flex { !important } würde das überschreiben.    */
+/* Daher nur li.flex und li.grid fixen (phpBB überschreibt li auf list-item).                  */
+#spectator-app li.flex  { display: flex  !important; }
+#spectator-app li.grid  { display: grid  !important; }
+
+/* Popup (via Teleport außerhalb #spectator-app) */
+#spectator-popup button {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+}
+#spectator-popup .bg-pth-accent         { background-color: var(--color-pth-accent) !important; }
+#spectator-popup .hover\:bg-pth-accent-hover:hover { background-color: var(--color-pth-accent-hover) !important; }
+#spectator-popup .text-white            { color: #fff !important; }
+#spectator-popup .font-semibold         { font-weight: 600 !important; }
+#spectator-popup .rounded               { border-radius: .25rem !important; }
+#spectator-popup .px-4                  { padding-left: 1rem !important; padding-right: 1rem !important; }
+#spectator-popup .py-2                  { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+
+/* ── Tailwind utility overrides ───────────────────────────────────────── */
+#spectator-app .bg-pth-accent          { background-color: var(--color-pth-accent) !important; }
+#spectator-app .bg-pth-accent-hover    { background-color: var(--color-pth-accent-hover) !important; }
+#spectator-app .bg-pth-surface         { background-color: var(--color-pth-surface) !important; }
+#spectator-app .bg-pth-elevated        { background-color: var(--color-pth-elevated) !important; }
+#spectator-app .hover\:bg-pth-accent-hover:hover { background-color: var(--color-pth-accent-hover) !important; }
+#spectator-app .hover\:bg-pth-surface:hover      { background-color: var(--color-pth-surface) !important; }
+#spectator-app .hover\:bg-pth-surface-hover:hover { background-color: var(--color-pth-surface-hover) !important; }
+#spectator-app .text-white             { color: #fff !important; }
+#spectator-app .text-pth-text          { color: var(--color-pth-text) !important; }
+#spectator-app .text-pth-text-secondary { color: var(--color-pth-text-secondary) !important; }
+#spectator-app .text-pth-green         { color: var(--color-pth-green) !important; }
+#spectator-app .text-pth-accent        { color: var(--color-pth-accent) !important; }
+#spectator-app .font-semibold          { font-weight: 600 !important; }
+#spectator-app .rounded                { border-radius: .25rem !important; }
+#spectator-app .px-4                   { padding-left: 1rem !important; padding-right: 1rem !important; }
+#spectator-app .py-2                   { padding-top: .5rem !important; padding-bottom: .5rem !important; }
+#spectator-app .px-3                   { padding-left: .75rem !important; padding-right: .75rem !important; }
+#spectator-app .py-1                   { padding-top: .25rem !important; padding-bottom: .25rem !important; }

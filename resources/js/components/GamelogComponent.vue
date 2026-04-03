@@ -65,7 +65,7 @@
                                     <el-table-column prop="hand" label="Hand">
                                     </el-table-column>
                                     <el-table-column prop="_" label=" ">
-                                        <template slot-scope="scope">
+                                        <template #default="scope">
                                             <span v-html="scope.row['_']"></span>
                                         </template>
                                     </el-table-column>

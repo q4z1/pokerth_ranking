@@ -13,13 +13,13 @@
             <ul class="topiclist forums">
 		        <li class="row">
                     <div class="list-inner">
-                        <template v-for="(version, index) in versions">
-                            <el-row :key="'title-' + index">
+                        <template v-for="(version, index) in versions" :key="index">
+                            <el-row>
                                 <el-col :style="index > 0 ? 'margin-top: 0.4em;' : ''">
                                     <h3>PokerTH {{ version.version }}:</h3>
                                 </el-col>
                             </el-row>
-                            <el-row :key="'md5-' + index">
+                            <el-row>
                                 <el-col>
                                     <el-collapse>
                                         <el-collapse-item title="MD5SUMS" :name="'md5-' + index">
@@ -28,7 +28,7 @@
                                     </el-collapse>                                
                                 </el-col>
                             </el-row>
-                            <el-row :key="'readme-' + index" v-if="version.readme">
+                            <el-row v-if="version.readme">
                                 <el-col>
                                     <el-collapse>
                                         <el-collapse-item title="README" :name="'readme-' + index">
@@ -37,7 +37,7 @@
                                     </el-collapse>                                
                                 </el-col>
                             </el-row>
-                            <el-row :key="'files-' + index">
+                            <el-row>
                                 <el-col v-if="version.files && version.files.length > 0">
                                     <el-table
                                         :data="version.files"
@@ -46,7 +46,7 @@
                                         <el-table-column
                                         label="File"
                                         width="auto">
-                                        <template slot-scope="scope">
+                                        <template #default="scope">
                                             <el-row style="display: flex; align-items: center">
                                                 <el-col :span="2"><img v-if="scope.row.icon" :src="scope.row.icon" width="48"></el-col>
                                                 <el-col :span="22" style="margin-left: 0.4em;">
@@ -59,14 +59,14 @@
                                         label="Datum"
                                         width="140"
                                         align="right">
-                                        <template slot-scope="scope">
+                                        <template #default="scope">
                                             <span class="file-date">{{ scope.row.date }}</span>
                                         </template>
                                         </el-table-column>
                                     </el-table>
                                 </el-col>
                             </el-row>
-                            <hr :key="'hr-' + index" v-if="index < versions.length - 1" />
+                            <hr v-if="index < versions.length - 1" />
                         </template>
                         <hr style="margin-top: 1em;" />
                         <el-row :gutter="20" align="middle">
@@ -143,13 +143,13 @@
                             </el-col>
                         </el-row>
                         <hr style="margin-top: 1em; margin-bottom: 1.5em;" />
-                       <template v-for="(version, index) in tracker">
-                            <el-row :key="'title-' + index">
+                       <template v-for="(version, index) in tracker" :key="index">
+                            <el-row>
                                 <el-col :style="index > 0 ? 'margin-top: 0.4em;' : ''">
                                     <h3>PokerTH Tracker {{ version.version }} (by ollika) - see <a href="https://www.pokerth.net/viewtopic.php?t=1138" target="_blank">forum thread</a>:</h3>
                                 </el-col>
                             </el-row>
-                            <el-row :key="'md5-' + index">
+                            <el-row>
                                 <el-col>
                                     <el-collapse>
                                         <el-collapse-item title="MD5SUMS" :name="'md5-' + index">
@@ -158,7 +158,7 @@
                                     </el-collapse>                                
                                 </el-col>
                             </el-row>
-                            <el-row :key="'readme-' + index" v-if="version.readme">
+                            <el-row v-if="version.readme">
                                 <el-col>
                                     <el-collapse>
                                         <el-collapse-item title="README" :name="'readme-' + index">
@@ -167,7 +167,7 @@
                                     </el-collapse>                                
                                 </el-col>
                             </el-row>
-                            <el-row :key="'files-' + index">
+                            <el-row>
                                 <el-col v-if="version.files && version.files.length > 0">
                                     <el-table
                                         :data="version.files"
@@ -176,7 +176,7 @@
                                         <el-table-column
                                         label="File"
                                         width="auto">
-                                        <template slot-scope="scope">
+                                        <template #default="scope">
                                             <el-row style="display: flex; align-items: center">
                                                 <el-col :span="2"><img v-if="scope.row.icon" :src="scope.row.icon" width="48"></el-col>
                                                 <el-col :span="22" style="margin-left: 0.4em;">
@@ -189,15 +189,16 @@
                                         label="Datum"
                                         width="140"
                                         align="right">
-                                        <template slot-scope="scope">
+                                        <template #default="scope">
                                             <span class="file-date">{{ scope.row.date }}</span>
                                         </template>
                                         </el-table-column>
                                     </el-table>
                                 </el-col>
                             </el-row>
-                            <hr :key="'hr-' + index" v-if="index < versions.length - 1" />
+                            <hr v-if="index < versions.length - 1" />
                         </template>
+                    </div>
 		        </li>
             </ul>
         </div>

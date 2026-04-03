@@ -1,12 +1,12 @@
 <template>
     <div>
-        <el-row v-if="champions">
+        <el-row v-if="champions && champions.length > 0">
             <el-col class="cod">
                 <h2>Champions of the Day</h2>
                 <ol>
-                    <li><a :href="champions[0]['url']" v-html="champions[0]['username']" target="_blank"></a></li>
-                    <li><a :href="champions[1]['url']" v-html="champions[1]['username']" target="_blank"></a></li>
-                    <li><a :href="champions[2]['url']" v-html="champions[2]['username']" target="_blank"></a></li>
+                    <li v-for="(champion, i) in champions.slice(0, 3)" :key="i">
+                        <a :href="champion['url']" v-html="champion['username']" target="_blank"></a>
+                    </li>
                 </ol>
             </el-col>
         </el-row>

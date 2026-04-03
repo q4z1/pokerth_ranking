@@ -15,23 +15,19 @@
                     <div class="list-inner">
                         <el-row>
                             <el-col>
-                                <data-tables v-if="emoticons" :data="emoticons" layout="table">
+                                <el-table v-if="emoticons" :data="emoticons" style="width:100%">
                                     <el-table-column prop="title" label="Title">
-                                        <template #default="{ row }">
-                                            {{ row.title }}
-                                        </template>
+                                        <template #default="{ row }">{{ row.title }}</template>
                                     </el-table-column>
                                     <el-table-column prop="char" label="Characters">
-                                        <template #default="{ row }">
-                                            {{ row.char }}
-                                        </template>
+                                        <template #default="{ row }">{{ row.char }}</template>
                                     </el-table-column>
                                     <el-table-column prop="emoticon" label="Emoticon">
                                         <template #default="{ row }">
                                             <img :src="'/images/emoticons/' + row.title + '.png'" :alt="row.title"/>
                                         </template>
                                     </el-table-column>
-                                </data-tables>
+                                </el-table>
                             </el-col>
                         </el-row>
                     </div>

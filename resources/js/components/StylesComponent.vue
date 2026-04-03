@@ -20,7 +20,7 @@
                                     :show-header="false"
                                     style="width: 100%">
                                     <el-table-column>
-                                    <template slot-scope="scope">
+                                    <template #default="scope">
                                         <el-row style="display: flex; align-items: center">
                                             <el-col :span="8"><img width="160" v-if="scope.row.preview" :src="scope.row.preview"></el-col>
                                             <el-col :span="16" style="margin-left: 0.4em;"><a :href="'/download/styles/cards/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a></el-col>
@@ -35,7 +35,7 @@
                                     :show-header="false"
                                     style="width: 100%">
                                     <el-table-column>
-                                    <template slot-scope="scope">
+                                    <template #default="scope">
                                         <el-row style="display: flex; align-items: center">
                                             <el-col :span="8"><img width="160" v-if="scope.row.preview" :src="scope.row.preview"></el-col>
                                             <el-col :span="16" style="margin-left: 0.4em;"><a :href="'/download/styles/table/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a></el-col>
