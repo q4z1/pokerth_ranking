@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col">
     <!-- Header -->
-    <div class="hidden md:grid grid-cols-[1fr_3.5rem_2.5rem_2.5rem_2.5rem_4rem_5rem_1rem] items-center gap-1 px-3 py-2 bg-pth-surface text-pth-muted text-xs font-semibold rounded-t">
+    <div class="hidden md:grid grid-cols-[1fr_3.5rem_2.5rem_2.5rem_3.5rem_4rem_5rem_1rem] items-center gap-1 px-3 py-2 bg-pth-surface text-pth-muted text-xs font-semibold rounded-t mb-1">
       <span class="min-w-0">Name</span>
       <span class="text-center">Players</span>
       <span class="text-center">Status</span>

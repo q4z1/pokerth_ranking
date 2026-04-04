@@ -1,7 +1,7 @@
 <template>
   <div class="px-6 py-8">
     <div class="rounded-t-lg px-6 py-3" style="background: linear-gradient(to right, var(--pth-grad-start), var(--pth-grad-end));">
-      <h1 class="text-white text-lg font-bold">Login</h1>
+      <div class="login-header text-white font-semibold">Login</div>
     </div>
     <div class="bg-pth-surface border-x border-b border-pth-border rounded-b-lg p-6 space-y-4">
       <!-- Guest-only mode: set GUEST_ONLY to false to show registered login -->
@@ -35,7 +35,7 @@
         </div>
       </template>
 
-      <p class="text-pth-text-secondary text-sm italic">Login may take some time, please be patient ...</p>
+      <p class="login-hint text-pth-text-secondary italic">Login may take some time, please be patient ...</p>
 
       <div class="flex items-center gap-4 mt-3">
         <button
@@ -96,3 +96,12 @@ function doLogin() {
   // NetEventHandler will update store.connected and emit events
 }
 </script>
+
+<style scoped>
+.login-header {
+  font-size: 1rem;
+}
+.login-hint {
+  font-size: 0.875rem;
+}
+</style>

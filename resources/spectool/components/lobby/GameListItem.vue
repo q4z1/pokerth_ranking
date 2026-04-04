@@ -2,7 +2,7 @@
   <div class="border border-pth-border-subtle rounded mb-2 overflow-hidden">
     <!-- Header row -->
     <div
-      class="grid grid-cols-[1fr_3.5rem_2.5rem_2.5rem_2.5rem_4rem_5rem_1rem] items-center gap-1 px-3 py-2 bg-pth-surface cursor-pointer hover:bg-pth-surface-hover transition-colors"
+      class="grid grid-cols-[1fr_3.5rem_2.5rem_2.5rem_3.5rem_4rem_5rem_1rem] items-center gap-1 px-3 py-2 bg-pth-surface cursor-pointer hover:bg-pth-surface-hover transition-colors"
       @click="expanded = !expanded"
     >
       <span class="min-w-0 text-pth-text text-sm font-semibold truncate">{{ gameName }}</span>

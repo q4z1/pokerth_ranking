@@ -1,9 +1,9 @@
 <template>
-  <li class="flex items-center gap-3 py-2 px-3 hover:bg-pth-surface rounded cursor-default">
+  <li class="flex items-center gap-3 py-1 px-3 hover:bg-pth-surface rounded cursor-default">
     <PlayerAvatar :player-id="playerId" />
     <div class="flex-1 min-w-0">
-      <h3 class="text-pth-text font-semibold truncate leading-tight">{{ playerName }}</h3>
-      <p class="text-sm truncate leading-tight mt-0.5">
+      <div class="text-pth-text text-xs font-semibold truncate leading-tight">{{ playerName }}</div>
+      <div class="player-status truncate leading-tight mt-0.5">
         <template v-if="gameInfo">
           <span class="text-pth-muted">{{ isSpectator ? 'Watching' : 'Playing at' }}:</span>
           <span class="text-pth-accent"> {{ gameInfo.gameName }}</span>
@@ -11,7 +11,7 @@
         <template v-else>
           <span class="text-pth-green italic">Currently idle</span>
         </template>
-      </p>
+      </div>
     </div>
     <button
       v-if="gameInfo && !isSpectator"
@@ -65,3 +65,9 @@ const isSpectator = computed(() => {
 
 const spectateGameId = computed(() => gameInfo.value?.gameId)
 </script>
+
+<style scoped>
+.player-status {
+  font-size: 0.75rem;
+}
+</style>

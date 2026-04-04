@@ -1,9 +1,9 @@
 <template>
-  <nav class="flex gap-1 bg-pth-elevated p-1 rounded">
+  <nav class="flex gap-1 bg-pth-elevated p-1 rounded" style="font-size: 0.75rem">
     <button
       v-for="tab in tabs"
       :key="tab.id"
-      class="px-4 py-2 rounded text-base font-semibold transition-colors cursor-pointer"
+      class="px-3 py-1 text-xs font-semibold transition-colors cursor-pointer outline-none focus:outline-none"
       :class="activeTab === tab.id
         ? 'bg-pth-accent text-white'
         : 'text-pth-text-secondary hover:text-pth-text hover:bg-pth-surface'"
@@ -33,3 +33,9 @@ const tabs = computed(() => [
   { id: 'chat', label: 'Chat', count: null }
 ])
 </script>
+
+<style scoped>
+button {
+  font-size: 0.75rem;
+}
+</style>

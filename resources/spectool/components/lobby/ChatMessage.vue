@@ -1,5 +1,5 @@
 <template>
-  <div class="p-3 text-sm">
+  <div class="px-3 py-0.5 text-xs">
     <span v-if="type === 'lobby'" class="text-pth-text">
       <b>{{ senderName }}:</b> {{ sanitizedText }}
     </span>
