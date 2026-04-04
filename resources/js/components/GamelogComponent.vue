@@ -350,30 +350,26 @@ export default {
                 // options
                 this.options1 = {
                     scales: {
-                        yAxes: [{
-                            ticks: {
-                                beginAtZero: true,
-                                min: 0
-                            }
-                        }]
+                        y: {
+                            min: 0,
+                        }
                     },
                     responsive: true,
-                    maintainAspectRatio: false
+                    maintainAspectRatio: true,
                 },
                 this.options2 = {
                     scales: {
-                        yAxes: [{
-                            ticks: {
-                                beginAtZero: true,
-                                min: 0
-                            }
-                        }]
+                        y: {
+                            min: 0,
+                        }
                     },
-                    legend: {
-                        display: false
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
                     },
                     responsive: true,
-                    maintainAspectRatio: false
+                    maintainAspectRatio: true,
                 }
             // console.log(this.game['most hands played'])
             this.most_hands = []
