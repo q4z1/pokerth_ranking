@@ -46,6 +46,9 @@ export default {
         width: 86%;
         margin: 0 7%;
         text-align: center;
+        h2 {
+            text-align: left;
+        }
         ol{
             list-style-position: inside;
             margin: 0;
