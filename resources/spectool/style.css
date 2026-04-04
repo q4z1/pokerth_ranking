@@ -87,10 +87,10 @@
 #spectator-app button {
   background: none !important;
   border: none !important;
-  padding: 0 !important;
+  padding: 2 3 !important;
   margin: 0 !important;
   color: inherit !important;
-  font-size: inherit !important;
+  /* font-size: inherit !important; */
   font-family: inherit !important;
   font-weight: inherit !important;
   line-height: inherit !important;

@@ -15,7 +15,7 @@
     </div>
     <button
       v-if="gameInfo && !isSpectator"
-      class="ml-auto shrink-0 px-3 py-1 text-xs rounded bg-pth-accent hover:bg-pth-accent-hover text-white whitespace-nowrap"
+      class="ml-auto shrink-0 px-2 py-0.5 text-xs rounded bg-pth-accent hover:bg-pth-accent-hover text-white whitespace-nowrap spectate-btn"
       @click="$emit('spectate', spectateGameId)"
     >
       Spectate
@@ -69,5 +69,9 @@ const spectateGameId = computed(() => gameInfo.value?.gameId)
 <style scoped>
 .player-status {
   font-size: 0.75rem;
+}
+.spectate-btn {
+  font-size: 0.75rem;
+  padding: 2px;
 }
 </style>
