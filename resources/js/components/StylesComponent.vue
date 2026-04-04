@@ -11,42 +11,28 @@
                 </li>
             </ul>
             <ul class="topiclist forums">
-		        <li class="row">
+                <li class="row styles-row" v-for="(pair, index) in pairedRows" :key="index">
                     <div class="list-inner">
-                        <el-row>
-                            <el-col :span="12" v-if="cards">
-                                <el-table
-                                    :data="cards"
-                                    :show-header="false"
-                                    style="width: 100%">
-                                    <el-table-column>
-                                    <template #default="scope">
-                                        <el-row style="display: flex; align-items: center">
-                                            <el-col :span="8"><img width="160" v-if="scope.row.preview" :src="scope.row.preview"></el-col>
-                                            <el-col :span="16" style="margin-left: 0.4em;"><a :href="'/download/styles/cards/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a></el-col>
-                                        </el-row>
-                                    </template>
-                                    </el-table-column>
-                                </el-table>
+                        <el-row style="display: flex;">
+                            <el-col :span="12" class="styles-col" :class="{ 'styles-col--empty': !pair.card }">
+                                <template v-if="pair.card">
+                                    <a :href="'/download/styles/cards/' + pair.card.filename" :title="pair.card.filename" class="styles-entry">
+                                        <div class="styles-img"><img v-if="pair.card.preview" :src="pair.card.preview"></div>
+                                        <span>{{ pair.card.filename }}</span>
+                                    </a>
+                                </template>
                             </el-col>
-                            <el-col :span="12" v-if="tables">
-                                <el-table
-                                    :data="tables"
-                                    :show-header="false"
-                                    style="width: 100%">
-                                    <el-table-column>
-                                    <template #default="scope">
-                                        <el-row style="display: flex; align-items: center">
-                                            <el-col :span="8"><img width="160" v-if="scope.row.preview" :src="scope.row.preview"></el-col>
-                                            <el-col :span="16" style="margin-left: 0.4em;"><a :href="'/download/styles/table/' + scope.row.filename" :title="scope.row.filename">{{ scope.row.filename }}</a></el-col>
-                                        </el-row>
-                                    </template>
-                                    </el-table-column>
-                                </el-table>
+                            <el-col :span="12" class="styles-col" :class="{ 'styles-col--empty': !pair.table }">
+                                <template v-if="pair.table">
+                                    <a :href="'/download/styles/table/' + pair.table.filename" :title="pair.table.filename" class="styles-entry">
+                                        <div class="styles-img"><img v-if="pair.table.preview" :src="pair.table.preview"></div>
+                                        <span>{{ pair.table.filename }}</span>
+                                    </a>
+                                </template>
                             </el-col>
                         </el-row>
                     </div>
-		        </li>
+                </li>
             </ul>
         </div>
     </div>
@@ -57,6 +43,18 @@
             return {
                 cards: null,
                 tables: null,
+            }
+        },
+        computed: {
+            pairedRows() {
+                const cards = this.cards || []
+                const tables = this.tables || []
+                const len = Math.max(cards.length, tables.length)
+                const result = []
+                for (let i = 0; i < len; i++) {
+                    result.push({ card: cards[i] || null, table: tables[i] || null })
+                }
+                return result
             }
         },
         mounted() {
@@ -78,80 +76,70 @@
     }
 </script>
 <style lang="scss">
-.styles{
-    .forums li{
-        margin-bottom: 1em !important;
-    }
-    .el-table{
-        .cell{
-            padding-left: 0 !important;
+.downloads {
+    .styles-row {
+        padding: 0 !important;
+
+        .list-inner {
+            padding: 0 !important;
         }
-        th {
-            background-color: transparent!important;
-        }
-        tr{
-            background-color: transparent!important;
-            &:hover{
-                background-color: transparent !important;
-            }
-            td{
-                background-color: transparent!important;
-                &:hover{
-                    background-color: transparent!important;
-                }
-            }
-        }
-        td, th{
-            border-bottom: none;
-        }
-        thead tr{
-            background-color: transparent!important;
-            &:hover{
-                background-color: transparent!important;
-            }
-            td{
-                background-color:transparent!important;
-                &:hover{
-                    background-color: transparent!important;
-                }
-            }
-        }
-        &::after, &::before {
-            background-color: transparent !important;
+
+        .el-row {
+            align-items: stretch;
         }
     }
+
+    .styles-col {
+        height: 160px;
+        border-right: 1px solid rgba(255,255,255,0.08);
+
+        &:last-child {
+            border-right: none;
+        }
+
+        &--empty {
+            background: transparent;
+        }
+    }
+
+    .styles-entry {
+        display: flex;
+        align-items: center;
+        height: 100%;
+        padding: 0.5em 0.75em;
+        text-decoration: none;
+        transition: background 0.15s;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .styles-img {
+            flex-shrink: 0;
+            width: 160px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            img {
+                max-width: 160px;
+                max-height: 140px;
+                width: auto;
+                height: auto;
+                object-fit: contain;
+            }
+        }
+
+        span {
+            margin-left: 0.75em;
+            word-break: break-all;
+        }
+    }
+
     p {
         margin-top: 1em;
         text-align: center;
-    }
-}
-.fd_dark .downloads{
-    .el-table{
-        background-color: transparent!important;
-        tr{
-            background-color: transparent!important;
-            &:hover{
-                background-color: transparent!important;
-            }
-            td{
-                background-color:transparent!important;
-                &:hover{
-                    background-color: transparent!important;
-                }
-            }
-        }
-        thead tr{
-            background-color: transparent!important;
-            &:hover{
-                background-color: transparent!important;
-            }
-            td{
-                background-color:transparent!important;
-                &:hover{
-                    background-color: transparent!important;
-                }
-            }
-        }
     }
 }
 </style>
