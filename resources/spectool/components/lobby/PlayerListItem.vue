@@ -72,6 +72,5 @@ const spectateGameId = computed(() => gameInfo.value?.gameId)
 }
 .spectate-btn {
   font-size: 0.75rem;
-  padding: 2px;
 }
 </style>
