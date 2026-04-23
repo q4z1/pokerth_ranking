@@ -72,6 +72,13 @@ html.internals a:focus {
 }
 
 /* ─────────────────────────────────────────────
+   phpbb post body
+   ───────────────────────────────────────────── */
+.postbody .content img{
+    display: inline;
+}
+
+/* ─────────────────────────────────────────────
    Country flag dropdown (UCP/injections)
    ───────────────────────────────────────────── */
 .pth_country {
