@@ -6,6 +6,9 @@
     <span class="ml-6 text-pth-pot font-bold" :style="{ fontSize: fontSize + 'px' }">
       Total: ${{ totalPot }}
     </span>
+    <span class="ml-6 text-pth-pot font-bold" :style="{ fontSize: fontSize + 'px' }">
+      Hand: {{ currentHand }}
+    </span>
   </div>
 </template>
 
@@ -32,6 +35,8 @@ const betsSum = computed(() => {
 })
 
 const totalPot = computed(() => store.netGame?.hand?.pot || 0)
+
+const currentHand = computed(() => store.netGame?.hand?.num || 0)
 
 const fontSize = computed(() => parseInt(props.canvasHeight * 3.2 / 100))
 
