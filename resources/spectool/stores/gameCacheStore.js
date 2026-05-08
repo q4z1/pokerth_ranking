@@ -313,6 +313,7 @@ export const useGameCacheStore = defineStore('gameCache', () => {
 
   function clearLobby() {
     for (const key of Object.keys(gameDataMap)) delete gameDataMap[key]
+    for (const key of Object.keys(playerDataMap)) delete playerDataMap[key]
     chatMessages.value = []
   }
 

@@ -93,6 +93,8 @@ function onClose() {
   store.nickName = ''
   store.gameTableActive = false
   store.lobbyActive = true
+  store.clearLobby()
+  for (const key of Object.keys(requestedPlayerIds)) delete requestedPlayerIds[key]
   store.showPopup('disconnect', 'Disconnected', 'Connection to server closed.', 'Close')
 }
 
@@ -100,6 +102,8 @@ function onError(evt) {
   store.connected = false
   store.gameTableActive = false
   store.lobbyActive = true
+  store.clearLobby()
+  for (const key of Object.keys(requestedPlayerIds)) delete requestedPlayerIds[key]
   store.showPopup('error', 'Network Error', 'A network error occurred.', 'Close')
 }
 

@@ -4,8 +4,8 @@ export const MAX_NUMBER_OF_PLAYERS = 10
 
 export const POKERTH_VERSION_MAJOR = 2
 export const POKERTH_VERSION_MINOR = 0
-export const POKERTH_VERSION_PATCH = 6
-export const POKERTH_BETA_RELEASE_STRING = '2.0.6'
+export const POKERTH_VERSION_PATCH = 7
+export const POKERTH_BETA_RELEASE_STRING = '2.0.7'
 
 export const CLIENT_TYPE_QT_WIDGET = 0x01
 
