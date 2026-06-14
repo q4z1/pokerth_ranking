@@ -17,8 +17,8 @@
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0",
-        "@vitejs/plugin-vue": "^5.0",
+        "@vitejs/plugin-vue": "^6.0",
         "sass": "^1.80",
-        "vite": "^6.4"
+        "vite": "^8.0"
     }
 }
