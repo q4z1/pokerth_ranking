@@ -309,7 +309,11 @@ export const useGameCacheStore = defineStore('gameCache', () => {
 
   // --- Game list computed ---
   const gameList = computed(() => Object.values(gameDataMap))
-  const playerList = computed(() => Object.values(playerDataMap).filter(p => p.playerInfoData))
+  // const playerList = computed(() => Object.values(playerDataMap).filter(p => p.playerInfoData))
+  const playerList = computed(() =>
+      Object.values(playerDataMap).filter(p => p.playerInfoData && p.playerInfoData.isHuman)
+  )
+
 
   function clearLobby() {
     for (const key of Object.keys(gameDataMap)) delete gameDataMap[key]
