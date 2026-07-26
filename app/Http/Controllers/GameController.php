@@ -39,6 +39,64 @@ class GameController extends Controller
         return ["status" => true, "msg" => $game];
     }    
 
+    // ── Raw pdb access (bridge for the web client) ───────────────────────
+    // Same directory the desktop log-analysis upload uses; see
+    // LogFileController::process_log_file().
+    private const PDB_DIR = '/var/www/pokerth/log_file_analysis/upload';
+
+    public function pdbDownload($id){
+        if(!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $id)){
+            return response()->json(['status' => false, 'msg' => 'Invalid id'], 400);
+        }
+        $path = self::PDB_DIR . '/' . $id . '.pdb';
+        if(!is_file($path)){
+            return response()->json(['status' => false, 'msg' => 'Not found'], 404);
+        }
+        return response()->download($path, $id . '.pdb', [
+            'Content-Type' => 'application/x-sqlite3',
+        ]);
+    }
+
+    public function pdbUpload(Request $request){
+        $file = $request->file('pdb');
+        if(!$file || !$file->isValid()){
+            return response()->json(['status' => false, 'msg' => 'Missing file (multipart field "pdb")'], 400);
+        }
+        if($file->getSize() > 10 * 1024 * 1024){
+            return response()->json(['status' => false, 'msg' => 'File too large'], 413);
+        }
+        // Must be a real SQLite database.
+        $fh = @fopen($file->getRealPath(), 'rb');
+        $magic = $fh ? fread($fh, 16) : '';
+        if($fh) fclose($fh);
+        if($magic !== "SQLite format 3\0"){
+            return response()->json(['status' => false, 'msg' => 'Not a pdb file'], 422);
+        }
+        // Must contain the PokerTH log tables.
+        try {
+            $pdo = new \PDO('sqlite:' . $file->getRealPath());
+            $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type='table'")
+                          ->fetchAll(\PDO::FETCH_COLUMN);
+            $pdo = null;
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'msg' => 'Unreadable pdb'], 422);
+        }
+        $tables = array_map('strtolower', $tables);
+        foreach(['session', 'game', 'hand', 'action'] as $t){
+            if(!in_array($t, $tables)){
+                return response()->json(['status' => false, 'msg' => 'Not a PokerTH log'], 422);
+            }
+        }
+        // 'web_' prefix: cannot collide with desktop log-analysis IDs.
+        $id = 'web_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4));
+        try {
+            $file->move(self::PDB_DIR, $id . '.pdb');
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'msg' => 'Store failed'], 500);
+        }
+        return ['status' => true, 'msg' => ['id' => $id]];
+    }
+
     public function games(Request $request)
     {
         return GameHasPlayer::offset($request->l)->where('player_idplayer', $request->p)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(5)->get();

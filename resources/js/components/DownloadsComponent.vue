@@ -61,36 +61,30 @@
                             <hr v-if="index < versions.length - 1" />
                         </template>
                         <hr style="margin-top: 1em;" />
-                        <el-row :gutter="20" align="middle">
-                            <el-col :span="6" style="display:flex;justify-content:center;align-items:center;">
-                                <a href="https://sourceforge.net/projects/pokerth/files/pokerth/" target="_blank">
-                                    <img alt="Download PokerTH"
-                                        src="https://a.fsdn.com/con/app/sf-download-button"
-                                        style="height:52px;width:auto;" />
-                                </a>
-                            </el-col>
+                        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-around;gap:12px;">
+                            <a href="https://sourceforge.net/projects/pokerth/files/pokerth/" target="_blank">
+                                <img alt="Download PokerTH"
+                                    src="https://a.fsdn.com/con/app/sf-download-button"
+                                    style="height:52px;width:auto;display:block;" />
+                            </a>
 
-                            <el-col :span="6" style="display:flex;justify-content:center;align-items:center;">
-                                <a href="https://flathub.org/apps/net.pokerth.PokerTH" target="_blank">
-                                    <img style="height:52px;width:auto;"
-                                        alt="Get it on Flathub"
-                                        src="https://flathub.org/api/badge?locale=en"/>
-                                </a>
-                            </el-col>
+                            <a href="https://flathub.org/apps/net.pokerth.PokerTH" target="_blank">
+                                <img style="height:52px;width:auto;display:block;"
+                                    alt="Get it on Flathub"
+                                    src="https://flathub.org/api/badge?locale=en"/>
+                            </a>
 
-                            <el-col :span="6" style="display:flex;justify-content:center;align-items:center;">
-                                <a href="https://snapcraft.io/pokerth" target="_blank">
-                                    <img style="height:52px;width:auto;"
-                                        alt="Get it from the Snap Store"
-                                        src="https://snapcraft.io/en/dark/install.svg" />
-                                </a>
-                            </el-col>
+                            <a href="https://snapcraft.io/pokerth" target="_blank">
+                                <img style="height:52px;width:auto;display:block;"
+                                    alt="Get it from the Snap Store"
+                                    src="https://snapcraft.io/en/dark/install.svg" />
+                            </a>
 
-                            <el-col :span="6" style="display:flex;justify-content:center;align-items:center;">
-                                <div style="
+                            <div style="
                                     display:inline-flex;
                                     align-items:center;
                                     justify-content:space-between;
+                                    flex-shrink:0;
                                     background:#111;
                                     color:#fff;
                                     border-radius:8px;
@@ -132,8 +126,45 @@
                                     </button>
 
                                 </div>
-                            </el-col>
-                        </el-row>
+
+                            <a href="https://webclient.pokerth.net" target="_blank" style="text-decoration:none;">
+                                <div style="
+                                    display:inline-flex;
+                                    align-items:center;
+                                    flex-shrink:0;
+                                    background:#111;
+                                    color:#fff;
+                                    border-radius:8px;
+                                    padding:8px 12px;
+                                    height:52px;
+                                    box-sizing:border-box;
+                                    font-family:system-ui, sans-serif;
+                                ">
+                                    <img src="/images/pokerth.svg" alt="PokerTH"
+                                         style="width:28px;height:28px;flex-shrink:0;" />
+
+                                    <span style="
+                                        margin-left:8px;
+                                        font-size:13px;
+                                        font-weight:600;
+                                        line-height:1.2;
+                                        color:#fff;
+                                        white-space:nowrap;
+                                    ">PokerTH Web-Client</span>
+
+                                    <span style="
+                                        margin-left:8px;
+                                        background:#2a2a2a;
+                                        color:#fff;
+                                        padding:3px 7px;
+                                        border-radius:5px;
+                                        font-size:10px;
+                                        letter-spacing:.05em;
+                                        white-space:nowrap;
+                                    ">webapp</span>
+                                </div>
+                            </a>
+                        </div>
                         <hr style="margin-top: 1em; margin-bottom: 1.5em;" />
                        <template v-for="(version, index) in tracker" :key="index">
                             <el-row>

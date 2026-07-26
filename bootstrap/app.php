@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
             '/account/validate',
             '/ranking/leaderboard/*',
             '/gametable/show',
+            '/game/pdb',
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {

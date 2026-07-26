@@ -44,6 +44,8 @@ Route::post('/gametable/show', [App\Http\Controllers\GameController::class, 'sho
 
 Route::get('/game/get', [App\Http\Controllers\GameController::class, 'get']);
 Route::get('/game/log', [App\Http\Controllers\GameController::class, 'log']);
+Route::get('/game/pdb/{id}', [App\Http\Controllers\GameController::class, 'pdbDownload']);
+Route::post('/game/pdb', [App\Http\Controllers\GameController::class, 'pdbUpload'])->middleware('throttle:10,1');
 
 Route::post('/ranking/leaderboard/{season}', [App\Http\Controllers\PlayerController::class, 'getLeaderboard']);
 Route::get('/ranking/cod', [App\Http\Controllers\GameController::class, 'getCOD']);
