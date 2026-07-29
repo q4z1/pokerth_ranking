@@ -36,22 +36,21 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useConfigStore } from '@/stores'
 
 const emit = defineEmits(['leaveGame'])
 
 const config = useConfigStore()
 const showMenu = ref(false)
-const soundOn = ref(config.get('PlaySoundEvents', true))
+const soundOn = computed({
+  get: () => config.playSoundEvents,
+  set: (val) => config.setPlaySoundEvents(val),
+})
 const lightTheme = ref(false)
 
 onMounted(() => {
   lightTheme.value = localStorage.getItem('pth-theme') === 'light'
-})
-
-watch(soundOn, (val) => {
-  config.set('PlaySoundEvents', val)
 })
 
 watch(lightTheme, (val) => {
