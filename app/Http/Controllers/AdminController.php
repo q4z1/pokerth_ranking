@@ -16,6 +16,39 @@ use App\Models\User;
 
 class AdminController extends Controller
 {
+  /**
+   * Bedeutung der `state`-Spalte in reported_gamename / reported_avatar.
+   * (siehe Spaltenkommentar in der DB)
+   */
+  public const STATE_NEW            = 0;
+  public const STATE_IGNORED        = 1;
+  public const STATE_CREATOR_WARNED = 2;
+  public const STATE_CREATOR_BANNED = 3;
+  public const STATE_REPORTER_SURE  = 4;
+  public const STATE_REPORTER_SPAM  = 5;
+
+  public const STATES = [
+    self::STATE_NEW,
+    self::STATE_IGNORED,
+    self::STATE_CREATOR_WARNED,
+    self::STATE_CREATOR_BANNED,
+    self::STATE_REPORTER_SURE,
+    self::STATE_REPORTER_SPAM,
+  ];
+
+  /** Player.active-Wert eines gebannten Accounts. */
+  public const PLAYER_BANNED = 4;
+  public const PLAYER_ACTIVE = 1;
+
+  /**
+   * Beide Report-Arten teilen sich dieselbe Logik, unterscheiden sich aber in
+   * Tabelle und Spaltennamen.
+   */
+  private const REPORT_TYPES = [
+    'gamename' => ['model' => ReportedGamename::class, 'table' => 'reported_gamename', 'creator' => 'game_creator_idplayer'],
+    'avatar'   => ['model' => ReportedAvatar::class,   'table' => 'reported_avatar',   'creator' => 'idplayer'],
+  ];
+
   public function __construct()
   {
     $this->middleware('auth', ['except' => ['login']]);
@@ -48,50 +81,292 @@ class AdminController extends Controller
     return ['success' => true, 'msg' => 'Logged out.'];
   }
 
+  /**
+   * Liste aller Reports eines Typs – inklusive Spieler-Daten und der Anzahl
+   * bisheriger Meldungen des gemeldeten Spielers (Grundlage für Wiederholungs-Bans).
+   */
   public function reports(Request $request, $type = null)
   {
-    if ($request->isMethod('GET')) {
-      $list = [];
-      if (!is_null($type) && $type === 'avatar') {
-        $list = ReportedAvatar::orderBy('timestamp', 'DESC')->get()->map(function ($avatar) {
-          $avatar->creator = Player::where('player_id', $avatar->idplayer)->first();
-          $avatar->reporter = Player::where('player_id', $avatar->by_idplayer)->first();
-          return $avatar;
-        });
-      } else if (!is_null($type) && $type === 'gamename') {
-        $list = ReportedGamename::orderBy('timestamp', 'DESC')->get()->map(function ($gamename) {
-          $gamename->creator = Player::where('player_id', $gamename->game_creator_idplayer)->first();
-          $gamename->reporter = Player::where('player_id', $gamename->by_idplayer)->first();
-          return $gamename;
-        });
-      } else {
-        return ['success' => false, 'msg' => 'Unknown Type.'];
-      }
-      return ['success' => true, 'list' => $list];
+    if (!isset(self::REPORT_TYPES[$type])) return ['success' => false, 'msg' => 'Unknown Type.'];
+    $cfg = self::REPORT_TYPES[$type];
+    $creatorColumn = $cfg['creator'];
+
+    $rows = $cfg['model']::orderBy('timestamp', 'DESC')->get();
+
+    $creatorIds = $rows->pluck($creatorColumn)->filter()->unique()->values();
+    $reporterIds = $rows->pluck('by_idplayer')->filter()->unique()->values();
+    $players = $this->playerLookup($creatorIds->merge($reporterIds)->unique()->all());
+    $offences = $this->reportTotals($creatorIds->all());
+
+    $list = $rows->map(function ($row) use ($type, $creatorColumn, $players, $offences) {
+      $creatorId = $row->{$creatorColumn};
+      $counts = $offences[$creatorId] ?? ['gamename' => 0, 'avatar' => 0, 'total' => 0, 'open' => 0];
+      return [
+        'id'          => (int) $row->id,
+        'type'        => $type,
+        'state'       => (int) $row->state,
+        'timestamp'   => $row->timestamp,
+        'game_name'   => $row->game_name ?? null,
+        'game_idgame' => $row->game_idgame ?? null,
+        'avatar_hash' => $row->avatar_hash ?? null,
+        'avatar_type' => $row->avatar_type ?? null,
+        'creator'     => $this->playerPayload($creatorId, $players),
+        'reporter'    => $this->playerPayload($row->by_idplayer, $players),
+        'offences'    => $counts,
+      ];
+    });
+
+    return ['success' => true, 'list' => $list, 'states' => $this->stateLabels()];
+  }
+
+  /**
+   * Aggregierte Sicht: pro gemeldetem Spieler die Summe aller Meldungen über
+   * beide Report-Arten hinweg. Das ist die Arbeitsgrundlage, um Wiederholungs-
+   * täter zu bannen.
+   */
+  public function offenders(Request $request)
+  {
+    $min = max(1, (int) $request->input('min', 1));
+
+    $rows = collect(DB::select($this->offenderSql()));
+    $players = $this->playerLookup($rows->pluck('pid')->all());
+
+    $list = $rows->filter(function ($row) use ($min) {
+      return (int) $row->total_reports >= $min;
+    })->map(function ($row) use ($players) {
+      $player = $players[$row->pid] ?? null;
+      return [
+        'player_id'          => (int) $row->pid,
+        'username'           => $player->username ?? null,
+        'banned'             => $player ? ((int) $player->active === self::PLAYER_BANNED) : false,
+        'exists'             => (bool) $player,
+        'last_login'         => $player->last_login ?? null,
+        'created'            => $player->created ?? null,
+        'gamename_reports'   => (int) $row->gamename_reports,
+        'avatar_reports'     => (int) $row->avatar_reports,
+        'total_reports'      => (int) $row->total_reports,
+        'open_reports'       => (int) $row->open_reports,
+        'distinct_reporters' => (int) $row->distinct_reporters,
+        'last_report'        => $row->last_report,
+      ];
+    })->sortByDesc('total_reports')->values();
+
+    return ['success' => true, 'list' => $list];
+  }
+
+  /**
+   * Aktionen auf Reports: Status setzen oder Einträge löschen.
+   */
+  public function reportAction(Request $request, $type = null)
+  {
+    if (!isset(self::REPORT_TYPES[$type])) return ['success' => false, 'msg' => 'Unknown Type.'];
+    $cfg = self::REPORT_TYPES[$type];
+
+    $ids = $request->input('ids', []);
+    if (is_string($ids)) $ids = array_filter(explode(',', $ids), 'strlen');
+    $ids = array_values(array_unique(array_map('intval', (array) $ids)));
+    if (!count($ids)) return ['success' => false, 'msg' => 'No reports selected.'];
+
+    $action = $request->input('action');
+    if ($action === 'delete') {
+      $affected = $cfg['model']::whereIn('id', $ids)->delete();
+      return ['success' => true, 'msg' => $affected . ' report(s) deleted.', 'affected' => $affected];
     }
+
+    if ($action === 'state') {
+      $state = (int) $request->input('state', self::STATE_NEW);
+      if (!in_array($state, self::STATES, true)) return ['success' => false, 'msg' => 'Unknown state.'];
+      $affected = $cfg['model']::whereIn('id', $ids)->update(['state' => $state]);
+      return ['success' => true, 'msg' => $affected . ' report(s) updated.', 'affected' => $affected];
+    }
+
+    return ['success' => false, 'msg' => 'Unknown action.'];
   }
 
   public function adverts(Request $request)
   {
-    if ($request->isMethod('GET')) return ['success' => true, 'list' => Advert::selectRaw('`id`, `position`, `content`, `order`, `start`, `end`')->orderBy('created_at', 'DESC')->get()];
+    if ($request->isMethod('GET')) {
+      return ['success' => true, 'list' => Advert::orderBy('position', 'ASC')->orderBy('order', 'ASC')->get(['id', 'position', 'content', 'order', 'start', 'end'])];
+    }
+
+    $action = $request->input('action');
+    if ($action === 'delete') {
+      $advert = Advert::find((int) $request->input('id'));
+      if (!$advert) return ['success' => false, 'msg' => 'Advert not found.'];
+      $advert->delete();
+      return ['success' => true, 'msg' => 'Advert deleted.'];
+    }
+
+    if ($action === 'create' || $action === 'update') {
+      $data = $request->validate([
+        'position' => 'required|string|max:32',
+        'content'  => 'required|string',
+        'order'    => 'required|integer|min:0|max:127',
+        'start'    => 'required|date',
+        'end'      => 'required|date|after_or_equal:start',
+      ]);
+      if ($action === 'create') {
+        $advert = Advert::create($data);
+        return ['success' => true, 'msg' => 'Advert created.', 'advert' => $advert];
+      }
+      $advert = Advert::find((int) $request->input('id'));
+      if (!$advert) return ['success' => false, 'msg' => 'Advert not found.'];
+      $advert->update($data);
+      return ['success' => true, 'msg' => 'Advert updated.', 'advert' => $advert];
+    }
+
+    return ['success' => false, 'msg' => 'Unknown action.'];
   }
 
   public function banlist(Request $request, Player $player)
   {
-    if ($request->isMethod('GET')) return ['success' => true, 'list' => Player::selectRaw('`player_id`, `username`, `last_login`, `created`')->where('active', 4)->orderBy('username', 'ASC')->get()];
+    if ($request->isMethod('GET')) {
+      $banned = DB::table('player')->where('active', self::PLAYER_BANNED)
+        ->orderBy('username', 'ASC')
+        ->get(['player_id', 'username', 'last_login', 'created']);
+      $totals = $this->reportTotals($banned->pluck('player_id')->all());
+      return [
+        'success' => true,
+        'list' => $banned->map(function ($row) use ($totals) {
+          $counts = $totals[$row->player_id] ?? ['gamename' => 0, 'avatar' => 0, 'total' => 0, 'open' => 0];
+          return [
+            'player_id'        => (int) $row->player_id,
+            'username'         => $row->username,
+            'last_login'       => $row->last_login,
+            'created'          => $row->created,
+            'gamename_reports' => $counts['gamename'],
+            'avatar_reports'   => $counts['avatar'],
+            'total_reports'    => $counts['total'],
+          ];
+        })->values(),
+      ];
+    }
+
     $action = $request->input('action', null);
     if (is_null($action)) return ['success' => false, 'msg' => 'Action not found.'];
+    if (!$player->exists) return ['success' => false, 'msg' => 'Player not found.'];
+
     if ($action === 'delete') {
       return $this->delete($player);
     } else if ($action === 'unban') {
-      $player->active = 1;
+      $player->active = self::PLAYER_ACTIVE;
       $player->save();
       return ['success' => true, 'msg' => 'Player unbanned.'];
     } else if ($action === 'ban') {
-      $player->active = 4;
+      $player->active = self::PLAYER_BANNED;
       $player->save();
-      return ['success' => true, 'msg' => 'Player banned.'];
+      // Offene Meldungen desselben Spielers gleich mit abschließen, damit die
+      // Report-Listen nicht dauerhaft mit erledigten Fällen zuwachsen.
+      $resolved = $request->boolean('resolve_reports', true)
+        ? $this->resolveOpenReports($player->player_id, self::STATE_CREATOR_BANNED)
+        : 0;
+      return ['success' => true, 'msg' => 'Player banned.', 'resolved_reports' => $resolved];
     }
+
+    return ['success' => false, 'msg' => 'Unknown action.'];
+  }
+
+  /**
+   * Setzt alle noch offenen Meldungen gegen einen Spieler auf den übergebenen Status.
+   */
+  private function resolveOpenReports($playerId, $state)
+  {
+    $affected = 0;
+    foreach (self::REPORT_TYPES as $cfg) {
+      $affected += $cfg['model']::where($cfg['creator'], $playerId)
+        ->where('state', self::STATE_NEW)
+        ->update(['state' => $state]);
+    }
+    return $affected;
+  }
+
+  /**
+   * Spieler-Stammdaten für eine Menge von IDs – bewusst über den Query Builder,
+   * damit `active` (im Model versteckt) verfügbar bleibt.
+   */
+  private function playerLookup(array $ids)
+  {
+    $ids = array_values(array_filter(array_map('intval', $ids)));
+    if (!count($ids)) return collect();
+    return DB::table('player')->whereIn('player_id', $ids)
+      ->get(['player_id', 'username', 'active', 'created', 'last_login'])
+      ->keyBy('player_id');
+  }
+
+  private function playerPayload($playerId, $players)
+  {
+    if (!$playerId) return null;
+    $player = $players[$playerId] ?? null;
+    return [
+      'player_id' => (int) $playerId,
+      'username'  => $player->username ?? null,
+      'banned'    => $player ? ((int) $player->active === self::PLAYER_BANNED) : false,
+      'exists'    => (bool) $player,
+    ];
+  }
+
+  /**
+   * Meldungen pro Spieler über beide Report-Arten hinweg.
+   *
+   * @return array<int, array{gamename:int, avatar:int, total:int, open:int}>
+   */
+  private function reportTotals(array $ids)
+  {
+    $ids = array_values(array_filter(array_map('intval', $ids)));
+    if (!count($ids)) return [];
+    $rows = DB::select($this->offenderSql($ids));
+    $out = [];
+    foreach ($rows as $row) {
+      $out[(int) $row->pid] = [
+        'gamename' => (int) $row->gamename_reports,
+        'avatar'   => (int) $row->avatar_reports,
+        'total'    => (int) $row->total_reports,
+        'open'     => (int) $row->open_reports,
+      ];
+    }
+    return $out;
+  }
+
+  /**
+   * Vereinigt beide Report-Tabellen und aggregiert je gemeldetem Spieler.
+   * Optional auf eine Liste von Spieler-IDs eingeschränkt; die IDs werden als
+   * Integer inlined, da PDO keine Array-Bindings für IN() kennt.
+   */
+  private function offenderSql(?array $ids = null)
+  {
+    $gameFilter = $avatarFilter = '';
+    if (!is_null($ids)) {
+      $inList = implode(',', array_map('intval', $ids));
+      $gameFilter = " AND game_creator_idplayer IN ({$inList})";
+      $avatarFilter = " AND idplayer IN ({$inList})";
+    }
+    return "SELECT pid,
+                   SUM(kind = 'gamename')      AS gamename_reports,
+                   SUM(kind = 'avatar')        AS avatar_reports,
+                   COUNT(*)                    AS total_reports,
+                   SUM(state = 0)              AS open_reports,
+                   COUNT(DISTINCT by_idplayer) AS distinct_reporters,
+                   MAX(ts)                     AS last_report
+            FROM (
+              SELECT game_creator_idplayer AS pid, by_idplayer, state, timestamp AS ts, 'gamename' AS kind
+                FROM reported_gamename WHERE game_creator_idplayer IS NOT NULL{$gameFilter}
+              UNION ALL
+              SELECT idplayer AS pid, by_idplayer, state, timestamp AS ts, 'avatar' AS kind
+                FROM reported_avatar WHERE idplayer IS NOT NULL{$avatarFilter}
+            ) r
+            GROUP BY pid";
+  }
+
+  private function stateLabels()
+  {
+    return [
+      self::STATE_NEW            => 'new',
+      self::STATE_IGNORED        => 'ignored',
+      self::STATE_CREATOR_WARNED => 'creator warned',
+      self::STATE_CREATOR_BANNED => 'creator banned',
+      self::STATE_REPORTER_SURE  => 'reporter confirmed',
+      self::STATE_REPORTER_SPAM  => 'reporter spam',
+    ];
   }
 
   private function delete(Player $player)

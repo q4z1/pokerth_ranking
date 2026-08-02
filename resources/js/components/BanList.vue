@@ -1,242 +1,198 @@
 <template>
-  <div class="banlist">
-    <el-row>
-      <el-col :span="20"><h3>Banlist</h3></el-col>
-      <el-col :span="4" class="add">
-        <el-tooltip content="Add Player to Banlist" placement="left-start">
-          <i
-            type="primary"
-            @click="addPlayer"
-            class="el-icon-plus el-icon--primary"
-          ></i>
-        </el-tooltip>
-      </el-col>
-    </el-row>
-    <transition name="el-fade-in-linear">
-      <el-row v-if="showAdd" class="add">
-        <el-col>
-          <el-autocomplete
-            class="inline-input"
-            v-model="nickname"
-            :fetch-suggestions="querySearch"
-            placeholder="Nickname"
-            @select="handleNickSelect"
-          ></el-autocomplete>
-          <el-button
-            icon="el-icon-check"
-            :disabled="!enabled"
-            @click="ban"
-            type="primary"
-            >Ban</el-button
-          >
-        </el-col>
-      </el-row>
-    </transition>
-    <el-table v-if="banlist" :data="banlist" stripe style="width: 100%">
-      <el-table-column prop="player_id" label="ID"> </el-table-column>
-      <el-table-column prop="username" label="Nick"> </el-table-column>
-      <el-table-column prop="last_login" label="Last Login"> </el-table-column>
-      <el-table-column prop="created" label="Created"> </el-table-column>
-      <el-table-column prop="action" label="Action">
-        <template #default="scope">
-          <el-row>
-            <el-col>
-              <el-button
-                size="small"
-                @click="unbanPlayer(scope.row.player_id)"
-                type="success"
-                >Unban</el-button
-              >
-              <el-button
-                size="small"
-                @click="deletePlayer(scope.row.player_id)"
-                type="danger"
-                >Delete</el-button
-              >
-            </el-col>
-          </el-row>
+    <admin-panel
+        title="Banlist"
+        :subtitle="subtitle"
+        :count="filteredRows.length"
+        :loading="loading"
+        :total="filteredRows.length"
+        :page="page"
+        :page-size="pageSize"
+        @refresh="load"
+        @update:page="page = $event"
+        @update:pageSize="onPageSizeChange"
+    >
+        <template #toolbar>
+            <el-input
+                v-model="search"
+                class="admin-toolbar__search"
+                placeholder="Search nickname"
+                :prefix-icon="Search"
+                clearable
+            />
+            <el-autocomplete
+                v-model="nickname"
+                class="admin-toolbar__search"
+                placeholder="Ban a player…"
+                value-key="username"
+                :fetch-suggestions="querySearch"
+                clearable
+                @select="handleNickSelect"
+                @clear="banCandidate = null"
+            />
+            <el-button type="danger" :icon="CircleClose" :disabled="!banCandidate" @click="ban">Ban</el-button>
         </template>
-      </el-table-column>
-    </el-table>
-  </div>
+
+        <el-table
+            v-loading="loading"
+            class="admin-table"
+            :data="pagedRows"
+            row-key="player_id"
+            stripe
+            :empty-text="emptyText"
+            :default-sort="{ prop: 'username', order: 'ascending' }"
+            @sort-change="onSortChange"
+        >
+            <el-table-column prop="player_id" label="ID" width="90" sortable="custom" />
+            <el-table-column prop="username" label="Nickname" min-width="180" sortable="custom" />
+            <el-table-column prop="total_reports" label="Reports" width="120" align="right" sortable="custom">
+                <template #default="{ row }">
+                    <el-tooltip v-if="row.total_reports" placement="top">
+                        <template #content>
+                            {{ row.gamename_reports }} table name · {{ row.avatar_reports }} avatar report(s)
+                        </template>
+                        <el-tag size="small" type="warning" effect="plain" disable-transitions>
+                            {{ row.total_reports }}
+                        </el-tag>
+                    </el-tooltip>
+                    <span v-else class="admin-muted">—</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="created" label="Registered" width="150" sortable="custom">
+                <template #default="{ row }">{{ formatDateTime(row.created) }}</template>
+            </el-table-column>
+            <el-table-column prop="last_login" label="Last login" width="150" sortable="custom">
+                <template #default="{ row }">{{ formatDateTime(row.last_login) }}</template>
+            </el-table-column>
+            <el-table-column label="Action" width="190" align="right">
+                <template #default="{ row }">
+                    <el-button size="small" type="success" plain @click="unbanPlayer(row)">Unban</el-button>
+                    <el-button size="small" type="danger" :icon="Delete" @click="deletePlayer(row)">Delete</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </admin-panel>
 </template>
+
 <script>
+import { CircleClose, Delete, Search } from '@element-plus/icons-vue'
+import AdminPanel from './AdminPanel.vue'
+import { apiGet, apiPost, confirmAction, formatDateTime, listMixin, notice, reportError } from '../admin/adminUtils.js'
+
 export default {
-  data() {
-    return {
-      banlist: false,
-      showAdd: false,
-      nickname: "",
-      enabled: false,
-      banPlayer: false,
-    };
-  },
-  mounted() {
-    this.getBanlist();
-  },
-  methods: {
-    getBanlist() {
-      axios
-        .get("/pthranking/banlist")
-        .then((res) => {
-          if (res.data.success === true && res.data.list.length) {
-            this.banlist = res.data.list;
-          } else {
-            this.notice("No banned players found.", "warning");
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    },
-    notice(msg, type = "success") {
-      this.$message({ message: msg, type: type, offset: 75 });
-    },
-    deletePlayer(id) {
-      this.$confirm(
-        "This is a permanent deletion - it will also remove any Forum-DB entries. Continue?",
-        "Warning",
-        {
-          confirmButtonText: "OK",
-          cancelButtonText: "Cancel",
-          type: "warning",
+    name: 'BanList',
+    components: { AdminPanel },
+    mixins: [listMixin],
+    emits: ['changed'],
+    data() {
+        return {
+            nickname: '',
+            banCandidate: null,
+            sortProp: 'username',
+            sortOrder: 'ascending',
+            CircleClose,
+            Delete,
+            Search,
         }
-      )
-        .then(() => {
-          let queryInfo = new FormData();
-          queryInfo.append("action", "delete");
-          axios
-            .post("/pthranking/banlist/" + id, queryInfo)
-            .then((res) => {
-              if (res.data.success) {
-                this.$message({
-                  type: "success",
-                  message: "Player deleted.",
-                });
-                for (const index in this.banlist) {
-                  if (this.banlist[index].player_id === id)
-                    this.banlist.splice(index, 1);
-                }
-              } else {
-                this.$message({
-                  type: "danger",
-                  message: "Player deletion failed.",
-                });
-              }
-            })
-            .catch((err) => {
-              console.log(err);
-            });
-        })
-        .catch((err) => {
-          console.log(err);
-          this.$message({
-            type: "info",
-            message: "Deletion canceled.",
-          });
-        });
     },
-    unbanPlayer(id) {
-      let queryInfo = new FormData();
-      queryInfo.append("action", "unban");
-      axios
-        .post("/pthranking/banlist/" + id, queryInfo)
-        .then((res) => {
-          if (res.data.success) {
-            this.$message({
-              type: "success",
-              message: "Player unbanned.",
-            });
-            for (const index in this.banlist) {
-              if (this.banlist[index].player_id === id)
-                this.banlist.splice(index, 1);
+    computed: {
+        subtitle() {
+            const reported = this.rows.filter((r) => r.total_reports > 0).length
+            return `${reported} of them with reports`
+        },
+        emptyText() {
+            return this.loading ? 'Loading…' : 'No banned players.'
+        },
+    },
+    mounted() {
+        this.load()
+    },
+    methods: {
+        formatDateTime,
+        matches(row, term) {
+            return (row.username || '').toLowerCase().includes(term) || String(row.player_id).includes(term)
+        },
+        async load() {
+            this.loading = true
+            try {
+                const data = await apiGet('/banlist')
+                this.rows = data.success ? data.list : []
+                if (!data.success) notice(data.msg || 'Could not load the banlist.', 'warning')
+            } catch (err) {
+                reportError(err, 'Could not load the banlist.')
+            } finally {
+                this.loading = false
             }
-          } else {
-            this.$message({
-              type: "danger",
-              message: "Player unban failed.",
-            });
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-        });
+        },
+        async querySearch(queryString, cb) {
+            if (!queryString || queryString.length < 2) return cb([])
+            try {
+                const data = await apiPost('/player/search', { username: queryString })
+                cb(data.success ? data.players : [])
+            } catch (err) {
+                console.error(err)
+                cb([])
+            }
+        },
+        handleNickSelect(item) {
+            this.banCandidate = item
+        },
+        async ban() {
+            if (!this.banCandidate) return
+            try {
+                await confirmAction(`Ban "${this.banCandidate.username}"?`, 'Ban player', {
+                    confirmButtonText: 'Ban player',
+                    confirmButtonClass: 'el-button--danger',
+                })
+            } catch {
+                return
+            }
+            try {
+                const data = await apiPost(`/banlist/${this.banCandidate.player_id}`, {
+                    action: 'ban',
+                    resolve_reports: 1,
+                })
+                if (!data.success) return notice(data.msg || 'Ban failed.', 'error')
+                notice(`${this.banCandidate.username} added to the banlist.`)
+                this.nickname = ''
+                this.banCandidate = null
+                this.$emit('changed')
+                this.load()
+            } catch (err) {
+                reportError(err, 'Ban failed.')
+            }
+        },
+        async unbanPlayer(row) {
+            try {
+                const data = await apiPost(`/banlist/${row.player_id}`, { action: 'unban' })
+                if (!data.success) return notice(data.msg || 'Unban failed.', 'error')
+                this.rows = this.rows.filter((r) => r.player_id !== row.player_id)
+                notice(`${row.username} unbanned.`)
+                this.$emit('changed')
+            } catch (err) {
+                reportError(err, 'Unban failed.')
+            }
+        },
+        async deletePlayer(row) {
+            try {
+                await confirmAction(
+                    `Permanently delete "${row.username}"? ` +
+                        'This also removes the matching forum account and all ranking data. This cannot be undone.',
+                    'Delete player',
+                    { confirmButtonText: 'Delete', confirmButtonClass: 'el-button--danger' }
+                )
+            } catch {
+                return
+            }
+            try {
+                const data = await apiPost(`/banlist/${row.player_id}`, { action: 'delete' })
+                if (!data.success) return notice(data.msg || 'Deletion failed.', 'error')
+                this.rows = this.rows.filter((r) => r.player_id !== row.player_id)
+                notice(`${row.username} deleted.`)
+                this.$emit('changed')
+            } catch (err) {
+                reportError(err, 'Deletion failed.')
+            }
+        },
     },
-    addPlayer() {
-      this.showAdd = !this.showAdd;
-    },
-    async querySearch(queryString, cb) {
-      if (queryString !== "" && queryString.length > 1) {
-        let queryInfo = new FormData();
-        queryInfo.append("username", queryString);
-        const res = await axios.post("/pthranking/player/search", queryInfo);
-        if (
-          typeof res.data.success !== "undefined" &&
-          res.data.success === true
-        ) {
-          cb(
-            res.data.players.map((player) => {
-              player.value = player.username;
-              return player;
-            })
-          );
-        } else {
-          cp([]);
-        }
-      }
-    },
-    handleNickSelect(item) {
-      this.enabled = true;
-      this.banPlayer = item.player_id;
-    },
-    ban() {
-      let queryInfo = new FormData();
-      queryInfo.append("action", "ban");
-      axios
-        .post("/pthranking/banlist/" + this.banPlayer, queryInfo)
-        .then((res) => {
-          if (res.data.success) {
-            this.showAdd = false;
-            this.$message({
-              type: "success",
-              message: "Player added to Banlist.",
-            });
-            this.getBanlist();
-          } else {
-            this.$message({
-              type: "danger",
-              message: "Player not banned.",
-            });
-          }
-        })
-        .catch((err) => {
-          console.log(err);
-        });
-    },
-  },
-};
-</script>
-<style lang="scss" scoped>
-.banlist {
-  .add {
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-end;
-    margin-block-start: 1em;
-    .el-icon-plus {
-      font-size: 2em;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .el-col {
-      display: flex;
-      justify-content: flex-end;
-      padding: 0.5em;
-      margin-bottom: 1em;
-      .el-button {
-        margin-left: 1em;
-      }
-    }
-  }
 }
-</style>
+</script>

@@ -46,19 +46,24 @@
 }
 
 /* ─────────────────────────────────────────────
-   Internals page (admin UI) – Element Plus dark mode
-   Aktiviert durch class="dark" auf <html>
+   Internals page (admin UI)
+   Theme über class="dark" + data-theme auf <html>
+   (siehe resources/js/admin/theme.js)
    ───────────────────────────────────────────── */
 html.internals {
     height: 100%;
+    color-scheme: light;
+}
+
+html.internals.dark {
     color-scheme: dark;
 }
 
 html.internals body {
     height: 100%;
     margin: 0;
-    background-color: var(--pth-elevated);
-    color: var(--pth-text-secondary);
+    background-color: var(--pth-base);
+    color: var(--pth-text);
     font-family: var(--font-sans);
 }
 
@@ -69,6 +74,288 @@ html.internals a {
 html.internals a:hover,
 html.internals a:focus {
     color: var(--pth-accent-hover);
+}
+
+/* ── Kopfzeile ───────────────────────────── */
+.internals-app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.internals-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 1.25rem;
+    background-color: var(--pth-elevated);
+    border-bottom: 1px solid var(--pth-border);
+}
+
+.internals-logo {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+    height: 42px;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+/* Das Logo ist weiß – im hellen Theme braucht es einen dunklen Träger. */
+html.internals[data-theme='light'] .internals-logo {
+    background-color: #242a36;
+}
+
+.internals-logo img {
+    height: 100%;
+    display: block;
+}
+
+.internals-nav {
+    flex: 1 1 auto;
+    border-bottom: 0 !important;
+    background-color: transparent !important;
+}
+
+.internals-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 0 0 auto;
+}
+
+.internals-main {
+    flex: 1 1 auto;
+    padding: 1.25rem;
+    max-width: 1440px;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 auto;
+}
+
+.internals-login {
+    max-width: 380px;
+    margin: 4rem auto;
+}
+
+.internals-login h2 {
+    margin: 0 0 0.25rem;
+    color: var(--pth-text);
+}
+
+.internals-login__submit {
+    width: 100%;
+}
+
+/* ── Einheitliches Panel für alle Backend-Tabellen ── */
+.admin-panel {
+    background-color: var(--pth-elevated);
+    border: 1px solid var(--pth-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.admin-panel__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--pth-border);
+}
+
+.admin-panel__title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.admin-panel__title h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--pth-text);
+}
+
+.admin-panel__subtitle {
+    font-size: 0.85rem;
+    color: var(--pth-text-muted);
+}
+
+.admin-panel__tools {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.admin-panel__bulk {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    padding: 0.6rem 1rem;
+    background-color: var(--pth-surface);
+    border-bottom: 1px solid var(--pth-border);
+}
+
+.admin-bulk__label {
+    font-weight: 600;
+    color: var(--pth-text);
+}
+
+.admin-panel__foot {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--pth-border);
+}
+
+/* Doppelte Klasse: Element Plus setzt width:100% auf .el-input/.el-select
+   und wird im gebündelten CSS nach pth.css geladen. */
+.admin-panel__tools .admin-toolbar__search {
+    width: 220px;
+}
+
+.admin-panel__tools .admin-toolbar__select {
+    width: 150px;
+}
+
+.admin-panel__tools .el-input-number {
+    width: 110px;
+}
+
+.admin-muted {
+    color: var(--pth-text-muted);
+}
+
+/* ── Tabellen ────────────────────────────── */
+.admin-table.el-table {
+    --el-table-border-color: var(--pth-border);
+    background-color: transparent;
+}
+
+.admin-table.el-table th.el-table__cell {
+    background-color: var(--pth-surface);
+    color: var(--pth-text);
+    font-weight: 600;
+}
+
+.admin-table.el-table td.el-table__cell {
+    color: var(--pth-text);
+}
+
+/* Wiederholungstäter am linken Zeilenrand markieren (nur erste Zelle). */
+.admin-table.el-table .el-table__row.is-repeat td.el-table__cell:first-child {
+    box-shadow: inset 3px 0 0 0 var(--el-color-warning);
+}
+
+.admin-table.el-table .el-table__row.is-banned td.el-table__cell {
+    opacity: 0.65;
+}
+
+.admin-table .el-table__cell .el-button + .el-button,
+.admin-table .el-table__cell .el-button + .el-dropdown,
+.admin-table .el-table__cell .el-tag + .el-tag {
+    margin-left: 6px;
+}
+
+.admin-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background-color: var(--pth-surface);
+    word-break: break-word;
+}
+
+.admin-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    background-color: var(--pth-surface);
+}
+
+.admin-avatar__missing {
+    font-size: 0.7rem;
+    color: var(--pth-text-muted);
+    display: block;
+    line-height: 48px;
+    text-align: center;
+}
+
+.admin-advert-preview {
+    max-height: 96px;
+    overflow-y: auto;
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.admin-advert-preview--large {
+    max-height: 200px;
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px dashed var(--pth-border);
+    border-radius: 4px;
+}
+
+.player-ref {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.player-ref__name {
+    font-weight: 600;
+    color: var(--pth-text);
+    word-break: break-word;
+}
+
+.player-ref--empty {
+    color: var(--pth-text-muted);
+}
+
+.severity--mid {
+    color: var(--el-color-warning);
+}
+
+.severity--high {
+    color: var(--el-color-danger);
+}
+
+@media only screen and (max-width: 900px) {
+    .internals-app {
+        overflow-x: hidden;
+    }
+
+    .internals-header {
+        flex-wrap: wrap;
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* Die Navigation bricht nicht um – sie darf seitlich scrollen. */
+    .internals-nav.el-menu--horizontal {
+        order: 3;
+        flex-basis: 100%;
+        max-width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .internals-main {
+        padding: 0.75rem;
+    }
+
+    .admin-panel__head {
+        align-items: flex-start;
+    }
+
+    .admin-panel__tools .admin-toolbar__search,
+    .admin-panel__tools .admin-toolbar__select {
+        width: 100%;
+    }
 }
 
 /* ─────────────────────────────────────────────

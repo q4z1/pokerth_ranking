@@ -14,8 +14,10 @@ class Authenticate extends Middleware
      */
     protected function redirectTo($request)
     {
+        // Das Backend hat keine eigene Login-Route – die Anmeldung passiert im
+        // Vue-Frontend auf "/". Für alles andere gibt es einen 401.
         if (! $request->expectsJson()) {
-            return route('login');
+            return url('/');
         }
     }
 }

@@ -1,237 +1,185 @@
 <template>
-  <div class="base">
-    <el-container>
-      <el-header>
-        <el-row v-if="auth">
-          <el-col>
+    <div class="internals-app">
+        <header class="internals-header">
+            <a class="internals-logo" href="/" title="PokerTH" target="_blank">
+                <img src="/images/pokerth-template-logo_light.png" alt="PokerTH" />
+            </a>
+
             <el-menu
-              :default-active="activeIndex"
-              mode="horizontal"
-              @select="navigate"
+                v-if="auth"
+                class="internals-nav"
+                :default-active="view"
+                mode="horizontal"
+                :ellipsis="false"
+                @select="navigate"
             >
-              <li class="logo">
-                <a href="/" title="PokerTH" target="_blank">
-                  <img
-                    src="/images/pokerth-template-logo_light.png"
-                    alt="PokerTH"
-                  />
-                </a>
-              </li>
-              <el-menu-item index="1">Adverts</el-menu-item>
-              <el-menu-item index="2">Banlist</el-menu-item>
-              <el-submenu index="3">
-                <template #title>Reports</template>
-                <el-menu-item index="3-1">Avatar Reports</el-menu-item>
-                <el-menu-item index="3-2">Gametable Name Reports</el-menu-item>
-              </el-submenu>
-              <li class="auth">
-                <el-row
-                  ><el-col
-                    ><el-button size="medium" @click="logout"
-                      >Logout</el-button
-                    ></el-col
-                  ></el-row
-                >
-              </li>
+                <el-menu-item index="offenders">Repeat offenders</el-menu-item>
+                <el-sub-menu index="reports">
+                    <template #title>Reports</template>
+                    <el-menu-item index="reports-gamename">Table names</el-menu-item>
+                    <el-menu-item index="reports-avatar">Avatars</el-menu-item>
+                </el-sub-menu>
+                <el-menu-item index="banlist">Banlist</el-menu-item>
+                <el-menu-item index="adverts">Adverts</el-menu-item>
             </el-menu>
-          </el-col>
-        </el-row>
-        <el-row v-else>
-          <el-col>
-            <el-menu mode="horizontal">
-              <li class="logo">
-                <img
-                  src="/images/pokerth-template-logo_light.png"
-                  alt="PokerTH"
+            <div v-else class="internals-nav internals-nav--empty"></div>
+
+            <div class="internals-actions">
+                <el-tooltip :content="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'" placement="bottom">
+                    <el-switch
+                        v-model="darkMode"
+                        inline-prompt
+                        :active-icon="Moon"
+                        :inactive-icon="Sunny"
+                        class="internals-theme"
+                    />
+                </el-tooltip>
+                <el-button v-if="auth" :icon="SwitchButton" @click="logout">Logout</el-button>
+            </div>
+        </header>
+
+        <main class="internals-main">
+            <div v-if="!auth" class="internals-login">
+                <el-card shadow="never">
+                    <h2>PokerTH Internals</h2>
+                    <p class="admin-muted">Please sign in with your PokerTH admin account.</p>
+                    <el-form @submit.prevent="login">
+                        <el-form-item>
+                            <el-input v-model="username" placeholder="Username" :prefix-icon="User" clearable />
+                        </el-form-item>
+                        <el-form-item>
+                            <el-input
+                                v-model="password"
+                                type="password"
+                                placeholder="Password"
+                                :prefix-icon="Lock"
+                                show-password
+                                @keyup.enter="login"
+                            />
+                        </el-form-item>
+                        <el-button type="primary" :loading="busy" class="internals-login__submit" @click="login">
+                            Login
+                        </el-button>
+                    </el-form>
+                </el-card>
+            </div>
+
+            <template v-else>
+                <offenders-table
+                    v-if="view === 'offenders'"
+                    :key="'offenders-' + revision"
+                    @show-reports="showReports"
+                    @changed="revision++"
                 />
-              </li>
-              <li class="auth">
-                <el-row>
-                  <el-col>
-                    <el-input
-                      placeholder="Username"
-                      v-model="username"
-                      size="medium"
-                      clearable
-                    ></el-input>
-                  </el-col>
-                  <el-col>
-                    <el-input
-                      placeholder="Password"
-                      v-model="password"
-                      size="medium"
-                      show-password
-                      clearable
-                    ></el-input>
-                  </el-col>
-                  <el-col>
-                    <el-button size="medium" @click="login">Login</el-button>
-                  </el-col>
-                </el-row>
-              </li>
-            </el-menu>
-          </el-col>
-        </el-row>
-      </el-header>
-      <el-main>
-        <el-row v-if="!auth">
-          <el-col>
-            <h2>PokerTH Internals</h2>
-            <i>Please login...</i>
-          </el-col>
-        </el-row>
-        <el-row v-else>
-          <el-col>
-            <adverts v-if="activeIndex === '1'"></adverts>
-            <ban-list v-if="activeIndex === '2'"></ban-list>
-            <avatar-reports v-if="activeIndex === '3-1'"></avatar-reports>
-            <game-name-reports v-if="activeIndex === '3-2'"></game-name-reports>
-          </el-col>
-        </el-row>
-      </el-main>
-    </el-container>
-  </div>
+                <reports-table
+                    v-else-if="view === 'reports-gamename'"
+                    :key="'gamename-' + revision"
+                    type="gamename"
+                    :preset="preset"
+                    @changed="revision++"
+                />
+                <reports-table
+                    v-else-if="view === 'reports-avatar'"
+                    :key="'avatar-' + revision"
+                    type="avatar"
+                    :preset="preset"
+                    @changed="revision++"
+                />
+                <ban-list v-else-if="view === 'banlist'" :key="'banlist-' + revision" @changed="revision++" />
+                <adverts v-else-if="view === 'adverts'" />
+            </template>
+        </main>
+    </div>
 </template>
+
 <script>
+import { Lock, Moon, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
+import Adverts from './Adverts.vue'
+import BanList from './BanList.vue'
+import OffendersTable from './OffendersTable.vue'
+import ReportsTable from './ReportsTable.vue'
+import { apiGet, apiPost, notice, reportError } from '../admin/adminUtils.js'
+import { applyTheme, preferredTheme } from '../admin/theme.js'
+
 export default {
-  props: ["authenticated"],
-  data() {
-    return {
-      auth: false,
-      username: null,
-      password: null,
-      activeIndex: "2",
-    };
-  },
-  mounted() {
-    this.auth = this.authenticated;
-  },
-  methods: {
-    login() {
-      if (
-        this.username === null ||
-        this.password === null ||
-        this.password.length < 1 ||
-        this.username.length < 3
-      ) {
-        this.notice("Username and/or Password too short", "error");
-      } else {
-        let queryInfo = new FormData();
-        queryInfo.append("username", this.username);
-        queryInfo.append("password", this.password);
-        axios
-          .post("/pthranking/login", queryInfo)
-          .then((res) => {
-            if (res.data.success === true) {
-              this.auth = true;
-              this.notice(res.data.msg);
-            } else {
-              this.notice(res.data.msg, "error");
+    name: 'InternalsComponent',
+    components: { Adverts, BanList, OffendersTable, ReportsTable },
+    props: ['authenticated'],
+    data() {
+        return {
+            auth: false,
+            busy: false,
+            username: null,
+            password: null,
+            view: 'offenders',
+            preset: '',
+            revision: 0,
+            theme: preferredTheme(),
+            Lock,
+            Moon,
+            Sunny,
+            SwitchButton,
+            User,
+        }
+    },
+    computed: {
+        darkMode: {
+            get() {
+                return this.theme === 'dark'
+            },
+            set(value) {
+                this.theme = applyTheme(value ? 'dark' : 'light')
+            },
+        },
+    },
+    mounted() {
+        this.auth = this.authenticated === true || this.authenticated === 'true'
+        applyTheme(this.theme)
+    },
+    methods: {
+        navigate(index) {
+            if (index === this.view) return
+            this.preset = ''
+            this.view = index
+        },
+        /** Sprung aus der Offender-Liste in die passende Report-Liste. */
+        showReports(row) {
+            this.preset = row.username || String(row.player_id)
+            this.view = row.avatar_reports > row.gamename_reports ? 'reports-avatar' : 'reports-gamename'
+        },
+        async login() {
+            if (!this.username || !this.password || this.password.length < 1 || this.username.length < 3) {
+                return notice('Username and/or password too short.', 'error')
             }
-          })
-          .catch((err) => {
-            this.notice("Login failed.", "error");
-          });
-      }
+            this.busy = true
+            try {
+                const data = await apiPost('/login', { username: this.username, password: this.password })
+                if (data.success) {
+                    this.auth = true
+                    this.password = null
+                    notice(data.msg)
+                } else {
+                    notice(data.msg || 'Login failed.', 'error')
+                }
+            } catch (err) {
+                reportError(err, 'Login failed.')
+            } finally {
+                this.busy = false
+            }
+        },
+        async logout() {
+            try {
+                const data = await apiGet('/logout')
+                if (data.success) {
+                    this.auth = false
+                    notice(data.msg, 'info')
+                } else {
+                    notice(data.msg || 'Logout failed.', 'error')
+                }
+            } catch (err) {
+                reportError(err, 'Logout failed.')
+            }
+        },
     },
-    logout() {
-      axios
-        .get("/pthranking/logout")
-        .then((res) => {
-          if (res.data.success === true) {
-            this.auth = false;
-            this.notice(res.data.msg, "default");
-          } else {
-            this.notice(res.data.msg, "error");
-          }
-        })
-        .catch((err) => {
-          this.notice("Logout failed.", "error");
-        });
-    },
-    notice(msg, type = "success") {
-      this.$message({ message: msg, type: type, offset: 75 });
-    },
-    navigate(index, indexPath) {
-      this.activeIndex = index;
-    },
-  },
-};
+}
 </script>
-<style scoped>
-.base .el-menu--horizontal.el-menu {
-  display: flex;
-}
-
-.base .auth {
-  border-bottom: 0;
-  margin-top: 10px;
-  margin-left: 20px;
-  height: 50px;
-  background-color: transparent !important;
-  cursor: default;
-}
-
-.base .auth:hover,
-.base .auth:focus {
-  background-color: transparent !important;
-}
-
-.base .auth .el-row {
-  margin-left: auto;
-}
-
-.base .auth .el-col {
-  width: auto;
-}
-
-.base .auth .el-input {
-  width: calc(100% - 10px);
-}
-
-.base .auth .el-button {
-  margin-right: 20px;
-}
-
-.base .logo {
-  flex-grow: 1;
-  padding-right: 20px;
-  border-bottom: 0;
-  margin-top: 10px;
-  margin-left: 20px;
-  height: 50px;
-  background-color: transparent !important;
-  cursor: default;
-}
-
-.base .logo:hover,
-.base .logo:focus {
-  background-color: transparent !important;
-}
-
-.base .logo img {
-  height: 80%;
-}
-
-@media only screen and (max-width: 896px) {
-  .base .auth .el-col { max-width: 150px; }
-  .base .auth .el-input { max-width: 140px; }
-  .base .auth .el-button { padding: 10px; }
-}
-
-@media only screen and (max-width: 662px) {
-  .base .auth .el-col { max-width: 100px; }
-  .base .auth .el-input { max-width: 90px; }
-  .base .auth .el-button { padding: 10px 5px; }
-}
-
-@media only screen and (max-width: 575px) {
-  .base .el-menu { justify-content: flex-end; }
-  .base .el-menu .logo { height: 40px; margin-top: 15px; }
-}
-
-@media only screen and (max-width: 455px) {
-  .base .auth { margin-left: 20px; }
-  .base .el-menu .logo { display: none; }
-}
-</style>

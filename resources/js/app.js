@@ -5,6 +5,11 @@ console.log('[pth.js] loaded')
 
 // Element Plus Dark Mode: html.fd_dark → html.dark synchronisieren
 // Außerdem data-theme für pth CSS-Variablen setzen
+//
+// Ausnahme: Auf der Internals-Seite (Laravel-Backend) gibt es kein phpbb und
+// damit kein fd_dark – dort steuert resources/js/admin/theme.js das Theme.
+const isInternals = document.documentElement.classList.contains('internals')
+
 function syncDarkMode() {
     const html = document.documentElement
     const shouldBeDark = html.classList.contains('fd_dark')
@@ -16,9 +21,11 @@ function syncDarkMode() {
     const targetTheme = shouldBeDark ? 'dark' : 'light'
     if (currentTheme !== targetTheme) html.setAttribute('data-theme', targetTheme)
 }
-setTimeout(syncDarkMode, 100)
-const observer = new MutationObserver(syncDarkMode)
-observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+if (!isInternals) {
+    setTimeout(syncDarkMode, 100)
+    const observer = new MutationObserver(syncDarkMode)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+}
 
 import { createApp } from 'vue'
 import ElementPlus from 'element-plus'
