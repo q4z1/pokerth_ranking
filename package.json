@@ -8,7 +8,7 @@
     },
     "dependencies": {
         "@element-plus/icons-vue": "^2.3",
-        "axios": "^1.15",
+        "axios": "^1.18",
         "chart.js": "^4.4",
         "element-plus": "^2.9",
         "pinia": "^2.3",
