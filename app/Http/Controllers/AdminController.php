@@ -13,6 +13,7 @@ use App\Models\PlayerRanking;
 use App\Models\ReportedAvatar;
 use App\Models\ReportedGamename;
 use App\Models\User;
+use App\Services\AvatarBlacklistService;
 
 class AdminController extends Controller
 {
@@ -98,7 +99,9 @@ class AdminController extends Controller
     $players = $this->playerLookup($creatorIds->merge($reporterIds)->unique()->all());
     $offences = $this->reportTotals($creatorIds->all());
 
-    $list = $rows->map(function ($row) use ($type, $creatorColumn, $players, $offences) {
+    $blacklist = app(AvatarBlacklistService::class);
+
+    $list = $rows->map(function ($row) use ($type, $creatorColumn, $players, $offences, $blacklist) {
       $creatorId = $row->{$creatorColumn};
       $counts = $offences[$creatorId] ?? ['gamename' => 0, 'avatar' => 0, 'total' => 0, 'open' => 0];
       return [
@@ -110,6 +113,7 @@ class AdminController extends Controller
         'game_idgame' => $row->game_idgame ?? null,
         'avatar_hash' => $row->avatar_hash ?? null,
         'avatar_type' => $row->avatar_type ?? null,
+        'blacklisted' => $type === 'avatar' ? $blacklist->isBlacklisted($row->avatar_hash ?? null) : false,
         'creator'     => $this->playerPayload($creatorId, $players),
         'reporter'    => $this->playerPayload($row->by_idplayer, $players),
         'offences'    => $counts,
@@ -180,7 +184,71 @@ class AdminController extends Controller
       return ['success' => true, 'msg' => $affected . ' report(s) updated.', 'affected' => $affected];
     }
 
+    if ($action === 'blacklist') {
+      if ($type !== 'avatar') return ['success' => false, 'msg' => 'Only avatars can be blacklisted.'];
+      return $this->blacklistAvatars($ids);
+    }
+
     return ['success' => false, 'msg' => 'Unknown action.'];
+  }
+
+  /**
+   * Sperrt die Avatare der angegebenen Reports: Eintrag in `avatar_blacklist`
+   * (den auch der Game-Server auswertet) und Datei raus aus dem öffentlichen
+   * Verzeichnis. Der Report-Status bleibt unberührt – Sperren und Abarbeiten
+   * des Reports sind bewusst getrennte Entscheidungen.
+   */
+  private function blacklistAvatars(array $ids)
+  {
+    $service = app(AvatarBlacklistService::class);
+
+    $hashes = ReportedAvatar::whereIn('id', $ids)->pluck('avatar_hash')
+      ->filter()->map(fn($h) => strtolower(trim($h)))->unique()->values();
+    if (!$hashes->count()) return ['success' => false, 'msg' => 'No avatar found for the selected report(s).'];
+
+    $added = 0;
+    $files = 0;
+    $failed = [];
+    foreach ($hashes as $hash) {
+      try {
+        $result = $service->blacklist($hash);
+        if ($result['added']) $added++;
+        $files += count($result['files']);
+      } catch (\Exception $e) {
+        $failed[] = $hash;
+      }
+    }
+
+    $msg = $added . ' avatar(s) blacklisted, ' . $files . ' file(s) moved to quarantine.';
+    if ($added < $hashes->count() - count($failed)) {
+      $msg .= ' ' . ($hashes->count() - count($failed) - $added) . ' were already blacklisted.';
+    }
+    if (count($failed)) {
+      $msg .= ' Failed: ' . implode(', ', $failed) . '.';
+    }
+
+    return [
+      'success'     => count($failed) === 0,
+      'msg'         => $msg,
+      'blacklisted' => $added,
+      'files'       => $files,
+      'hashes'      => $hashes->all(),
+    ];
+  }
+
+  /**
+   * Liefert einen gemeldeten Avatar für die Admin-Oberfläche aus – auch dann
+   * noch, wenn er bereits gesperrt und damit aus dem öffentlichen Verzeichnis
+   * verschwunden ist. Ohne das wäre der Moderator nach dem Sperren blind.
+   */
+  public function avatarImage(Request $request, $hash)
+  {
+    $service = app(AvatarBlacklistService::class);
+
+    $file = $service->publicFiles($hash)[0] ?? $service->quarantinedFile($hash);
+    if (!$file || !is_file($file)) abort(404);
+
+    return response()->file($file, ['Cache-Control' => 'private, max-age=300']);
   }
 
   public function adverts(Request $request)

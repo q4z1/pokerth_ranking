@@ -241,9 +241,10 @@ CREATE TABLE `admin_player` (
 
 DROP TABLE IF EXISTS `avatar_blacklist`;
 CREATE TABLE `avatar_blacklist` (
-  `id` int(11) NOT NULL,
-  `avatar_hash` varchar(128) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `avatar_hash` varchar(128) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
 DROP TABLE IF EXISTS `game`;

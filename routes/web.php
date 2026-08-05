@@ -34,6 +34,8 @@ Route::get('/banlist', [App\Http\Controllers\AdminController::class, 'banlist'])
 Route::post('/adverts', [App\Http\Controllers\AdminController::class, 'adverts']);
 Route::get('/adverts', [App\Http\Controllers\AdminController::class, 'adverts']);
 Route::get('/reports/offenders', [App\Http\Controllers\AdminController::class, 'offenders']);
+// Muss vor /reports/{type} stehen, sonst greift dort das type-Pattern nicht mehr.
+Route::get('/reports/avatar/image/{hash}', [App\Http\Controllers\AdminController::class, 'avatarImage'])->where('hash', '[0-9a-fA-F]{8,128}');
 Route::get('/reports/{type}', [App\Http\Controllers\AdminController::class, 'reports'])->where('type', 'avatar|gamename');
 Route::post('/reports/{type}', [App\Http\Controllers\AdminController::class, 'reportAction'])->where('type', 'avatar|gamename');
 

@@ -33,6 +33,16 @@
             <span class="admin-bulk__label">{{ selection.length }} selected</span>
             <el-button size="small" :icon="Close" @click="setState(selection, STATE_IGNORED)">Ignore</el-button>
             <el-button size="small" :icon="Warning" @click="setState(selection, STATE_WARNED)">Mark warned</el-button>
+            <el-button
+                v-if="type === 'avatar'"
+                size="small"
+                :icon="Picture"
+                type="danger"
+                plain
+                @click="blacklistAvatars(selection)"
+            >
+                Blacklist avatar
+            </el-button>
             <el-button size="small" :icon="Delete" type="danger" plain @click="removeReports(selection)">Delete</el-button>
             <el-button size="small" text @click="clearSelection">Clear</el-button>
         </template>
@@ -64,16 +74,20 @@
 
             <el-table-column :label="contentLabel" min-width="200">
                 <template #default="{ row }">
-                    <el-image
-                        v-if="type === 'avatar'"
-                        class="admin-avatar"
-                        :src="avatarUrl(row)"
-                        :preview-src-list="[avatarUrl(row)]"
-                        preview-teleported
-                        fit="contain"
-                    >
-                        <template #error><span class="admin-avatar__missing">missing</span></template>
-                    </el-image>
+                    <div v-if="type === 'avatar'" class="admin-avatar__cell">
+                        <el-image
+                            class="admin-avatar"
+                            :src="avatarUrl(row)"
+                            :preview-src-list="[avatarUrl(row)]"
+                            preview-teleported
+                            fit="contain"
+                        >
+                            <template #error><span class="admin-avatar__missing">missing</span></template>
+                        </el-image>
+                        <el-tag v-if="row.blacklisted" type="danger" size="small" disable-transitions>
+                            blacklisted
+                        </el-tag>
+                    </div>
                     <code v-else class="admin-code">{{ row.game_name }}</code>
                 </template>
             </el-table-column>
@@ -122,6 +136,13 @@
                                 <el-dropdown-item command="spam" :disabled="row.state === STATE_REPORTER_SPAM">
                                     Flag as report spam
                                 </el-dropdown-item>
+                                <el-dropdown-item
+                                    v-if="type === 'avatar'"
+                                    command="blacklist"
+                                    :disabled="row.blacklisted"
+                                >
+                                    {{ row.blacklisted ? 'Avatar already blacklisted' : 'Blacklist avatar' }}
+                                </el-dropdown-item>
                                 <el-dropdown-item command="reopen" :disabled="row.state === STATE_NEW" divided>
                                     Reopen
                                 </el-dropdown-item>
@@ -136,10 +157,11 @@
 </template>
 
 <script>
-import { Close, Delete, MoreFilled, Search, Warning } from '@element-plus/icons-vue'
+import { Close, Delete, MoreFilled, Picture, Search, Warning } from '@element-plus/icons-vue'
 import AdminPanel from './AdminPanel.vue'
 import PlayerRef from './PlayerRef.vue'
 import {
+    API_BASE,
     REPEAT_THRESHOLD,
     REPORT_STATES,
     STATE_IGNORED,
@@ -178,6 +200,7 @@ export default {
             Close,
             Delete,
             MoreFilled,
+            Picture,
             Search,
             Warning,
             STATE_NEW,
@@ -233,7 +256,9 @@ export default {
         formatDateTime,
         stateMeta,
         avatarUrl(row) {
-            return `/images/avatars/game/${row.avatar_hash}.${row.avatar_type}`
+            // Bewusst nicht /images/avatars/game/… : gesperrte Avatare liegen dort
+            // nicht mehr, sollen für den Moderator aber sichtbar bleiben.
+            return `${API_BASE}/reports/avatar/image/${row.avatar_hash}`
         },
         rowClass({ row }) {
             if (row.creator?.banned) return 'is-banned'
@@ -277,7 +302,39 @@ export default {
                 reopen: STATE_NEW,
             }
             if (command === 'delete') return this.removeReports([row])
+            if (command === 'blacklist') return this.blacklistAvatars([row])
             return this.setState([row], map[command])
+        },
+        async blacklistAvatars(rows) {
+            const targets = rows.filter((r) => !r.blacklisted)
+            if (!targets.length) return notice('All selected avatars are already blacklisted.', 'info')
+
+            const hashes = [...new Set(targets.map((r) => r.avatar_hash))]
+            try {
+                await confirmAction(
+                    `Blacklist ${hashes.length} avatar(s)? ` +
+                        'The image is removed from the public avatar directory and the game server ' +
+                        'will stop distributing it. Players currently using it lose their avatar on the site.',
+                    'Blacklist avatar',
+                    { confirmButtonText: 'Blacklist', confirmButtonClass: 'el-button--danger' }
+                )
+            } catch {
+                return
+            }
+            try {
+                const ids = targets.map((r) => r.id)
+                const data = await apiPost(`/reports/${this.type}`, { action: 'blacklist', ids })
+                if (!data.success) return notice(data.msg || 'Blacklisting failed.', 'error')
+                // Alle Zeilen mit denselben Hashes mitziehen, nicht nur die ausgewählten.
+                this.rows.forEach((r) => {
+                    if (hashes.includes(r.avatar_hash)) r.blacklisted = true
+                })
+                this.clearSelection()
+                notice(data.msg)
+                this.$emit('changed')
+            } catch (err) {
+                reportError(err, 'Blacklisting failed.')
+            }
         },
         async setState(rows, state) {
             const ids = rows.map((r) => r.id)

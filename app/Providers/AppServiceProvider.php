@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\AvatarBlacklistService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -13,7 +14,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        // Singleton, damit die Blacklist pro Request nur einmal geladen wird –
+        // der Player-Accessor fragt sie sonst für jede Zeile einer Liste neu ab.
+        $this->app->singleton(AvatarBlacklistService::class);
     }
 
     /**
