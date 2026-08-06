@@ -18,16 +18,41 @@ class LogFileController extends Controller
 		if(!file_exists("/var/www/pokerth/log_file_analysis/upload/$pdb")){
 			return false;
 		}
-		if(is_null($this->game_id) && !is_null($id)) $this->game_id = $id;
+		$requested_id = is_null($this->game_id) ? $id : $this->game_id;
 		$this->pdo = new PDO("sqlite:/var/www/pokerth/log_file_analysis/upload/$pdb");
 		// sqlite error handling necessary?
-		
+
 		$session = $this->get_session();
 
 		$game_ids = $this->get_game_ids();
+		if(count($game_ids) == 0) return false;
+
+		// Resolve the requested game against the ids the log actually contains.
+		// A missing or unknown id (e.g. the default 1 on a log whose first game
+		// is 2) falls back to the first game instead of producing an empty page.
+		// This is also what keeps the id safe for the SQL string interpolation
+		// in the get_* methods below.
+		$this->game_id = null;
+		foreach($game_ids as $gid){
+			if((string)$gid === (string)$requested_id){
+				$this->game_id = $gid;
+				break;
+			}
+		}
+		if(is_null($this->game_id)) $this->game_id = $game_ids[0];
 
 		$player_list = $player_list2 = $this->get_player_list();
-		if(!is_array($player_list) || count((array)$player_list) == 0) return false;
+		if(!is_array($player_list) || count((array)$player_list) == 0){
+			// The game exists in the log but carries no usable data. Return the
+			// bare minimum so the page can still render its game selector.
+			return array(
+				"game_ids" => $game_ids,
+				"game_id" => $this->game_id,
+				"session" => $session,
+				"pdb" => $pdb,
+				"incomplete" => true,
+			);
+		}
 		array_multisort($player_list[0],$player_list[1],$player_list[2],$player_list[3],$player_list[4],$player_list[5],$player_list[6],$player_list[7]);
 		$hand_cash = $this->get_hand_cash();
 		$played_hands = $this->get_played_hands($player_list[3]);
@@ -90,6 +115,9 @@ class LogFileController extends Controller
 				GROUP BY HandID";
 		$query = $db->prepare($query);
 		$query->execute();
+		// Pre-initialised: a game without won pots still has to yield the two
+		// rows the chart expects instead of an undefined variable.
+		$pot_size = [[], []];
 		while($row = $query->fetch(PDO::FETCH_ASSOC)) {
 			if(is_numeric($row['Pot']) & $row['Pot']>0 & is_numeric($row['HandID']) & $row['HandID']>0) {
 				$pot_size[0][] = 100000-$row['Pot'];

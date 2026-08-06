@@ -30,6 +30,13 @@
                                 <hr />
                             </el-col>
                         </el-row>
+                        <el-row v-if="!hasData">
+                            <el-col class="pb">
+                                <p>No data available for this game.<span v-if="game_ids && game_ids.length > 1">
+                                        Please select another game ID.</span></p>
+                            </el-col>
+                        </el-row>
+                        <template v-if="hasData">
                         <el-row>
                             <el-col :xs="24" :md="12" class="pb">
                                 <h3>Basic data</h3>
@@ -226,6 +233,27 @@
                                 <hr />
                             </el-col>
                         </el-row>
+                        </template>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        <div v-else-if="error" class="game-log inner">
+            <ul class="topiclist">
+                <li class="header">
+                    <dl class="row-item">
+                        <dt>
+                            <div class="list-inner">
+                                Logfile-Analysis
+                            </div>
+                        </dt>
+                    </dl>
+                </li>
+            </ul>
+            <ul class="topiclist forums">
+                <li class="row">
+                    <div class="list-inner">
+                        <p>{{ error }}</p>
                     </div>
                 </li>
             </ul>
@@ -252,31 +280,40 @@ export default {
             basic_data: null,
             ranking: null,
             game_ids: null,
-            game_id: 1,
+            game_id: null,
+            hasData: false,
+            error: null,
         }
     },
     methods: {
         init() {
-            let gId = this.getUrlParameter('game_id')
-            if (gId === null) {
-                gId = ''
-            } else {
-                this.game_id = gId
-                gId = '&game_id=' + gId
+            const pdb = this.getUrlParameter('pdb')
+            if (!pdb) {
+                this.error = 'Missing parameter!'
+                return
             }
-            axios.get('/pthranking/game/log?pdb=' + this.getUrlParameter('pdb') + gId)
+            // No game_id is passed on when absent: the backend then picks the
+            // first game the log actually contains.
+            const params = new URLSearchParams({ pdb: pdb })
+            const gId = this.getUrlParameter('game_id')
+            if (gId !== null) params.set('game_id', gId)
+            axios.get('/pthranking/game/log?' + params.toString())
                 .then(res => {
-                    if (res.data.status && res.data.status == true) {
+                    if (res.data.status === true && res.data.msg) {
                         this.game = res.data.msg
                         this.render_game()
+                    } else {
+                        this.error = res.data.msg || 'Log file could not be loaded!'
                     }
                 }).catch(err => {
                     console.log(err)
+                    this.error = 'Log file could not be loaded!'
                 })
         },
         getGame() {
             // console.log("getGame", this.game_id);
-            window.location.href = window.location.origin + '/gamelog?pdb=' + this.getUrlParameter('pdb') + '&game_id=' + this.game_id
+            const params = new URLSearchParams({ pdb: this.getUrlParameter('pdb'), game_id: this.game_id })
+            window.location.href = window.location.origin + '/gamelog?' + params.toString()
         },
         getUrlParameter: function (key) {
             let address = window.location.search
@@ -287,9 +324,24 @@ export default {
             this.game_ids = []
             for (let id in this.game.game_ids) {
                 this.game_ids.push(
-                    { value: this.game.game_ids[id], text: this.game.game_ids[id] }
+                    { value: this.game.game_ids[id], label: String(this.game.game_ids[id]) }
                 )
             }
+            // The backend resolves the effective game id (the requested one may
+            // not exist in this log), so take it from the response.
+            if (typeof this.game.game_id !== 'undefined') this.game_id = this.game.game_id
+            if (this.game.incomplete) return
+            // A defect anywhere in the statistics must not take the whole page
+            // down — the game selector stays usable either way.
+            try {
+                this.render_details()
+                this.hasData = true
+            } catch (e) {
+                console.log(e)
+                this.hasData = false
+            }
+        },
+        render_details() {
             let colors = [
                 'rgba(86, 226, 137, 1.0)',
                 'rgba(104, 226, 86, 1.0)',

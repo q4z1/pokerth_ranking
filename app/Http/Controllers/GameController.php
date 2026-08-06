@@ -32,10 +32,18 @@ class GameController extends Controller
         if(!$pdb){
             return ["status" => false, "msg" => 'Missing Parameter!'];
         }
-        $id = $request->input('game_id', 1);
+        if(!preg_match('/^[A-Za-z0-9_-]{1,64}$/', $pdb)){
+            return ["status" => false, "msg" => 'Invalid id'];
+        }
+        // No game_id (or a bogus one) is not an error: process_log_file() falls
+        // back to the first game the log actually contains.
+        $id = $request->input('game_id', null);
         $log = new LogFileController();
         $pdb .= ".pdb";
         $game = $log->process_log_file($pdb, $id);
+        if($game === false){
+            return ["status" => false, "msg" => 'Log file not found or unreadable!'];
+        }
         return ["status" => true, "msg" => $game];
     }    
 
