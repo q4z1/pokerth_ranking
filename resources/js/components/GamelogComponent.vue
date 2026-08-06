@@ -320,6 +320,17 @@ export default {
             let parameterList = new URLSearchParams(address)
             return parameterList.get(key)
         },
+        syncUrl() {
+            // This URL gets pasted into the bbc / wec upload, which reads pdb and
+            // game_id straight out of it. So whenever the game actually shown is
+            // not the one in the URL — no game_id given, or one this log does not
+            // contain — write the effective id back into the address bar.
+            if (this.game_id === null || typeof this.game_id === 'undefined') return
+            if (String(this.getUrlParameter('game_id')) === String(this.game_id)) return
+            const params = new URLSearchParams(window.location.search)
+            params.set('game_id', this.game_id)
+            window.history.replaceState(null, '', window.location.pathname + '?' + params.toString())
+        },
         render_game() {
             this.game_ids = []
             for (let id in this.game.game_ids) {
@@ -330,6 +341,7 @@ export default {
             // The backend resolves the effective game id (the requested one may
             // not exist in this log), so take it from the response.
             if (typeof this.game.game_id !== 'undefined') this.game_id = this.game.game_id
+            this.syncUrl()
             if (this.game.incomplete) return
             // A defect anywhere in the statistics must not take the whole page
             // down — the game selector stays usable either way.
