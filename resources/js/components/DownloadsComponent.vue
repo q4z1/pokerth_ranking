@@ -127,43 +127,7 @@
 
                                 </div>
 
-                            <a href="https://webclient.pokerth.net" target="_blank" style="text-decoration:none;">
-                                <div style="
-                                    display:inline-flex;
-                                    align-items:center;
-                                    flex-shrink:0;
-                                    background:#111;
-                                    color:#fff;
-                                    border-radius:8px;
-                                    padding:8px 12px;
-                                    height:52px;
-                                    box-sizing:border-box;
-                                    font-family:system-ui, sans-serif;
-                                ">
-                                    <img src="/images/pokerth.svg" alt="PokerTH"
-                                         style="width:28px;height:28px;flex-shrink:0;" />
-
-                                    <span style="
-                                        margin-left:8px;
-                                        font-size:13px;
-                                        font-weight:600;
-                                        line-height:1.2;
-                                        color:#fff;
-                                        white-space:nowrap;
-                                    ">PokerTH Web-Client</span>
-
-                                    <span style="
-                                        margin-left:8px;
-                                        background:#2a2a2a;
-                                        color:#fff;
-                                        padding:3px 7px;
-                                        border-radius:5px;
-                                        font-size:10px;
-                                        letter-spacing:.05em;
-                                        white-space:nowrap;
-                                    ">webapp</span>
-                                </div>
-                            </a>
+                            <webclient-button-component></webclient-button-component>
                         </div>
                         <hr style="margin-top: 1em; margin-bottom: 1.5em;" />
                        <template v-for="(version, index) in tracker" :key="index">

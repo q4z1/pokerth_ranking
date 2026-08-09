@@ -103,4 +103,5 @@ function mountApp(selector) {
 }
 
 // Ranking-Seiten: multiple unabhängige Vue-Instanzen
-;['#vue1', '#vue2', '#vue3', '#vue4'].forEach(sel => mountApp(sel))
+// #vue-header sitzt im Teaser (overall_header.html) und ist auf jeder Seite da.
+;['#vue1', '#vue2', '#vue3', '#vue4', '#vue-header'].forEach(sel => mountApp(sel))

@@ -556,3 +556,149 @@ html.internals[data-theme='light'] .internals-logo {
     overflow: hidden;
     border-radius: 8px;
 }
+
+/* ─────────────────────────────────────────────
+   Store-Buttons (Web-Client / Download)
+   Optik der Store-Badges (SourceForge, Flathub, Snap) auf der
+   Download-Seite; wird ausserdem im Teaser-Header verwendet.
+   Bewusst dunkel/fix eingefaerbt (kein Theme-Wechsel), damit die
+   Buttons neben den externen Badges einheitlich wirken.
+   ───────────────────────────────────────────── */
+.pth-store-btn {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    background: #111;
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 12px;
+    height: 52px;
+    box-sizing: border-box;
+    font-family: system-ui, sans-serif;
+    text-decoration: none;
+}
+
+.pth-store-btn:hover {
+    background: #1d1d1d;
+    color: #fff;
+    text-decoration: none;
+}
+
+.pth-store-btn__icon {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+}
+
+.pth-store-btn__label {
+    margin-left: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.pth-store-btn__badge {
+    margin-left: 8px;
+    background: #2a2a2a;
+    color: #fff;
+    padding: 3px 7px;
+    border-radius: 5px;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────
+   Teaser-Header: Button-Spalte rechts
+   Sitzt in .particles_container neben #site-description (float: left).
+   ───────────────────────────────────────────── */
+#vue-header {
+    float: right;
+    position: relative;
+    z-index: 2;
+    font-size: 1rem; /* .particles_container setzt font-size: 0 */
+}
+
+body.navbar_i_header #vue-header {
+    margin: 100px 50px;
+}
+
+body.navbar_o_header #vue-header {
+    margin: 50px 50px 100px;
+}
+
+/* Halbtransparente Karte um die Buttons.
+   Der Teaser liegt in beiden Themes auf einem abgedunkelten Foto
+   (.headerbar_overlay_darken = rgba(0,0,0,.6)), deshalb sind die Werte
+   nicht aus der --pth-Palette, sondern eigens auf diesen Untergrund
+   abgestimmt. Default = dark (Site-Default), light per [data-theme]. */
+.pth-header-card {
+    --pth-header-card-bg:      rgba(16, 18, 22, 0.45);
+    --pth-header-card-border:  rgba(255, 255, 255, 0.14);
+    --pth-header-card-shadow:  rgba(0, 0, 0, 0.35);
+
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--pth-header-card-bg);
+    border: 1px solid var(--pth-header-card-border);
+    box-shadow: 0 8px 28px var(--pth-header-card-shadow);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+}
+
+/* Der Minifier (Lightning CSS) wirft das unprefixed backdrop-filter raus,
+   wenn es direkt neben der -webkit-Variante steht – Firefox bliebe ohne
+   Blur. In @supports bleibt die Deklaration erhalten. */
+@supports (backdrop-filter: blur(1px)) {
+    .pth-header-card {
+        backdrop-filter: blur(8px) saturate(120%);
+    }
+}
+
+[data-theme="light"] .pth-header-card {
+    --pth-header-card-bg:      rgba(255, 255, 255, 0.20);
+    --pth-header-card-border:  rgba(255, 255, 255, 0.40);
+    --pth-header-card-shadow:  rgba(0, 0, 0, 0.20);
+}
+
+.pth-header-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+
+/* Beide Buttons auf die Breite des breiteren ziehen: die Spalte ist
+   shrink-to-fit (float bzw. Flex-Item) und damit so breit wie der
+   groessere Button; align-items: stretch streckt den kleineren nach. */
+.pth-header-buttons .pth-store-btn {
+    display: flex;
+}
+
+.pth-header-buttons .pth-store-btn__badge {
+    margin-left: auto;
+}
+
+/* Ab Tablet abwaerts unter den Schriftzug rutschen und zentrieren.
+   Der Abstand nach unten muss padding sein, kein margin: .particles_container
+   hat overflow: hidden und schneidet die Karte sonst unten ab.
+   100px, weil #inner-wrap per margin-top: -50px !important (milk.css) mit
+   deckendem Hintergrund ueber das Header-Ende ragt — sichtbar bleiben also
+   50px, genau wie im Desktop-Fall (dort: margin-bottom 100px des Floats). */
+@media (max-width: 991px) {
+    #vue-header {
+        float: none;
+        clear: both;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 0 15px 100px;
+        box-sizing: border-box;
+    }
+
+    body.navbar_i_header #vue-header,
+    body.navbar_o_header #vue-header {
+        margin: 0;
+    }
+}
