@@ -27,6 +27,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule) {
         $schedule->call(new SeasonSwitch)->cron('0 0 01 */3 *');
         $schedule->command('attack:check')->cron('*/5 * * * *');
+        // 2x täglich, versetzt zur vollen Stunde – öfter bringt nichts, die
+        // Suchmaschinen holen die Sitemap ohnehin nur etwa einmal am Tag ab.
+        $schedule->command('sitemap:generate')->cron('20 4,16 * * *');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
