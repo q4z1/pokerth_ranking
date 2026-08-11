@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -24,6 +25,9 @@ class GenerateSitemap extends Command
 
     /** Datenbank des Forums – die Ranking-App liegt in einer eigenen, daher qualifiziert. */
     protected string $forumDb;
+
+    /** Gecachte Werte aus phpbb_config, siehe forumConfig(). */
+    protected ?Collection $forumConfig = null;
 
     /** phpBB-Gruppen-ID der Gäste (Standard-Installation: 1). */
     protected const GUEST_GROUP = 1;
@@ -48,13 +52,15 @@ class GenerateSitemap extends Command
         }
 
         $urls = array_merge(
-            $this->boardUrls($base),
+            $this->boardUrls($base, $forumIds),
             $this->pageUrls($base),
             $this->forumUrls($base, $forumIds),
             $this->topicUrls($base, $forumIds),
         );
 
         if (count($urls) > self::MAX_URLS) {
+            // Themen stehen nach Aktualität sortiert hinten, abgeschnitten werden
+            // also die ältesten – bis die Sitemap auf mehrere Dateien aufgeteilt ist.
             $this->warn(count($urls) . ' URLs – über dem Limit von ' . self::MAX_URLS . ', die Sitemap muss aufgeteilt werden.');
             $urls = array_slice($urls, 0, self::MAX_URLS);
         }
@@ -89,15 +95,21 @@ class GenerateSitemap extends Command
     {
         if ($override = env('SITEMAP_BASE_URL')) return rtrim($override, '/');
 
-        $config = DB::table($this->forumDb . '.phpbb_config')
-            ->whereIn('config_name', ['server_protocol', 'server_name', 'script_path'])
-            ->pluck('config_value', 'config_name');
+        $config = $this->forumConfig();
 
         $protocol = $config['server_protocol'] ?? 'https://';
         $host = $config['server_name'] ?? 'www.pokerth.net';
         $path = rtrim($config['script_path'] ?? '/', '/');
 
         return rtrim($protocol . $host . $path, '/');
+    }
+
+    /** Die paar Konfigwerte, die hier gebraucht werden – ein Query statt drei. */
+    protected function forumConfig(): Collection
+    {
+        return $this->forumConfig ??= DB::table($this->forumDb . '.phpbb_config')
+            ->whereIn('config_name', ['server_protocol', 'server_name', 'script_path', 'enable_mod_rewrite'])
+            ->pluck('config_value', 'config_name');
     }
 
     protected function defaultTarget(): string
@@ -125,27 +137,46 @@ class GenerateSitemap extends Command
             ->all();
     }
 
-    protected function boardUrls(string $base): array
+    protected function boardUrls(string $base, array $forumIds): array
     {
-        return [
-            ['loc' => $base . '/', 'changefreq' => 'daily', 'priority' => '1.0'],
-        ];
+        $lastPost = DB::table($this->forumDb . '.phpbb_forums')
+            ->whereIn('forum_id', $forumIds)
+            ->max('forum_last_post_time');
+
+        return [[
+            'loc' => $base . '/',
+            'lastmod' => $this->timestamp($lastPost),
+            'changefreq' => 'daily',
+            'priority' => '1.0',
+        ]];
     }
 
     /** Statische Seiten der phpbb/pages-Erweiterung (Download, Leaderboard, ...). */
     protected function pageUrls(string $base): array
     {
+        $prefix = $base . $this->routePrefix();
+
         return DB::table($this->forumDb . '.phpbb_pages')
             ->where('page_display_to_guests', 1)
             ->whereNotIn('page_route', $this->skipPages)
             ->orderBy('page_id')
             ->pluck('page_route')
             ->map(fn($route) => [
-                'loc' => $base . '/page/' . $route,
+                'loc' => $prefix . $route,
                 'changefreq' => 'weekly',
                 'priority' => '0.8',
             ])
             ->all();
+    }
+
+    /**
+     * Präfix für Controller-Routen. phpBB hängt ohne aktiviertes URL-Rewriting
+     * ein /app.php/ davor und verlinkt intern auch genau so – die Sitemap muss
+     * dieselbe Form nennen, sonst stehen dort URLs, auf die nichts zeigt.
+     */
+    protected function routePrefix(): string
+    {
+        return ($this->forumConfig()['enable_mod_rewrite'] ?? '0') === '1' ? '/' : '/app.php/';
     }
 
     protected function forumUrls(string $base, array $forumIds): array
@@ -172,7 +203,12 @@ class GenerateSitemap extends Command
         DB::table($this->forumDb . '.phpbb_topics')
             ->whereIn('forum_id', $forumIds)
             ->where('topic_visibility', 1)          // 1 = ITEM_APPROVED
-            ->orderBy('topic_id')
+            // Frisches zuerst: Crawler arbeiten große Sitemaps von oben ab, und
+            // beim Kürzen auf MAX_URLS fallen so die ältesten Themen weg.
+            // topic_id als Tiebreak, sonst ist die Reihenfolge über die Chunks
+            // hinweg nicht stabil und es fehlen einzelne Themen.
+            ->orderByDesc('topic_last_post_time')
+            ->orderByDesc('topic_id')
             ->select(['topic_id', 'topic_last_post_time'])
             ->chunk(1000, function ($topics) use (&$urls, $base) {
                 foreach ($topics as $t) {
