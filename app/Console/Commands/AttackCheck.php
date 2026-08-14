@@ -16,14 +16,16 @@ class AttackCheck extends Command
      *
      * @var string
      */
-    protected $signature = 'attack:check';
+    protected $signature = 'attack:check
+                            {--enable : Switch the filter on by hand instead of measuring}
+                            {--disable : Switch the filter off by hand instead of measuring}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Watch the hit rate and switch the Cloudflare filter on under attack';
 
 
     protected $last_state_file = 'visitors.txt';
@@ -38,6 +40,34 @@ class AttackCheck extends Command
     protected $hours = 96;
     protected $limit = 2500;
     protected $enabled_limit = 604800; // 604800 => 7 days
+
+    // Absolute hit rate that counts as an attack on its own. The $limit above only
+    // catches a jump between two samples, which a slowly ramping attack never
+    // produces: on 2026-08-13 the rate climbed from 157 to 5009 hits per 5 min over
+    // 34 hours and the largest jump in the whole run was 1628. A quiet week sits at
+    // a median of 157 and peaks at 1303, so 1200 is well clear of normal traffic.
+    // Two samples in a row have to be above it, so a single outlier is not enough:
+    // that peak of 1303 was one sample on its own, the rest of the week stayed below.
+    protected $level_limit = 1200;
+
+    // Every vhost the Cloudflare rule applies to, so an attack on a side domain is
+    // seen as well. webclient.pokerth.net is deliberately absent, the rule excludes
+    // that host, so counting its traffic could only trigger a filter that does not
+    // cover it. Together the side domains add about a tenth of pokerth.net at the
+    // median and next to nothing at the peak, so they do not shift the limit above.
+    protected $access_logs = [
+        'pokerth'    => '/var/log/nginx/pokerth_access.log',
+        'bbc'        => '/var/log/nginx/bbc_access.log',
+        'monthlycup' => '/var/log/nginx/monthlycup_access.log',
+        'wec'        => '/var/log/nginx/wec_access.log',
+        'test'       => '/var/log/nginx/pokerth_test_access.log',
+        'ustats'     => '/var/log/nginx/ustats_access.log',
+        'bugform'    => '/var/log/nginx/ustats_bugform_access.log',
+    ];
+
+    // Only the tail of a log is needed for a 5 minute window. Reading the files in
+    // full is well over a gigabyte per run, they are not rotated.
+    protected $access_log_tail = 20000000; // ~13x the busiest 5 minutes seen so far
 
     // Official crawler ranges, so verified search engine bots are not challenged
     // by the filter. cf.client.bot would do the same in one word, but that field
@@ -58,6 +88,12 @@ class AttackCheck extends Command
      */
     public function handle()
     {
+
+        if($this->option('enable') && $this->option('disable')){
+            $this->error('Use either --enable or --disable, not both.');
+
+            return Command::FAILURE;
+        }
 
         $url = "https://api.cloudflare.com/client/v4/zones/" . env('CF_ZONE_ID') . "/rulesets/" . env('CF_RULESET_ID');
         $response = $this->cloudflare('GET', $url);
@@ -83,6 +119,12 @@ class AttackCheck extends Command
         $is_enabled = $rule['enabled'];
         // $is_enabled = false; // debug
 
+        // Manual fallback. Switch and stop, no measuring, no graph, no crawler sync:
+        // those belong to the scheduled run and would only slow the command down.
+        if($this->option('enable') || $this->option('disable')){
+            return $this->switchFilter($rule, $is_enabled);
+        }
+
         $rule = $this->syncCrawlerAllowlist($rule);
 
         $enabled_since = $this->enabledSince($is_enabled, $last_update);
@@ -94,8 +136,8 @@ class AttackCheck extends Command
         date_default_timezone_set('UTC');
         $last5min = date("c", strtotime("-5 minutes"));
 
-        $command =  "cat /var/log/nginx/pokerth_access.log | awk '$4 > \"[$last5min]\"' | wc -l";
-        $total = trim(shell_exec($command));
+        $hits = $this->countHits($last5min);
+        $total = array_sum($hits);
 
         $diff = 0;
 
@@ -126,18 +168,108 @@ class AttackCheck extends Command
 
         }
 
+        // A sudden spike, or a rate that simply stays too high. The second one is
+        // what catches an attack that ramps up slowly enough to hide in the noise.
+        $reason = null;
+
         if($diff > $this->limit){
+            $reason = "last 5 min Hits diff: $diff";
+        } elseif($total > $this->level_limit && $lastTotal > $this->level_limit){
+            $reason = "last 5 min Hits: $total (previous: $lastTotal, limit: " . $this->level_limit . ")";
+        }
+
+        if(!is_null($reason)){
             // Storage::append($this->log_file, date("Y-m-d H:i:s") . "|Under Attack!");
 
+            $reason .= " [" . $this->formatHits($hits) . "]";
+
             $this->patchRule($rule_enable);
+
+            // Only report the switch itself. The level trigger stays true for as
+            // long as the attack lasts, which would otherwise notify every 5 min.
             if(!$is_enabled){
                 Storage::disk('local')->put($this->enabled_since_file, time());
-            }
 
-            $this->notify(date("Y-m-d H:i:s") . " - Critical - last 5 min Hits diff: $diff ... Filter activated!", 14177041);
+                $this->notify(date("Y-m-d H:i:s") . " - Critical - $reason ... Filter activated!", 14177041);
+            }
         }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Switches the filter by hand, for when the automatic detection is not what we
+     * want: an attack it does not recognise yet, or a false alarm to be cleared.
+     * Enabling starts the auto-disable timer just like an automatic switch does, so
+     * a filter turned on by hand does not stay on forever if it is then forgotten.
+     */
+    protected function switchFilter($rule, $is_enabled)
+    {
+        $enable = (bool) $this->option('enable');
+
+        if($enable === (bool) $is_enabled){
+            $this->info('Filter is already ' . ($enable ? 'enabled' : 'disabled') . ', nothing to do.');
+
+            return Command::SUCCESS;
+        }
+
+        $rule['enabled'] = $enable;
+        $this->patchRule($rule);
+
+        // Written fresh rather than overwritten: the file is not always ours, a run
+        // as root leaves it root owned and put() alone would then fail silently.
+        Storage::disk('local')->delete($this->enabled_since_file);
+
+        if($enable){
+            Storage::disk('local')->put($this->enabled_since_file, time());
+        }
+
+        $this->info('Filter ' . ($enable ? 'enabled' : 'disabled') . '.');
+
+        $this->notify(date("Y-m-d H:i:s") . " - Manual - Filter " . ($enable ? "activated" : "deactivated")
+            . " by hand.", $enable ? 14177041 : 1127128);
+
+        return Command::SUCCESS;
+    }
+
+    /**
+     * Hits since $since per vhost. All logs share nginx's "main" format, so the
+     * timestamp is field 4 everywhere and compares correctly as an ISO 8601 string.
+     */
+    protected function countHits($since)
+    {
+        $hits = [];
+
+        foreach($this->access_logs as $name => $path){
+            if(!is_readable($path)){
+                continue; // a vhost that has never been hit has no log yet
+            }
+
+            // tail -n +2 drops the first line, which tail -c is free to cut in half.
+            $command = "tail -c " . $this->access_log_tail . " " . escapeshellarg($path)
+                . " | tail -n +2 | awk '$4 > \"[$since]\"' | wc -l";
+
+            $hits[$name] = (int) trim(shell_exec($command));
+        }
+
+        return $hits;
+    }
+
+    /**
+     * "pokerth: 4812, bbc: 41, wec: 9" for the alert, busiest vhost first, so it is
+     * visible at a glance which site is being hit.
+     */
+    protected function formatHits($hits)
+    {
+        $hits = array_filter($hits);
+        arsort($hits);
+
+        $parts = [];
+        foreach($hits as $name => $count){
+            $parts[] = "$name: $count";
+        }
+
+        return empty($parts) ? "no hits" : implode(", ", $parts);
     }
 
     /**
