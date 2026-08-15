@@ -40,17 +40,27 @@ class AttackCheck extends Command
     protected $hours = 96;
     protected $limit = 2500;
 
-    protected $enabled_limit = 604800; // 604800 => 7 days
+    // Kept short on purpose. A single scanner spraying 404s for a quarter of an
+    // hour is enough to trip the detection, and leaving the whole zone behind a
+    // challenge for days over that costs real visitors far more than the scan
+    // ever cost us. After an hour the filter drops and the next run decides
+    // again on current traffic, so a lasting attack simply switches it back on.
+    protected $enabled_limit = 3600; // 3600 => 1 hour, disabled at the 55 minute run
 
     // Grace period after the auto disable, during which a traffic jump does not
-    // count as an attack. Without it the very next run would switch the filter
-    // straight back on, and nothing could ever be observed with it off.
+    // count as an attack yet.
     //
-    // Deliberately just under ten minutes: the run that switches off lands a
-    // second or so past the minute, and a full 600 would then expire a second
-    // after the run that is meant to close the window, costing another whole
-    // interval. Nine minutes expires safely before it, giving ten minutes off.
-    protected $window_limit = 540; // 540 => 9 minutes, closed at the 10 minute run
+    // At a minute this no longer reaches the next scheduled run, which is the
+    // point: the run right after the auto disable judges the traffic normally,
+    // sees the jump from filtered to unfiltered and switches straight back on
+    // over the spike trigger. An attack that is still going is therefore let
+    // through for one interval rather than two. What is left of the grace only
+    // guards against a hand started run seconds after the automatic one.
+    //
+    // Raise it again to open a deliberate observation window: at 540 the filter
+    // stays off for a full ten minutes, which is what it was set to on
+    // 2026-08-15 while the scraper needed a chance to re-read the board.
+    protected $window_limit = 60; // 60 => 1 minute, no longer spans a cron interval
     protected $window_file = 'filter_window_until.txt';
 
     // Switching the filter is worth a message again. This was off on 2026-08-15
