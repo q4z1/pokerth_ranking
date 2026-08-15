@@ -39,7 +39,24 @@ class AttackCheck extends Command
 
     protected $hours = 96;
     protected $limit = 2500;
+
     protected $enabled_limit = 604800; // 604800 => 7 days
+
+    // Grace period after the auto disable, during which a traffic jump does not
+    // count as an attack. Without it the very next run would switch the filter
+    // straight back on, and nothing could ever be observed with it off.
+    //
+    // Deliberately just under ten minutes: the run that switches off lands a
+    // second or so past the minute, and a full 600 would then expire a second
+    // after the run that is meant to close the window, costing another whole
+    // interval. Nine minutes expires safely before it, giving ten minutes off.
+    protected $window_limit = 540; // 540 => 9 minutes, closed at the 10 minute run
+    protected $window_file = 'filter_window_until.txt';
+
+    // Switching the filter is worth a message again. This was off on 2026-08-15
+    // while the filter cycled every half hour, which would have been roughly 96
+    // messages a day. Failures are reported either way.
+    protected $notify_switches = true;
 
     // Absolute hit rate that counts as an attack on its own. The $limit above only
     // catches a jump between two samples, which a slowly ramping attack never
@@ -161,8 +178,17 @@ class AttackCheck extends Command
             $this->patchRule($rule_disable);
             Storage::disk('local')->delete($this->enabled_since_file);
 
-            $this->notify(date("Y-m-d H:i:s") . " - Normal - filter was active for "
-                . ($this->enabled_limit/60) . " min ... Filter deactivated.", 1127128);
+            // Hold the door open for $window_limit, otherwise the next run closes
+            // it again straight away and the crawler gets nothing out of it.
+            // Deleted first: a file left behind by the root cron cannot be
+            // overwritten from a hand started run, put() would just fail quietly.
+            Storage::disk('local')->delete($this->window_file);
+            Storage::disk('local')->put($this->window_file, time() + $this->window_limit);
+
+            if($this->notify_switches){
+                $this->notify(date("Y-m-d H:i:s") . " - Normal - filter was active for "
+                    . ($this->enabled_limit/60) . " min ... Filter deactivated.", 1127128);
+            }
 
             return Command::SUCCESS;
 
@@ -178,6 +204,12 @@ class AttackCheck extends Command
             $reason = "last 5 min Hits: $total (previous: $lastTotal, limit: " . $this->level_limit . ")";
         }
 
+        // The traffic jumping right back is the whole point of an open window, so
+        // it must not count as an attack while the window lasts.
+        if(!is_null($reason) && $this->windowIsOpen()){
+            $reason = null;
+        }
+
         if(!is_null($reason)){
             // Storage::append($this->log_file, date("Y-m-d H:i:s") . "|Under Attack!");
 
@@ -190,11 +222,34 @@ class AttackCheck extends Command
             if(!$is_enabled){
                 Storage::disk('local')->put($this->enabled_since_file, time());
 
-                $this->notify(date("Y-m-d H:i:s") . " - Critical - $reason ... Filter activated!", 14177041);
+                if($this->notify_switches){
+                    $this->notify(date("Y-m-d H:i:s") . " - Critical - $reason ... Filter activated!", 14177041);
+                }
             }
         }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * Whether the filter was switched off on purpose a moment ago and should be
+     * left off for now. Closes itself once the window has run out.
+     */
+    protected function windowIsOpen()
+    {
+        if(!Storage::disk('local')->exists($this->window_file)){
+            return false;
+        }
+
+        $until = (int) trim(Storage::disk('local')->get($this->window_file));
+
+        if(time() >= $until){
+            Storage::disk('local')->delete($this->window_file);
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -509,7 +564,20 @@ class AttackCheck extends Command
     {
         $url = "https://api.cloudflare.com/client/v4/zones/" . env('CF_ZONE_ID') . "/rulesets/" . env('CF_RULESET_ID') . "/rules/" . env('CF_RULE_ID');
 
-        return $this->cloudflare('PATCH', $url, json_encode($rule));
+        $response = $this->cloudflare('PATCH', $url, json_encode($rule));
+
+        // Nobody used to look at the answer. That was tolerable while the filter
+        // was switched twice a week; now that it cycles every half hour, a call
+        // failing quietly would leave the board wide open with nothing to show
+        // for it. This is reported even when $notify_switches is off.
+        $result = json_decode($response, true);
+
+        if(!isset($result['success']) || !$result['success']){
+            $this->notify(date("Y-m-d H:i:s") . " - ERROR - Cloudflare refused the rule update: "
+                . substr(trim((string) $response), 0, 300), 14177041);
+        }
+
+        return $response;
     }
 
     protected function notify($title, $color)
