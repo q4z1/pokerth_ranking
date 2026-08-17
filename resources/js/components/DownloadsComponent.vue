@@ -65,17 +65,20 @@
                             <a href="https://sourceforge.net/projects/pokerth/files/pokerth/" target="_blank">
                                 <img alt="Download PokerTH"
                                     src="https://a.fsdn.com/con/app/sf-download-button"
-                                    style="height:52px;width:auto;display:block;" />
+                                    width="299" height="52"
+                                    style="height:52px;width:299px;display:block;" />
                             </a>
 
                             <a href="https://flathub.org/apps/net.pokerth.PokerTH" target="_blank">
-                                <img style="height:52px;width:auto;display:block;"
+                                <img style="height:52px;width:156px;display:block;"
+                                    width="156" height="52"
                                     alt="Get it on Flathub"
                                     src="https://flathub.org/api/badge?locale=en"/>
                             </a>
 
                             <a href="https://snapcraft.io/pokerth" target="_blank">
-                                <img style="height:52px;width:auto;display:block;"
+                                <img style="height:52px;width:169px;display:block;"
+                                    width="169" height="52"
                                     alt="Get it from the Snap Store"
                                     src="https://snapcraft.io/en/dark/install.svg" />
                             </a>
