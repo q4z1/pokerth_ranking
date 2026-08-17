@@ -85,7 +85,14 @@ class PlayerController extends Controller
   {
     $season = str_replace("-", "_", $season);
     $seasonsDb = config('database.connections.seasons.database');
-    Cache::flush();
+    // Kein Cache::flush() mehr: die Tabellen in pokerth_seasons werden beim
+    // Season-Wechsel einmal befüllt und danach nicht mehr angefasst – neue
+    // Spiele laufen in pokerth_ranking und tauchen hier nie auf. Der Flush
+    // hat also nichts invalidiert, aber bei jedem Abruf den kompletten
+    // Datei-Cache gelöscht; parallele Requests sind dabei über das
+    // verschwindende Verzeichnis gestolpert und mit 500 abgebrochen.
+    // Was tatsächlich veraltet, ist die Season-Liste – die räumt jetzt
+    // SeasonSwitch ab.
     try {
       $player->ranking = Cache::rememberForever("{$player->player_id}_{$season}_ranking", function () use ($season, $player, $seasonsDb) {
         return DB::table("{$seasonsDb}.{$season}_player_ranking")

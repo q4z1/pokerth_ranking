@@ -18,7 +18,7 @@ class SeasonSwitch {
         $this->create_tables();
         $this->copy_tables();
         $this->cleanup();
-        Cache::forget('seasons');
+        $this->forget_season_lists();
         echo date("Y-m-d H:i:s") . " : Ending Season {$this->season}.\n";
         return;
     }
@@ -32,9 +32,27 @@ class SeasonSwitch {
         $this->create_tables();
         $this->copy_tables();
         $this->cleanup();
-        Cache::forget('seasons');
+        $this->forget_season_lists();
         echo date("Y-m-d H:i:s") . " : Ending Season {$this->season}.\n";
         return;
+    }
+
+    /**
+     * Die zwischengespeicherten Season-Listen verwerfen.
+     *
+     * Sie entstehen aus den Tabellennamen in pokerth_seasons und sind das
+     * Einzige im Cache, das ein Season-Wechsel veraltet – die Season-Daten
+     * selbst ändern sich nach dem Wechsel nicht mehr.
+     *
+     * Vorher stand hier Cache::forget('seasons'). Diesen Schlüssel schreibt
+     * niemand; die Listen liegen unter 'player_seasons_<db>' (PlayerController
+     * Konstruktor) und 'gseasons_<db>' (getLeaderboard). Aufgeräumt wurden sie
+     * bislang nur als Nebenwirkung des Cache::flush() im Lesepfad.
+     */
+    private function forget_season_lists(){
+        $seasonsDb = config('database.connections.seasons.database');
+        Cache::forget('player_seasons_' . $seasonsDb);
+        Cache::forget('gseasons_' . $seasonsDb);
     }
 
     private function create_tables(){
