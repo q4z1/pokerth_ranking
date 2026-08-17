@@ -27,16 +27,22 @@ if (!isInternals) {
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 }
 
-import { createApp } from 'vue'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
-import 'element-plus/theme-chalk/dark/css-vars.css'
-
+import { createApp, defineAsyncComponent } from 'vue'
 import axios from 'axios'
 window.axios = axios
 
-// Alle Vue-Komponenten per glob importieren
-const componentModules = import.meta.glob('./components/*.vue', { eager: true })
+// Komponenten NICHT eager laden.
+//
+// Mit { eager: true } landeten alle 26 Komponenten samt Element Plus in
+// pth.js – 1,19 MB, ausgeliefert auf jeder Seite, auch dort, wo gar keine
+// Komponente vorkommt. Das Parsen blockierte den Main-Thread so lange, dass
+// forum_fn.js erst nach 14 s die Navbar zusammenklappen konnte.
+//
+// Ohne eager liefert der glob Loader-Funktionen; Vite legt jede Komponente in
+// einen eigenen Chunk und der Browser holt nur die, deren Tag auch wirklich
+// im Dokument steht. Element Plus hängt an denselben Chunks und kommt damit
+// ebenfalls nur, wenn eine Komponente montiert wird.
+const componentModules = import.meta.glob('./components/*.vue')
 
 // Hilfsfunktion: PascalCase → kebab-case
 function toKebab(str) {
@@ -56,19 +62,27 @@ function toKebab(str) {
  *   <adverts-component position="home"></adverts-component>
  * </div>
  */
-function mountComponentOn(childEl) {
+async function mountComponentOn(childEl) {
     const tag = childEl.tagName.toLowerCase()
 
-    // Passende Komponente suchen
-    let rootComponent = null
+    // Passenden Loader suchen – noch ohne zu laden.
+    let loader = null
     for (const path in componentModules) {
         const fileName = path.split('/').pop().replace(/\.vue$/, '')
         if (toKebab(fileName) === tag) {
-            rootComponent = componentModules[path].default
+            loader = componentModules[path]
             break
         }
     }
-    if (!rootComponent) return // kein Vue-Komponenten-Tag → unberührt lassen
+    if (!loader) return // kein Vue-Komponenten-Tag → unberührt lassen
+
+    // Erst jetzt Komponente und Element Plus holen.
+    const [componentModule, elementPlusModule] = await Promise.all([
+        loader(),
+        import('./element-plus-bundle.js'),
+    ])
+    const rootComponent = componentModule.default
+    const ElementPlus = elementPlusModule.default
 
     // Attribute als Props übergeben
     const props = {}
@@ -85,11 +99,15 @@ function mountComponentOn(childEl) {
     app.config.errorHandler = (err, instance, info) => {
         console.error(`[pth.js] Vue error on <${tag}> (${info}):`, err)
     }
-    // Alle Komponenten global registrieren (für verschachtelte Verwendung)
+    // Alle Komponenten global registrieren (für verschachtelte Verwendung).
+    // defineAsyncComponent hält die Registrierung, ohne die Datei zu laden –
+    // geholt wird eine verschachtelte Komponente erst, wenn sie im Template
+    // tatsächlich gerendert wird.
     for (const path in componentModules) {
         const fileName = path.split('/').pop().replace(/\.vue$/, '')
-        app.component(fileName, componentModules[path].default)
-        app.component(toKebab(fileName), componentModules[path].default)
+        const asyncComponent = defineAsyncComponent(componentModules[path])
+        app.component(fileName, asyncComponent)
+        app.component(toKebab(fileName), asyncComponent)
     }
     app.mount(childEl)
     console.log(`[pth.js] mounted <${tag}>`)
