@@ -65,4 +65,19 @@ Route::get('/downloads/all', [App\Http\Controllers\DownloadsController::class, '
 Route::get('/downloads/tracker', [App\Http\Controllers\DownloadsController::class, 'tracker']);
 Route::get('/styles', [App\Http\Controllers\DownloadsController::class, 'styles']);
 
-Route::get('/teaser/weekly', [App\Http\Controllers\TeaserController::class, 'weekly']);
+// Das Header-Bild ist auf jeder Seite das LCP-Element und für alle Besucher
+// dasselbe. Im web-Stack hängt daran eine Session: die Antwort trug XSRF-TOKEN
+// und laravel_session als Set-Cookie, rund ein Kilobyte Header pro Abruf, und
+// war damit für gemeinsame Caches und Proxies unbrauchbar. Nichts davon wird
+// hier gebraucht – die Route liest nur eine Datei.
+// ValidateCsrfToken ist der Name ab Laravel 11, VerifyCsrfToken die alte
+// Ableitung davon; ein nicht zutreffender Eintrag wird schlicht ignoriert.
+Route::get('/teaser/weekly', [App\Http\Controllers\TeaserController::class, 'weekly'])
+    ->withoutMiddleware([
+        \Illuminate\Cookie\Middleware\EncryptCookies::class,
+        \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+        \Illuminate\Session\Middleware\StartSession::class,
+        \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+        \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+        \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+    ]);

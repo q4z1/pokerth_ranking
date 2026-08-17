@@ -3,33 +3,50 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 class TeaserController extends Controller
 {
+    /**
+     * Das Motiv des Tages – für alle Besucher dasselbe.
+     *
+     * Vorher lag eine gemischte Dateiliste im Cache und der Index kam aus der
+     * Kalenderwoche. Zwei Fehler steckten darin:
+     *
+     * 1. Die TTL entstand aus $nextWeekStart->diffInSeconds($now). Carbon 3
+     *    liefert vorzeichenbehaftete Differenzen, das Ergebnis war negativ
+     *    (rund -550000). Laravel wertet eine TTL <= 0 als bereits abgelaufen
+     *    und legt den Eintrag gar nicht erst ab – die Liste wurde also bei
+     *    jedem Aufruf neu gemischt und das Bild wechselte bei jedem Reload.
+     * 2. Selbst mit funktionierendem Cache hätte der Wochenindex nur einmal
+     *    pro Woche gewechselt, nicht täglich.
+     *
+     * Jetzt ohne Cache: die Reihenfolge ergibt sich aus dem Dateinamen-Hash
+     * (stabil, sieht aber nicht alphabetisch aus), der Index aus der Anzahl
+     * Tage seit Epoche. Damit sehen alle Besucher dasselbe Motiv, es wechselt
+     * um Mitternacht Ortszeit, und kein Cache-Zustand kann daran rütteln.
+     */
     public function weekly(Request $request)
     {
         $now = Carbon::now();
-        $weekKey = $now->format('oW');
         $files = Storage::disk('public')->files('teaser');
 
-        $nextWeekStart = $now->copy()->startOfWeek(Carbon::MONDAY)->addWeek();
-        $seconds = $nextWeekStart->diffInSeconds($now);
-
-        $cacheKey = "random_weekly_teaser_{$weekKey}";
-        $random_list = Cache::remember($cacheKey, $seconds, function () use ($files) {
-            $list = $files;
-            shuffle($list);
-            return $list;
-        });
-
-        $index = intval($now->format('W')) % max(1, count($random_list));
-        $file = $random_list[$index] ?? ($files[0] ?? null);
-        if (! $file) {
+        if (! $files) {
             abort(404);
         }
+
+        // Feste, für alle gleiche Reihenfolge – unabhängig davon, in welcher
+        // Sortierung das Dateisystem die Namen liefert.
+        usort($files, fn ($a, $b) => strcmp(md5($a), md5($b)));
+
+        // startOfDay() rechnet in der App-Zeitzone, der Wechsel liegt also auf
+        // lokaler Mitternacht und nicht auf UTC.
+        $day = intdiv($now->copy()->startOfDay()->getTimestamp(), 86400);
+        $file = $files[$day % count($files)];
+
+        // Bis Mitternacht cachen. Bewusst ohne diffInSeconds, siehe oben.
+        $seconds = $now->copy()->endOfDay()->getTimestamp() - $now->getTimestamp();
 
         $path = storage_path('app/public/' . $file);
 
