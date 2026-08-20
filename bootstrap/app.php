@@ -30,6 +30,21 @@ return Application::configure(basePath: dirname(__DIR__))
         // 2x täglich, versetzt zur vollen Stunde – öfter bringt nichts, die
         // Suchmaschinen holen die Sitemap ohnehin nur etwa einmal am Tag ab.
         $schedule->command('sitemap:generate')->cron('20 4,16 * * *');
+
+        // Die Schwesterseiten bringen ihren eigenen Generator mit, jede kennt
+        // nur ihre eigenen Routen und Modelle. Angestossen werden sie hier,
+        // weil der Cron ausschliesslich diesen Scheduler aufruft. Zeitlich
+        // versetzt, damit nicht vier Läufe gleichzeitig auf der DB liegen.
+        foreach ([
+            'monthlycup' => '25 4,16 * * *',
+            'bbc'        => '30 4,16 * * *',
+            'wec'        => '35 4,16 * * *',
+        ] as $app => $cron) {
+            $schedule->exec("cd /var/www/{$app} && php artisan sitemap:generate")
+                ->cron($cron)
+                ->withoutOverlapping()
+                ->onFailure(fn () => logger()->error("sitemap:generate failed for {$app}"));
+        }
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
