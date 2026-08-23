@@ -29,6 +29,12 @@ class Kernel extends ConsoleKernel
         $schedule->call(new SeasonSwitch)->cron('0 0 01 */3 *'); // M H d m Y
         $schedule->command('attack:check')->cron('*/5 * * * *');
 
+        // Stuendlich statt taeglich: die Platte stand am 23.08.2026 bei 95%,
+        // und pokerth_access.log waechst unter Angriff um mehrere hundert MB
+        // am Tag. Rotiert wird ohnehin nur, was ueber der Groessenschwelle
+        // liegt - laeuft der Aufruf leer, kostet er nichts.
+        $schedule->command('logs:rotate-nginx')->hourly()->withoutOverlapping();
+
     }
 
     /**
