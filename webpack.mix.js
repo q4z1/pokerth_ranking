@@ -17,5 +17,4 @@ mix.vue()
     .copy('resources/js/jquery.gorilla-dropdown.min.js', 'public/js/dd.js')
     .js('resources/js/app.js', 'public/js/pth.js')
     .copy('resources/css/jquery.gorilla-dropdown.min.css', 'public/css/dd.css')
-    .js('resources/js/injections.js', 'public/js')
     .version(); // Automatisches Cache-Busting durch Datei-Hashing

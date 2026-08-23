@@ -28,7 +28,6 @@ export default defineConfig({
             input: {
                 pth: 'resources/js/app.js',
                 spectool: 'resources/js/spectool.js',
-                injections: 'resources/js/injections.js',
             },
             output: {
                 // Stable entry filenames so phpbb can hardcode them
