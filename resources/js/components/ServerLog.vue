@@ -140,6 +140,28 @@
                 <p v-if="gapNote" class="serverlog-panel__note">{{ gapNote }}</p>
             </div>
 
+            <div class="serverlog-panel">
+                <div class="serverlog-panel__head">
+                    <h4>Client versions</h4>
+                </div>
+                <div class="serverlog-retention">
+                    <div v-for="row in clientTypeRows" :key="row.label" class="serverlog-retention__row">
+                        <span class="serverlog-retention__label">{{ row.label }}</span>
+                        <el-progress
+                            class="serverlog-retention__bar"
+                            :percentage="row.pct"
+                            :stroke-width="14"
+                            :show-text="false"
+                            :color="progressColor"
+                        />
+                        <span class="serverlog-retention__value">{{ row.pct }}% ({{ row.sessions }} sessions)</span>
+                    </div>
+                </div>
+                <p v-if="hasUnknownClientType" class="serverlog-panel__note">
+                    "Unknown" is older sessions imported from server_messages.log, which doesn't record the build id.
+                </p>
+            </div>
+
             <div class="serverlog-summary">
                 <h4>Bottom line</h4>
                 <p>{{ bottomLine.intake }}</p>
@@ -304,6 +326,19 @@ export default {
         },
         seenPct() {
             return this.data.new_total ? Math.round((100 * this.data.new_seen) / this.data.new_total) : 0
+        },
+        clientTypeRows() {
+            const rows = this.data.client_types || []
+            const totalSessions = rows.reduce((sum, r) => sum + r.sessions, 0)
+            const labels = { 1: 'Qt Widget', 2: 'QML' }
+            return rows.map((r) => ({
+                label: r.type === null ? 'Unknown' : (labels[r.type] || `Type ${r.type}`),
+                sessions: r.sessions,
+                pct: totalSessions ? Math.round((100 * r.sessions) / totalSessions) : 0,
+            }))
+        },
+        hasUnknownClientType() {
+            return (this.data.client_types || []).some((r) => r.type === null)
         },
         oneDayPct() {
             return Math.round(100 * this.data.histogram.one_day_share)

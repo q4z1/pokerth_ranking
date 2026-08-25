@@ -116,7 +116,31 @@ class ServerLogAnalyzer
             'established' => $established,
             'hourly' => $hourly,
             'longest_gap' => $gap,
+            'client_types' => $this->clientTypeBreakdown($start, $end),
         ];
+    }
+
+    /**
+     * Sessions/Spieler je client_type im Fenster. NULL steht für Sessions
+     * ohne client_build_id - z. B. Backfill aus server_messages.log, das die
+     * Build-ID nicht mitschreibt. Der Webclient identifiziert sich derzeit
+     * absichtlich als Qt-Widget (client_type 1), ist also darin nicht
+     * gesondert auszählbar - siehe Absprache mit narmod.
+     */
+    private function clientTypeBreakdown(Carbon $start, Carbon $end): array
+    {
+        $rows = DB::table('server_session')
+            ->selectRaw('client_type, COUNT(*) as sessions, COUNT(DISTINCT player_id) as players')
+            ->whereBetween('connected_at', [$start, $end])
+            ->groupBy('client_type')
+            ->orderByDesc('sessions')
+            ->get();
+
+        return $rows->map(fn ($r) => [
+            'type' => $r->client_type === null ? null : (int) $r->client_type,
+            'sessions' => (int) $r->sessions,
+            'players' => (int) $r->players,
+        ])->all();
     }
 
     /**
