@@ -21,6 +21,7 @@
                 </el-sub-menu>
                 <el-menu-item index="banlist">Banlist</el-menu-item>
                 <el-menu-item index="adverts">Adverts</el-menu-item>
+                <el-menu-item index="serverlog">Server Log</el-menu-item>
             </el-menu>
             <div v-else class="internals-nav internals-nav--empty"></div>
 
@@ -87,6 +88,7 @@
                 />
                 <ban-list v-else-if="view === 'banlist'" :key="'banlist-' + revision" @changed="revision++" />
                 <adverts v-else-if="view === 'adverts'" />
+                <server-log v-else-if="view === 'serverlog'" />
             </template>
         </main>
     </div>
@@ -98,12 +100,13 @@ import Adverts from './Adverts.vue'
 import BanList from './BanList.vue'
 import OffendersTable from './OffendersTable.vue'
 import ReportsTable from './ReportsTable.vue'
+import ServerLog from './ServerLog.vue'
 import { apiGet, apiPost, notice, reportError } from '../admin/adminUtils.js'
 import { applyTheme, preferredTheme } from '../admin/theme.js'
 
 export default {
     name: 'InternalsComponent',
-    components: { Adverts, BanList, OffendersTable, ReportsTable },
+    components: { Adverts, BanList, OffendersTable, ReportsTable, ServerLog },
     props: ['authenticated'],
     data() {
         return {

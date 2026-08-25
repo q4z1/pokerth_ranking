@@ -14,6 +14,7 @@ use App\Models\ReportedAvatar;
 use App\Models\ReportedGamename;
 use App\Models\User;
 use App\Services\AvatarBlacklistService;
+use App\Services\ServerLogAnalyzer;
 
 class AdminController extends Controller
 {
@@ -52,7 +53,11 @@ class AdminController extends Controller
 
   public function __construct()
   {
-    $this->middleware('auth', ['except' => ['login']]);
+    // serverLog() ist bewusst öffentlich: ServerLogAnalyzer liefert nur
+    // Aggregate (Tageszahlen, Prozentwerte), nie rohe IPs, Nicks oder
+    // Player-IDs - keine privaten Daten, also kein Login nötig. So kann z. B.
+    // der Adminbereich des Webclients die Zahlen direkt abrufen.
+    $this->middleware('auth', ['except' => ['login', 'serverLog']]);
   }
 
   public function login(Request $request)
@@ -284,6 +289,17 @@ class AdminController extends Controller
     }
 
     return ['success' => false, 'msg' => 'Unknown action.'];
+  }
+
+  /**
+   * Lobby-Aktivität aus server_run / server_session, siehe ServerLogAnalyzer.
+   * Öffentlich erreichbar, siehe Kommentar im Konstruktor.
+   */
+  public function serverLog(Request $request)
+  {
+    $days = (int) $request->query('days', 30);
+    $days = max(8, min(90, $days));
+    return app(ServerLogAnalyzer::class)->analyze($days);
   }
 
   public function banlist(Request $request, Player $player)

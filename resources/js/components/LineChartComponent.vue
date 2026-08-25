@@ -1,5 +1,5 @@
 <template>
-  <Line :data="chartData" :options="mergedOptions" />
+  <Line :data="chartData" :options="mergedOptions" :plugins="plugins" />
 </template>
 
 <script>
@@ -16,6 +16,7 @@ export default {
     props: {
         chartData: { type: Object, required: true },
         options:   { type: Object, default: () => ({}) },
+        plugins:   { type: Array, default: () => [] },
     },
     computed: {
         mergedOptions() {

@@ -1,5 +1,5 @@
 <template>
-  <Bar :data="chartData" :options="mergedOptions" />
+  <Bar :data="chartData" :options="mergedOptions" :plugins="plugins" />
 </template>
 
 <script>
@@ -30,6 +30,10 @@ export default {
     props: {
         chartData: { type: Object, required: true },
         options:   { type: Object, default: () => ({}) },
+        // Instanzgebundene Chart.js-Plugins (z. B. ein Band oder Werte-Labels
+        // nur für einen bestimmten Chart) - bewusst nicht global registriert,
+        // um andere Seiten nicht zu beeinflussen.
+        plugins:   { type: Array, default: () => [] },
     },
     computed: {
         mergedOptions() {
