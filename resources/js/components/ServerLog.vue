@@ -1,6 +1,6 @@
 <template>
     <admin-panel
-        title="Server Log"
+        title="Game-Server Log"
         :subtitle="subtitle"
         :loading="loading"
         @refresh="load"

@@ -36,6 +36,32 @@ export const nightBandPlugin = {
     },
 }
 
+/**
+ * Wie nightBandPlugin, aber für mehrere Bereiche zugleich - der Webserver-Log
+ * markiert damit jedes Zeitfenster, in dem der Cloudflare-Filter aktiv war.
+ * opts.bands: Array aus {from, to, color?} (Tick-Indizes, wie bei
+ * nightBandPlugin). Ein band-eigenes color überschreibt opts.color - genutzt,
+ * um bestätigte Filter-Laufzeiten (rot) von nur gemessenen, nicht
+ * bestätigten Schwellwert-Überschreitungen (gedeckter) zu unterscheiden.
+ */
+export const attackBandsPlugin = {
+    id: 'attackBands',
+    beforeDatasetsDraw(chart, args, opts) {
+        if (!opts || !opts.bands || !opts.bands.length) return
+        const { ctx, chartArea, scales } = chart
+        const xScale = scales.x
+        const slot = slotWidth(xScale)
+        ctx.save()
+        opts.bands.forEach((band) => {
+            ctx.fillStyle = band.color || opts.color || 'rgba(226, 84, 104, 0.16)'
+            const xFrom = xScale.getPixelForTick(band.from) - slot / 2
+            const xTo = xScale.getPixelForTick(band.to) + slot / 2
+            ctx.fillRect(xFrom, chartArea.top, xTo - xFrom, chartArea.bottom - chartArea.top)
+        })
+        ctx.restore()
+    },
+}
+
 /** Dashed Linie mit Label über den Balken eines Wochenblocks, z. B. der Wochenschnitt. */
 export const weekMeansPlugin = {
     id: 'weekMeans',

@@ -15,6 +15,7 @@ use App\Models\ReportedGamename;
 use App\Models\User;
 use App\Services\AvatarBlacklistService;
 use App\Services\ServerLogAnalyzer;
+use App\Services\WebServerLogAnalyzer;
 
 class AdminController extends Controller
 {
@@ -53,11 +54,12 @@ class AdminController extends Controller
 
   public function __construct()
   {
-    // serverLog() ist bewusst öffentlich: ServerLogAnalyzer liefert nur
-    // Aggregate (Tageszahlen, Prozentwerte), nie rohe IPs, Nicks oder
-    // Player-IDs - keine privaten Daten, also kein Login nötig. So kann z. B.
-    // der Adminbereich des Webclients die Zahlen direkt abrufen.
-    $this->middleware('auth', ['except' => ['login', 'serverLog']]);
+    // serverLog()/webServerLog() sind bewusst öffentlich: beide Analyzer
+    // liefern nur Aggregate (Tageszahlen, Prozentwerte, Trefferzahlen je
+    // Vhost), nie rohe IPs, Nicks oder Player-IDs - keine privaten Daten,
+    // also kein Login nötig. So kann z. B. der Adminbereich des Webclients
+    // die Zahlen direkt abrufen.
+    $this->middleware('auth', ['except' => ['login', 'serverLog', 'webServerLog']]);
   }
 
   public function login(Request $request)
@@ -300,6 +302,18 @@ class AdminController extends Controller
     $days = (int) $request->query('days', 30);
     $days = max(8, min(90, $days));
     return app(ServerLogAnalyzer::class)->analyze($days);
+  }
+
+  /**
+   * Webserver-Traffic und Cloudflare-Filterhistorie aus AttackCheck's
+   * Logdateien, siehe WebServerLogAnalyzer. Öffentlich erreichbar, siehe
+   * Kommentar im Konstruktor.
+   */
+  public function webServerLog(Request $request)
+  {
+    $hours = (int) $request->query('hours', 24);
+    $hours = max(1, min(168, $hours));
+    return app(WebServerLogAnalyzer::class)->analyze($hours);
   }
 
   public function banlist(Request $request, Player $player)

@@ -32,6 +32,16 @@ class AttackCheck extends Command
     protected $log_file = 'visitor_log.txt';
     protected $graph_file = "visitors.png";
 
+    // Filter enable/disable history with the reason, for the webserver log
+    // dashboard. Kept separate from $log_file, which is just the raw 5 min
+    // hit counts read by updateGraph() - mixing event rows into that would
+    // break its awk parsing. Pre-created with open permissions on purpose:
+    // this file is written by both the root cron and hand runs, and unlike
+    // $enabled_since_file below there is no cheap delete-and-recreate for an
+    // append-only log, so it needs to already be writable by both from the
+    // start.
+    protected $events_file = 'attack_events.log';
+
     // Remembers when the filter was switched on. The rule's own last_updated is
     // not usable for this any more: the crawler allowlist sync below patches the
     // rule whenever Google rotates its ranges, which would keep resetting it.
@@ -103,8 +113,6 @@ class AttackCheck extends Command
         'monthlycup' => '/var/log/nginx/monthlycup_access.log',
         'wec'        => '/var/log/nginx/wec_access.log',
         'test'       => '/var/log/nginx/pokerth_test_access.log',
-        'ustats'     => '/var/log/nginx/ustats_access.log',
-        'bugform'    => '/var/log/nginx/ustats_bugform_access.log',
     ];
 
     // Only the tail of a log is needed for a 5 minute window. Reading the files in
@@ -194,7 +202,11 @@ class AttackCheck extends Command
 
         Storage::disk('local')->put($this->last_state_file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
 
-        Storage::append($this->log_file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
+        // Fields 4 and 5 (unique IPs, per-vhost hits as JSON) were added later
+        // for the webserver log dashboard; older rows simply lack them, which
+        // WebServerLogAnalyzer accounts for.
+        Storage::append($this->log_file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff
+            . "|" . $uniqueTotal . "|" . json_encode($hits));
 
         // Same before/after comparison as the hit total above, kept in its own
         // file since it is not part of the visitor graph/log.
@@ -212,6 +224,8 @@ class AttackCheck extends Command
 
             $this->patchRule($rule_disable);
             Storage::disk('local')->delete($this->enabled_since_file);
+
+            $this->logEvent('disable', 'auto', 'active for ' . ($this->enabled_limit / 60) . ' min');
 
             // Hold the door open for $window_limit, otherwise the next run closes
             // it again straight away and the crawler gets nothing out of it.
@@ -231,15 +245,7 @@ class AttackCheck extends Command
 
         // A sudden spike, or a rate that simply stays too high. The second one is
         // what catches an attack that ramps up slowly enough to hide in the noise.
-        $reason = null;
-
-        if($diff > $this->limit){
-            $reason = "last 5 min Hits diff: $diff";
-        } elseif($total > $this->level_limit && $lastTotal > $this->level_limit){
-            $reason = "last 5 min Hits: $total (previous: $lastTotal, limit: " . $this->level_limit . ")";
-        } elseif($uniqueTotal > $this->unique_ip_limit && $lastUniqueTotal > $this->unique_ip_limit){
-            $reason = "last 5 min unique IPs: $uniqueTotal (previous: $lastUniqueTotal, limit: " . $this->unique_ip_limit . ")";
-        }
+        [$reason, $reasonType] = $this->detectReason($total, $diff, $lastTotal, $uniqueTotal, $lastUniqueTotal);
 
         // The traffic jumping right back is the whole point of an open window, so
         // it must not count as an attack while the window lasts.
@@ -259,6 +265,8 @@ class AttackCheck extends Command
             if(!$is_enabled){
                 Storage::disk('local')->put($this->enabled_since_file, time());
 
+                $this->logEvent('enable', 'auto', $reason, $reasonType, $total, $uniqueTotal, $hits);
+
                 if($this->notify_switches){
                     $this->notify(date("Y-m-d H:i:s") . " - Critical - $reason ... Filter activated!", 14177041);
                 }
@@ -266,6 +274,28 @@ class AttackCheck extends Command
         }
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * The trigger check itself, pulled out of handle() so WebServerLogAnalyzer
+     * can replay it over historical visitor_log.txt rows - attack_events.log
+     * only exists from the point it was introduced onward, this lets the
+     * dashboard reconstruct hit-spike/sustained-rate episodes that predate it
+     * (unique-IP bursts can't be reconstructed this way: unique_ips.txt only
+     * ever held the latest sample, never a history, before the same change).
+     * Returns [reason, reasonType] or [null, null].
+     */
+    public function detectReason($total, $diff, $lastTotal, $uniqueTotal, $lastUniqueTotal)
+    {
+        if($diff > $this->limit){
+            return ["last 5 min Hits diff: $diff", 'hit_spike'];
+        } elseif($total > $this->level_limit && $lastTotal > $this->level_limit){
+            return ["last 5 min Hits: $total (previous: $lastTotal, limit: " . $this->level_limit . ")", 'sustained_rate'];
+        } elseif($uniqueTotal > $this->unique_ip_limit && $lastUniqueTotal > $this->unique_ip_limit){
+            return ["last 5 min unique IPs: $uniqueTotal (previous: $lastUniqueTotal, limit: " . $this->unique_ip_limit . ")", 'unique_ip_burst'];
+        }
+
+        return [null, null];
     }
 
     /**
@@ -315,6 +345,8 @@ class AttackCheck extends Command
         if($enable){
             Storage::disk('local')->put($this->enabled_since_file, time());
         }
+
+        $this->logEvent($enable ? 'enable' : 'disable', 'manual');
 
         $this->info('Filter ' . ($enable ? 'enabled' : 'disabled') . '.');
 
@@ -622,6 +654,28 @@ class AttackCheck extends Command
         }
 
         return $response;
+    }
+
+    /**
+     * Appends one filter switch to $events_file for the webserver log
+     * dashboard (WebServerLogAnalyzer). One line per switch, not per run, so
+     * the file stays small; duration between an enable/disable pair is
+     * derived when it is read, not stored here.
+     */
+    protected function logEvent($action, $trigger, $reason = null, $reasonType = null, $total = null, $uniqueTotal = null, $hits = null)
+    {
+        $entry = [
+            'ts' => date('Y-m-d H:i:s'),
+            'action' => $action, // 'enable' | 'disable'
+            'trigger' => $trigger, // 'auto' | 'manual'
+            'reason' => $reason,
+            'reason_type' => $reasonType, // 'hit_spike' | 'sustained_rate' | 'unique_ip_burst'
+            'total' => $total,
+            'unique_ips' => $uniqueTotal,
+            'hits' => $hits,
+        ];
+
+        Storage::append($this->events_file, json_encode($entry));
     }
 
     protected function notify($title, $color)
