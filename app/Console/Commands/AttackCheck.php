@@ -77,6 +77,21 @@ class AttackCheck extends Command
     // that peak of 1303 was one sample on its own, the rest of the week stayed below.
     protected $level_limit = 1200;
 
+    // Distinct source IPs in the same 5 minute window, kept in its own state file
+    // ($unique_ip_state_file) alongside the hit-count check above. A residential
+    // proxy botnet fans out over far more distinct IPs than real traffic ever
+    // does, so this catches that shape even when the raw hit count alone is
+    // ambiguous. Over the ~2.5 days of log kept on disk the busiest 5 minute
+    // window (pokerth only) saw 604 distinct IPs, an isolated sample with
+    // neighbours of 316 and 177 -- the same kind of one-off the two-consecutive-
+    // samples rule above already tolerates. The botnet burst on 2026-08-26 hit
+    // 2002 and then 1274 distinct IPs in two consecutive samples, over 3x that
+    // peak, so 700 with the same two-in-a-row rule stays clear of normal traffic
+    // while catching an attack shaped like that one a full cycle earlier than
+    // the hit count alone did (00:30 vs. 00:35).
+    protected $unique_ip_limit = 700;
+    protected $unique_ip_state_file = 'unique_ips.txt';
+
     // Every vhost the Cloudflare rule applies to, so an attack on a side domain is
     // seen as well. webclient.pokerth.net is deliberately absent, the rule excludes
     // that host, so counting its traffic could only trigger a filter that does not
@@ -163,8 +178,9 @@ class AttackCheck extends Command
         date_default_timezone_set('UTC');
         $last5min = date("c", strtotime("-5 minutes"));
 
-        $hits = $this->countHits($last5min);
+        [$hits, $uniqueIps] = $this->countHits($last5min);
         $total = array_sum($hits);
+        $uniqueTotal = array_sum($uniqueIps);
 
         $diff = 0;
 
@@ -179,6 +195,15 @@ class AttackCheck extends Command
         Storage::disk('local')->put($this->last_state_file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
 
         Storage::append($this->log_file, date("Y-m-d H:i:s") . "|" . $total . "|" . $diff);
+
+        // Same before/after comparison as the hit total above, kept in its own
+        // file since it is not part of the visitor graph/log.
+        if (!Storage::disk('local')->exists($this->unique_ip_state_file)){
+            Storage::disk('local')->put($this->unique_ip_state_file, $uniqueTotal);
+        }
+
+        $lastUniqueTotal = (int) trim(Storage::disk('local')->get($this->unique_ip_state_file));
+        Storage::disk('local')->put($this->unique_ip_state_file, $uniqueTotal);
 
         $this->updateGraph();
 
@@ -212,6 +237,8 @@ class AttackCheck extends Command
             $reason = "last 5 min Hits diff: $diff";
         } elseif($total > $this->level_limit && $lastTotal > $this->level_limit){
             $reason = "last 5 min Hits: $total (previous: $lastTotal, limit: " . $this->level_limit . ")";
+        } elseif($uniqueTotal > $this->unique_ip_limit && $lastUniqueTotal > $this->unique_ip_limit){
+            $reason = "last 5 min unique IPs: $uniqueTotal (previous: $lastUniqueTotal, limit: " . $this->unique_ip_limit . ")";
         }
 
         // The traffic jumping right back is the whole point of an open window, so
@@ -298,12 +325,15 @@ class AttackCheck extends Command
     }
 
     /**
-     * Hits since $since per vhost. All logs share nginx's "main" format, so the
-     * timestamp is field 4 everywhere and compares correctly as an ISO 8601 string.
+     * Hits and distinct source IPs since $since per vhost, in one pass over each
+     * log so a 5 minute window is not read from disk twice. All logs share
+     * nginx's "main" format, so the timestamp is field 4 everywhere and compares
+     * correctly as an ISO 8601 string.
      */
     protected function countHits($since)
     {
         $hits = [];
+        $uniqueIps = [];
 
         foreach($this->access_logs as $name => $path){
             if(!is_readable($path)){
@@ -312,12 +342,16 @@ class AttackCheck extends Command
 
             // tail -n +2 drops the first line, which tail -c is free to cut in half.
             $command = "tail -c " . $this->access_log_tail . " " . escapeshellarg($path)
-                . " | tail -n +2 | awk '$4 > \"[$since]\"' | wc -l";
+                . " | tail -n +2 | awk '$4 > \"[$since]\" { total++; if (!seen[$1]++) uniq++ } "
+                . "END { print (total+0) \"|\" (uniq+0) }'";
 
-            $hits[$name] = (int) trim(shell_exec($command));
+            [$total, $unique] = explode("|", trim(shell_exec($command)));
+
+            $hits[$name] = (int) $total;
+            $uniqueIps[$name] = (int) $unique;
         }
 
-        return $hits;
+        return [$hits, $uniqueIps];
     }
 
     /**
