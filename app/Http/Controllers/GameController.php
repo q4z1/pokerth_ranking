@@ -19,7 +19,13 @@ class GameController extends Controller
 
         $game = Game::where('idgame', $g)->with('players.player.ranking')->get()->map(function($g){
             foreach($g->players as $i => $p){
-                $g->players[$i]->player->rank = PlayerRanking::where('final_score', '>=', $p->player->ranking->final_score)->orderBy('final_score', 'DESC')->count();
+                if($p->player === null) continue;
+                // ranking ist null, solange der Spieler keine Zeile in player_ranking
+                // hat (Gast, frischer/gelöschter/gebannter Account) - dann kein Rang.
+                $ranking = $p->player->ranking;
+                $g->players[$i]->player->rank = $ranking
+                    ? PlayerRanking::where('final_score', '>=', $ranking->final_score)->count()
+                    : null;
             }
             return $g;
         });
