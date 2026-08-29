@@ -49,9 +49,18 @@ export function reportError(err, fallback = 'Request failed.') {
     notice(msg ? `${fallback} (${msg})` : fallback, 'error')
 }
 
-export async function apiGet(path, params = {}) {
-    const res = await window.axios.get(API_BASE + path, { params })
-    return res.data
+export async function apiGet(path, params = {}, _retried = false) {
+    try {
+        const res = await window.axios.get(API_BASE + path, { params, timeout: 20000 })
+        return res.data
+    } catch (err) {
+        // Kein err.response = Transportfehler (tote keep-alive-Verbindung, abgerissener
+        // HTTP/2-Stream o. ä.), kein Serverfehler. Einmal frisch nachfassen - das öffnet
+        // einen neuen Stream und deckt "beim zweiten Klick geht's" transparent ab.
+        // Nur GET (idempotent); apiPost bekommt bewusst keinen Auto-Retry.
+        if (!err.response && !_retried) return apiGet(path, params, true)
+        throw err
+    }
 }
 
 export async function apiPost(path, payload = {}) {
