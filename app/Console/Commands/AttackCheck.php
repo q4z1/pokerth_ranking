@@ -149,6 +149,22 @@ class AttackCheck extends Command
         $response = $this->cloudflare('GET', $url);
         $rules = json_decode($response, true);
 
+        // TEMP-Diagnose (2026-08-29): rohe CF-API-Antwort protokollieren, um
+        // "AttackCheck faellt aus" von einem echten Cloudflare-Problem zu trennen.
+        // Nach der Auswertung wieder entfernen.
+        logger()->error('AttackCheck: CF ruleset probe', [
+            'response_type' => gettype($response),
+            'body' => is_string($response) ? substr($response, 0, 600) : $response,
+        ]);
+
+        if (!is_array($rules) || !isset($rules['result']['rules'])) {
+            logger()->error('AttackCheck: unerwartete CF-API-Antwort, Lauf abgebrochen', [
+                'errors' => is_array($rules) ? ($rules['errors'] ?? null) : null,
+            ]);
+
+            return Command::FAILURE;
+        }
+
         $rule = null;
         foreach($rules['result']['rules'] as $tRule){
             if($tRule['id'] == env('CF_RULE_ID')){
@@ -631,6 +647,20 @@ class AttackCheck extends Command
             curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
         }
         $response = curl_exec($curl);
+        // TEMP-Diagnose (2026-08-30): bei curl-Fehler errno/Meldung/Timing loggen,
+        // um die intermittierenden Ausfaelle (DNS? connect? TLS? timeout?) zu klaeren.
+        if ($response === false || curl_errno($curl) !== 0) {
+            $info = curl_getinfo($curl);
+            logger()->error('AttackCheck cloudflare() curl-Fehler', [
+                'errno'        => curl_errno($curl),
+                'error'        => curl_error($curl),
+                'primary_ip'   => $info['primary_ip'] ?? null,
+                't_namelookup' => $info['namelookup_time'] ?? null,
+                't_connect'    => $info['connect_time'] ?? null,
+                't_total'      => $info['total_time'] ?? null,
+                'url'          => $url,
+            ]);
+        }
         curl_close($curl);
 
         return $response;
