@@ -24,7 +24,7 @@
                                             </svg>
                                             Downloads are served from&nbsp;<a :href="version.github_url" target="_blank" rel="noopener">GitHub Releases</a>.
                                         </span>
-                                        <span v-if="version.published_at" style="opacity:.55;font-size:.8em;white-space:nowrap;">released {{ version.published_at.slice(0, 10) }}</span>
+                                        <span v-if="version.published_at" style="margin-left:auto;opacity:.55;font-size:.8em;white-space:nowrap;">released {{ version.published_at.slice(0, 10) }}</span>
                                     </div>
                                 </el-col>
                             </el-row>
@@ -207,6 +207,17 @@
                 font-size: 1em !important;
                 cursor: pointer!important;
                 border-bottom: none !important;
+                // EP 2.9 setzt 48px Höhe/Zeilenhöhe und width:100% – hier
+                // kompakt halten und den Pfeil direkt an den Titel rücken.
+                min-height: 0 !important;
+                line-height: 1.4 !important;
+                width: auto !important;
+                .el-collapse-item__title{
+                    flex: 0 1 auto !important;
+                }
+                .el-collapse-item__arrow{
+                    margin-left: 6px !important;
+                }
             }
             .el-collapse-item__content {
                 padding-bottom: 0.6em !important;

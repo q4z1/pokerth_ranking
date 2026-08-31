@@ -35,8 +35,18 @@ export default defineConfig({
                 // Shared chunks (Vue, Element Plus) get hashed names
                 chunkFileNames: 'js/chunks/[name]-[hash].js',
                 assetFileNames: (assetInfo) => {
-                    if (assetInfo.name?.endsWith('.css')) {
+                    const name = assetInfo.names?.[0] ?? assetInfo.name ?? ''
+                    // pth.css und spectool.css sind in den phpBB-Templates fest
+                    // verlinkt (mit ?v=filemtime) und müssen stabil heißen.
+                    if (name === 'pth.css' || name === 'spectool.css') {
                         return 'css/[name][extname]'
+                    }
+                    // Alle anderen Stylesheets werden zur Laufzeit von Vite
+                    // nachgeladen (lazy Komponenten-Chunks, Element-Plus-Bundle).
+                    // Die brauchen einen Hash im Namen, sonst hängt in Browsern
+                    // eine alte Version im Cache, während pth.js schon neu ist.
+                    if (name.endsWith('.css')) {
+                        return 'css/[name]-[hash][extname]'
                     }
                     return 'assets/[name]-[hash][extname]'
                 },
