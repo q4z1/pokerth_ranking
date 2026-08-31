@@ -1,62 +1,79 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# PokerTH Ranking
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel-App hinter **pokerth.net**: Ranglisten & Statistiken, Download-Seite,
+Server-Log-Auswertung, Cloudflare-Schutzautomatik und Sitemap-Generator.
+Erreichbar unter `/pthranking`, teilt sich Datenbank und Web-Root mit dem
+phpBB-Forum. Deploy = `git pull` (+ ggf. `npm run build`); es gibt keinen
+separaten Build-/Release-Schritt, Änderungen sind sofort live.
 
-## About Laravel
+## Setup & Build
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.2+, Composer, Node
+- `composer install`
+- Frontend (Vue 3 + Element Plus, Vite):
+  - `npm install`
+  - `npm run build` – Ausgabe nach `public/js` und `public/css`
+    (beide gitignored, werden direkt ausgeliefert)
+  - `npm run dev` für lokale Entwicklung
+- `.env` wie bei Laravel üblich. Die Downloads/Assets des Forums liegen unter
+  `base_path()/../download` bzw. `.../images`.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Artisan-Befehle (projekteigen)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+`php artisan list` zeigt alles, `php artisan schedule:list` den Ist-Zustand des
+Schedulers. Die folgenden Befehle sind projektspezifisch – der Rest ist
+Framework-Standard.
 
-## Learning Laravel
+| Befehl | Zweck | Optionen | Takt |
+| --- | --- | --- | --- |
+| `attack:check` | Trefferrate beobachten und den Cloudflare-„Under Attack"-Modus automatisch ein-/ausschalten | `--enable`, `--disable` (von Hand schalten statt messen) | alle 5 Min |
+| `downloads:sync` | Neuestes PokerTH-Release von GitHub holen und den Download-Snapshot schreiben | `--dry-run` (nur anzeigen) | täglich 04:40 |
+| `sitemap:generate` | `sitemap.xml` für das Forum bauen | `--output=<pfad>`, `--dry-run` | 04:20 & 16:20 |
+| `avatars:purge-blacklisted` | Dateien bereits gesperrter Avatare aus dem öffentlichen Verzeichnis in die Quarantäne schieben | `--dry-run` | manuell |
+| `logs:rotate-nginx` | Zu große nginx-Logs komprimieren und leeren (copytruncate-Stil) | `--dir=`, `--max-size=<MB>`, `--keep=<n>`, `--dry-run` | manuell (siehe Hinweis) |
+| `bbc:gamedates` | Spieltermine für BBC automatisch anlegen | – | manuell |
+| `ranking:fix` | Platzhalter für Ad-hoc-Neuberechnung des Rankings; Logik im Body ist auskommentiert und wird pro Einsatz angepasst | – | manuell / Entwicklung |
+| `season:switch` | Platzhalter (`handle()` gibt 0 zurück) – **nicht benutzen** | – | – |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Details
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**`attack:check`** – misst die Request-Rate (nginx-Log) und aktiviert bei einem
+Angriff automatisch die Cloudflare-Under-Attack-Regel; fällt die Rate wieder,
+wird sie zurückgenommen. Zustand liegt in `storage/app` (`filter_window_until.txt`
+u. a.). `--enable`/`--disable` überschreiben die Messung manuell.
 
-## Laravel Sponsors
+**`downloads:sync`** – ruft die GitHub-API (`pokerth/pokerth`, Release „latest")
+ab und legt `storage/app/downloads-latest.json` an. Die Download-Seite
+(Route `/downloads/all`, `DownloadsController::allversions`) rendert
+ausschließlich diesen Snapshot – es gibt **keine selbstgehosteten
+Client-Installer** mehr. Bei API-Ausfall bleibt der vorhandene Snapshot
+unangetastet. Nach einem Upstream-Release einfach einmal aufrufen; sonst
+erledigt das der tägliche Lauf. Logik in `app/Services/GithubReleases.php`.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+**`sitemap:generate`** – nimmt nur auf, was ein Gast sehen darf (Gäste-ACL aus
+`phpbb_acl_groups`). Die Schwesterseiten (`monthlycup`, `bbc`, `wec`) bringen
+ihren eigenen Generator mit und werden vom selben Scheduler zeitversetzt
+angestoßen.
 
-### Premium Partners
+**`logs:rotate-nginx`** – rotiert nur Dateien über der Größenschwelle; ein
+Leerlauf kostet nichts. ⚠️ In `app/Console/Kernel.php` ist der Befehl als
+stündlich eingetragen, aber `Kernel.php` wird unter Laravel 12 nicht mehr
+geladen (Scheduler kommt komplett aus `bootstrap/app.php`). Er läuft also
+aktuell **nicht** automatisch – bei Bedarf in `bootstrap/app.php` nachtragen.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/)**
-- **[OP.GG](https://op.gg)**
+## Scheduler
 
-## Contributing
+Kein `schedule:run`-Cron, sondern ein Dauerprozess **`php artisan
+schedule:work`**, gestartet bzw. neugestartet über `restart_scheduler.sh`
+(läuft als `root`, daher gehören manche Dateien unter `storage/` root). Alle
+geplanten Aufgaben stehen in **`bootstrap/app.php`** unter `->withSchedule(...)`:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| Cron | Aufgabe |
+| --- | --- |
+| `*/5 * * * *` | `attack:check` |
+| `40 4 * * *` | `downloads:sync` |
+| `20 4,16 * * *` | `sitemap:generate` (+ `monthlycup`/`bbc`/`wec` um :25/:30/:35) |
+| `0 0 01 */3 *` | `App\Console\Invokes\SeasonSwitch` (Quartals-Rollover: Tabellen kopieren, aufräumen) |
 
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+`app/Console/Kernel.php` und der darin importierte `AttackCeck` (sic) sind
+toter Code aus der Zeit vor dem Laravel-12-Umbau.

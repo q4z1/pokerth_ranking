@@ -61,10 +61,7 @@ Route::post('/account/change', [App\Http\Controllers\PlayerController::class, 'a
 Route::post('/account/validate', [App\Http\Controllers\PlayerController::class, 'account_validate']);
 Route::post('/account/delete', [App\Http\Controllers\PlayerController::class, 'account_delete']);
 
-Route::get('/downloads/1.1.2', [App\Http\Controllers\DownloadsController::class, 'oldfiles']);
-Route::get('/downloads/2.0', [App\Http\Controllers\DownloadsController::class, 'currentfiles']);
 Route::get('/downloads/all', [App\Http\Controllers\DownloadsController::class, 'allversions']);
-Route::get('/downloads/tracker', [App\Http\Controllers\DownloadsController::class, 'tracker']);
 Route::get('/styles', [App\Http\Controllers\DownloadsController::class, 'styles']);
 
 // Das Header-Bild ist auf jeder Seite das LCP-Element und für alle Besucher
