@@ -36,6 +36,23 @@ return Application::configure(basePath: dirname(__DIR__))
         // Suchmaschinen holen die Sitemap ohnehin nur etwa einmal am Tag ab.
         $schedule->command('sitemap:generate')->cron('20 4,16 * * *');
 
+        // Backup (loest ~/.local/bin/backup.sh + automysqlbackup ab, Details im
+        // Doc-Block von App\Console\Commands\Backup). Alle 4 h nur DB-Dump,
+        // unkomprimiert und ohne Table-Lock. Wird der Plattenplatz vorher
+        // knapp, packt der Lauf selbst (Notventil in backup:run).
+        $schedule->command('backup:run')
+            ->cron('0 0,8,12,16,20 * * *')->timezone('Europe/Berlin')
+            ->withoutOverlapping(55)
+            ->onFailure(fn () => logger()->error('backup:run failed'));
+
+        // 04:00 CEST: schwerer Lauf - Dump + gebuendelte pigz-Kompression aller
+        // offenen Dumps + rsync der vier Web-Trees + weekly (Fr) / monthly (1.).
+        // Randlage zum Wartungsfenster (05:00-09:30) und im Verkehrstief.
+        $schedule->command('backup:run --compress --files')
+            ->cron('0 4 * * *')->timezone('Europe/Berlin')
+            ->withoutOverlapping(180)
+            ->onFailure(fn () => logger()->error('backup:run --compress --files failed'));
+
         // Die Schwesterseiten bringen ihren eigenen Generator mit, jede kennt
         // nur ihre eigenen Routen und Modelle. Angestossen werden sie hier,
         // weil der Cron ausschliesslich diesen Scheduler aufruft. Zeitlich
