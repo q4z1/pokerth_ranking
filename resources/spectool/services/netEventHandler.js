@@ -6,7 +6,7 @@
 
 import {
   WEBSOCKET_URL,
-  CLIENT_TYPE_QT_WIDGET,
+  CLIENT_TYPE_WEB,
   POKERTH_VERSION_MAJOR,
   POKERTH_VERSION_MINOR,
   POKERTH_VERSION_PATCH,
@@ -196,8 +196,11 @@ function handleMsgAnnounce(announce) {
   init.initMessage.requestedVersion = new PT.AnnounceMessage.Version()
   init.initMessage.requestedVersion.majorVersion = announce.protocolVersion.majorVersion
   init.initMessage.requestedVersion.minorVersion = announce.protocolVersion.minorVersion
+  // Browser/WebSocket client type (0x03), accepted by the official server since
+  // 2.1.8 (game_defs.h: MIN_BUILD_ID_WEB has no version floor). Lets server
+  // activity logging tell the spectator tool apart from a real desktop client.
   init.initMessage.buildId =
-    (CLIENT_TYPE_QT_WIDGET << 24) | (POKERTH_VERSION_MAJOR << 16) | (POKERTH_VERSION_MINOR << 8) | POKERTH_VERSION_PATCH
+    ((CLIENT_TYPE_WEB << 24) | (POKERTH_VERSION_MAJOR << 16) | (POKERTH_VERSION_MINOR << 8) | POKERTH_VERSION_PATCH) >>> 0
 
   if (!localNickName) {
     setGuestNickName()

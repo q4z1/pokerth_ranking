@@ -8,6 +8,8 @@ export const POKERTH_VERSION_PATCH = 8
 export const POKERTH_BETA_RELEASE_STRING = '2.1.8'
 
 export const CLIENT_TYPE_QT_WIDGET = 0x01
+export const CLIENT_TYPE_QML = 0x02
+export const CLIENT_TYPE_WEB = 0x03 // Browser client; server >= 2.1.8, no build-id floor
 
 export const BERO = {
   PREFLOP: { value: 0 },
