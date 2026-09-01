@@ -123,9 +123,9 @@ class ServerLogAnalyzer
     /**
      * Sessions/Spieler je client_type im Fenster. NULL steht für Sessions
      * ohne client_build_id - z. B. Backfill aus server_messages.log, das die
-     * Build-ID nicht mitschreibt. Der Webclient identifiziert sich derzeit
-     * absichtlich als Qt-Widget (client_type 1), ist also darin nicht
-     * gesondert auszählbar - siehe Absprache mit narmod.
+     * Build-ID nicht mitschreibt. client_type ist eine generierte Spalte
+     * (client_build_id >> 24): 1 = Qt-Widget, 2 = QML, 3 = Web (Spectator-Tool
+     * seit 2.1.8; narmods Webclient folgt, sobald er USE_CLIENT_TYPE_WEB setzt).
      */
     private function clientTypeBreakdown(Carbon $start, Carbon $end): array
     {

@@ -330,7 +330,7 @@ export default {
         clientTypeRows() {
             const rows = this.data.client_types || []
             const totalSessions = rows.reduce((sum, r) => sum + r.sessions, 0)
-            const labels = { 1: 'Qt Widget', 2: 'QML' }
+            const labels = { 1: 'Qt Widget', 2: 'QML', 3: 'Web' }
             return rows.map((r) => ({
                 label: r.type === null ? 'Unknown' : (labels[r.type] || `Type ${r.type}`),
                 sessions: r.sessions,
