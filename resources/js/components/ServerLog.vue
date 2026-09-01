@@ -162,6 +162,34 @@
                 </p>
             </div>
 
+            <div v-if="data.guests" class="serverlog-panel">
+                <div class="serverlog-panel__head">
+                    <h4>Guest connections</h4>
+                    <span class="serverlog-panel__note">{{ guestSubtitle }}</span>
+                </div>
+                <div class="serverlog-chart serverlog-chart--tall">
+                    <line-chart-component
+                        :chart-data="guestChartData"
+                        :options="guestChartOptions"
+                        :plugins="[valueLabelsPlugin]"
+                    />
+                </div>
+                <div class="serverlog-retention">
+                    <div v-for="row in guestClientRows" :key="row.label" class="serverlog-retention__row">
+                        <span class="serverlog-retention__label">{{ row.label }}</span>
+                        <el-progress
+                            class="serverlog-retention__bar"
+                            :percentage="row.pct"
+                            :stroke-width="14"
+                            :show-text="false"
+                            :color="progressColor"
+                        />
+                        <span class="serverlog-retention__value">{{ row.pct }}% ({{ row.sessions }} sessions, {{ row.ips }} IPs)</span>
+                    </div>
+                </div>
+                <p class="serverlog-panel__note">{{ guestNote }}</p>
+            </div>
+
             <div class="serverlog-summary">
                 <h4>Bottom line</h4>
                 <p>{{ bottomLine.intake }}</p>
@@ -339,6 +367,74 @@ export default {
         },
         hasUnknownClientType() {
             return (this.data.client_types || []).some((r) => r.type === null)
+        },
+        guestSubtitle() {
+            const g = this.data.guests
+            return `${g.total_sessions.toLocaleString()} guest sessions · `
+                + `${Math.round(100 * g.share)}% of all sessions · `
+                + `${g.total_ips.toLocaleString()} distinct IPs`
+        },
+        guestChartData() {
+            const days = this.data.guests.per_day
+            return {
+                labels: days.map((p) => this.shortDate(p.date)),
+                datasets: [
+                    {
+                        label: 'Guest sessions',
+                        data: days.map((p) => p.sessions),
+                        borderColor: ORANGE,
+                        backgroundColor: 'rgba(235, 104, 52, 0.15)',
+                        pointRadius: 2,
+                        tension: 0.25,
+                        fill: false,
+                    },
+                    {
+                        label: 'Distinct IPs',
+                        data: days.map((p) => p.ips),
+                        borderColor: BLUE,
+                        backgroundColor: BLUE_FILL,
+                        pointRadius: 2,
+                        tension: 0.25,
+                        fill: false,
+                    },
+                ],
+            }
+        },
+        guestChartOptions() {
+            return {
+                scales: { y: { beginAtZero: true, ticks: { color: CHART_TEXT_COLOR }, grid: { color: CHART_GRID_COLOR } } },
+                plugins: {
+                    valueLabels: { show: true, mode: 'edges', datasetIndex: 0, color: CHART_TEXT_COLOR },
+                },
+            }
+        },
+        guestClientRows() {
+            const rows = this.data.guests.by_client_type || []
+            const total = rows.reduce((sum, r) => sum + r.sessions, 0)
+            const labels = { 1: 'Qt Widget', 2: 'QML', 3: 'Web' }
+            return rows.map((r) => ({
+                label: r.type === null ? 'Unknown' : (labels[r.type] || `Type ${r.type}`),
+                sessions: r.sessions,
+                ips: r.ips,
+                pct: total ? Math.round((100 * r.sessions) / total) : 0,
+            }))
+        },
+        guestNote() {
+            const web = (this.data.guests.by_client_type || []).find((r) => r.type === 3)
+            const hasUnknown = (this.data.guests.by_client_type || []).some((r) => r.type === null)
+            const parts = []
+            if (web) {
+                parts.push(`Web = browser client (pokerth-web-client, any host): ${web.sessions} guest `
+                    + `session${web.sessions === 1 ? '' : 's'} from ${web.ips} distinct IP${web.ips === 1 ? '' : 's'}.`)
+            } else {
+                parts.push('No guest logins from the browser client (type 3) in this window yet.')
+            }
+            parts.push('Guests get a server-assigned guestNNNNN nick and no account, so distinct IPs is the only '
+                + 'rough head count.')
+            if (hasUnknown) {
+                parts.push('"Unknown" is older sessions imported from server_messages.log, which has no build id.')
+            }
+            return parts.join(' ')
         },
         oneDayPct() {
             return Math.round(100 * this.data.histogram.one_day_share)

@@ -117,6 +117,64 @@ class ServerLogAnalyzer
             'hourly' => $hourly,
             'longest_gap' => $gap,
             'client_types' => $this->clientTypeBreakdown($start, $end),
+            'guests' => $this->guestBreakdown($start, $end, $dayList),
+        ];
+    }
+
+    /**
+     * Gastverbindungen (is_guest = 1, player_id NULL). Der Gameserver vergibt
+     * die Gast-Nicks (guestNNNNN) selbst und fortlaufend, daher ist
+     * COUNT(DISTINCT nick) praktisch gleich der Sitzungszahl und als
+     * Eindeutigkeits-Maß wertlos - stattdessen COUNT(DISTINCT ip) als grober
+     * Kopf-Proxy (reines Aggregat, keine rohe IP verlässt den Analyzer).
+     *
+     * by_client_type zeigt, wie viele Gäste über einen Webclient (Typ 3)
+     * hereinkommen - Eigen-Hosting eingeschlossen, denn jede Instanz von
+     * narmods pokerth-web-client meldet Typ 3 (seit 2.1.8-web.0).
+     * NULL = Backfill aus server_messages.log ohne Build-ID (vor 2026-08-25).
+     */
+    private function guestBreakdown(Carbon $start, Carbon $end, array $dayList): array
+    {
+        $base = fn () => DB::table('server_session')
+            ->where('is_guest', 1)
+            ->whereBetween('connected_at', [$start, $end]);
+
+        $perDay = $base()
+            ->selectRaw('DATE(connected_at) as d, COUNT(*) as sessions, COUNT(DISTINCT ip) as ips')
+            ->groupBy('d')
+            ->get()
+            ->keyBy('d');
+
+        $days = [];
+        foreach ($dayList as $day) {
+            $row = $perDay->get($day);
+            $days[] = [
+                'date' => $day,
+                'sessions' => $row ? (int) $row->sessions : 0,
+                'ips' => $row ? (int) $row->ips : 0,
+            ];
+        }
+
+        $totals = $base()->selectRaw('COUNT(*) as sessions, COUNT(DISTINCT ip) as ips')->first();
+        $allSessions = DB::table('server_session')->whereBetween('connected_at', [$start, $end])->count();
+
+        $byClient = $base()
+            ->selectRaw('client_type, COUNT(*) as sessions, COUNT(DISTINCT ip) as ips')
+            ->groupBy('client_type')
+            ->orderByDesc('sessions')
+            ->get()
+            ->map(fn ($r) => [
+                'type' => $r->client_type === null ? null : (int) $r->client_type,
+                'sessions' => (int) $r->sessions,
+                'ips' => (int) $r->ips,
+            ])->all();
+
+        return [
+            'per_day' => $days,
+            'total_sessions' => (int) $totals->sessions,
+            'total_ips' => (int) $totals->ips,
+            'share' => $allSessions ? round($totals->sessions / $allSessions, 3) : 0.0,
+            'by_client_type' => $byClient,
         ];
     }
 
