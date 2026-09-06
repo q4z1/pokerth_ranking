@@ -162,6 +162,29 @@
                 </p>
             </div>
 
+            <div class="serverlog-panel">
+                <div class="serverlog-panel__head">
+                    <h4>Client platforms</h4>
+                </div>
+                <div class="serverlog-retention">
+                    <div v-for="row in clientPlatformRows" :key="row.label" class="serverlog-retention__row">
+                        <span class="serverlog-retention__label">{{ row.label }}</span>
+                        <el-progress
+                            class="serverlog-retention__bar"
+                            :percentage="row.pct"
+                            :stroke-width="14"
+                            :show-text="false"
+                            :color="progressColor"
+                        />
+                        <span class="serverlog-retention__value">{{ row.pct }}% ({{ row.sessions }} sessions)</span>
+                    </div>
+                </div>
+                <p v-if="hasUnknownClientPlatform" class="serverlog-panel__note">
+                    The client reports its platform (Windows, Linux, macOS, Android, iOS) from 2.1.9 on; earlier
+                    sessions and log backfill have none and show as "Unknown".
+                </p>
+            </div>
+
             <div v-if="data.guests" class="serverlog-panel">
                 <div class="serverlog-panel__head">
                     <h4>Guest connections</h4>
@@ -174,8 +197,23 @@
                         :plugins="[valueLabelsPlugin]"
                     />
                 </div>
+                <p class="serverlog-panel__note">By client</p>
                 <div class="serverlog-retention">
                     <div v-for="row in guestClientRows" :key="row.label" class="serverlog-retention__row">
+                        <span class="serverlog-retention__label">{{ row.label }}</span>
+                        <el-progress
+                            class="serverlog-retention__bar"
+                            :percentage="row.pct"
+                            :stroke-width="14"
+                            :show-text="false"
+                            :color="progressColor"
+                        />
+                        <span class="serverlog-retention__value">{{ row.pct }}% ({{ row.sessions }} sessions, {{ row.ips }} IPs)</span>
+                    </div>
+                </div>
+                <p class="serverlog-panel__note">By platform</p>
+                <div class="serverlog-retention">
+                    <div v-for="row in guestPlatformRows" :key="row.label" class="serverlog-retention__row">
                         <span class="serverlog-retention__label">{{ row.label }}</span>
                         <el-progress
                             class="serverlog-retention__bar"
@@ -207,6 +245,9 @@ import LineChartComponent from './LineChartComponent.vue'
 import { apiGet, formatDateTime, notice, reportError } from '../admin/adminUtils.js'
 import { CHART_TEXT_COLOR, CHART_GRID_COLOR } from '../chartColors.js'
 import { nightBandPlugin, weekMeansPlugin, valueLabelsPlugin } from '../admin/chartPlugins.js'
+
+const CLIENT_TYPE_LABELS = { 1: 'Qt Widget', 2: 'QML', 3: 'Web' }
+const PLATFORM_LABELS = { 1: 'Windows', 2: 'Linux', 3: 'macOS', 4: 'Android', 5: 'iOS' }
 
 const BLUE = 'rgba(58, 135, 229, 1)'
 const BLUE_FILL = 'rgba(58, 135, 229, 0.15)'
@@ -358,15 +399,26 @@ export default {
         clientTypeRows() {
             const rows = this.data.client_types || []
             const totalSessions = rows.reduce((sum, r) => sum + r.sessions, 0)
-            const labels = { 1: 'Qt Widget', 2: 'QML', 3: 'Web' }
             return rows.map((r) => ({
-                label: r.type === null ? 'Unknown' : (labels[r.type] || `Type ${r.type}`),
+                label: r.type === null ? 'Unknown' : (CLIENT_TYPE_LABELS[r.type] || `Type ${r.type}`),
                 sessions: r.sessions,
                 pct: totalSessions ? Math.round((100 * r.sessions) / totalSessions) : 0,
             }))
         },
         hasUnknownClientType() {
             return (this.data.client_types || []).some((r) => r.type === null)
+        },
+        clientPlatformRows() {
+            const rows = this.data.client_platforms || []
+            const totalSessions = rows.reduce((sum, r) => sum + r.sessions, 0)
+            return rows.map((r) => ({
+                label: r.platform === null ? 'Unknown' : (PLATFORM_LABELS[r.platform] || `Platform ${r.platform}`),
+                sessions: r.sessions,
+                pct: totalSessions ? Math.round((100 * r.sessions) / totalSessions) : 0,
+            }))
+        },
+        hasUnknownClientPlatform() {
+            return (this.data.client_platforms || []).some((r) => r.platform === null)
         },
         guestSubtitle() {
             const g = this.data.guests
@@ -411,9 +463,18 @@ export default {
         guestClientRows() {
             const rows = this.data.guests.by_client_type || []
             const total = rows.reduce((sum, r) => sum + r.sessions, 0)
-            const labels = { 1: 'Qt Widget', 2: 'QML', 3: 'Web' }
             return rows.map((r) => ({
-                label: r.type === null ? 'Unknown' : (labels[r.type] || `Type ${r.type}`),
+                label: r.type === null ? 'Unknown' : (CLIENT_TYPE_LABELS[r.type] || `Type ${r.type}`),
+                sessions: r.sessions,
+                ips: r.ips,
+                pct: total ? Math.round((100 * r.sessions) / total) : 0,
+            }))
+        },
+        guestPlatformRows() {
+            const rows = this.data.guests.by_platform || []
+            const total = rows.reduce((sum, r) => sum + r.sessions, 0)
+            return rows.map((r) => ({
+                label: r.platform === null ? 'Unknown' : (PLATFORM_LABELS[r.platform] || `Platform ${r.platform}`),
                 sessions: r.sessions,
                 ips: r.ips,
                 pct: total ? Math.round((100 * r.sessions) / total) : 0,

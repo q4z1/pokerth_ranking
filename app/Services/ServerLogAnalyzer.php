@@ -117,6 +117,7 @@ class ServerLogAnalyzer
             'hourly' => $hourly,
             'longest_gap' => $gap,
             'client_types' => $this->clientTypeBreakdown($start, $end),
+            'client_platforms' => $this->clientPlatformBreakdown($start, $end),
             'guests' => $this->guestBreakdown($start, $end, $dayList),
         ];
     }
@@ -132,6 +133,10 @@ class ServerLogAnalyzer
      * hereinkommen - Eigen-Hosting eingeschlossen, denn jede Instanz von
      * narmods pokerth-web-client meldet Typ 3 (seit 2.1.8-web.0).
      * NULL = Backfill aus server_messages.log ohne Build-ID (vor 2026-08-25).
+     *
+     * by_platform bricht dieselben Gast-Sessions nach client_platform auf
+     * (Windows/Linux/Mac/Android/iOS); NULL, solange der Client die Plattform
+     * noch nicht meldet (vor 2.1.9).
      */
     private function guestBreakdown(Carbon $start, Carbon $end, array $dayList): array
     {
@@ -169,12 +174,24 @@ class ServerLogAnalyzer
                 'ips' => (int) $r->ips,
             ])->all();
 
+        $byPlatform = $base()
+            ->selectRaw('client_platform, COUNT(*) as sessions, COUNT(DISTINCT ip) as ips')
+            ->groupBy('client_platform')
+            ->orderByDesc('sessions')
+            ->get()
+            ->map(fn ($r) => [
+                'platform' => $r->client_platform === null ? null : (int) $r->client_platform,
+                'sessions' => (int) $r->sessions,
+                'ips' => (int) $r->ips,
+            ])->all();
+
         return [
             'per_day' => $days,
             'total_sessions' => (int) $totals->sessions,
             'total_ips' => (int) $totals->ips,
             'share' => $allSessions ? round($totals->sessions / $allSessions, 3) : 0.0,
             'by_client_type' => $byClient,
+            'by_platform' => $byPlatform,
         ];
     }
 
@@ -196,6 +213,28 @@ class ServerLogAnalyzer
 
         return $rows->map(fn ($r) => [
             'type' => $r->client_type === null ? null : (int) $r->client_type,
+            'sessions' => (int) $r->sessions,
+            'players' => (int) $r->players,
+        ])->all();
+    }
+
+    /**
+     * Sessions/Spieler je client_platform im Fenster. Der Gameserver meldet die
+     * Plattform ab Client 2.1.9 mit; alles davor (und jeder Backfill aus
+     * server_messages.log) hat NULL. 1 = Windows, 2 = Linux, 3 = Mac,
+     * 4 = Android, 5 = iOS - siehe Spaltenkommentar in server_session.
+     */
+    private function clientPlatformBreakdown(Carbon $start, Carbon $end): array
+    {
+        $rows = DB::table('server_session')
+            ->selectRaw('client_platform, COUNT(*) as sessions, COUNT(DISTINCT player_id) as players')
+            ->whereBetween('connected_at', [$start, $end])
+            ->groupBy('client_platform')
+            ->orderByDesc('sessions')
+            ->get();
+
+        return $rows->map(fn ($r) => [
+            'platform' => $r->client_platform === null ? null : (int) $r->client_platform,
             'sessions' => (int) $r->sessions,
             'players' => (int) $r->players,
         ])->all();
