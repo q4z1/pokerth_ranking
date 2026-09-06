@@ -57,14 +57,22 @@ return Application::configure(basePath: dirname(__DIR__))
         // nur ihre eigenen Routen und Modelle. Angestossen werden sie hier,
         // weil der Cron ausschliesslich diesen Scheduler aufruft. Zeitlich
         // versetzt, damit nicht vier Läufe gleichzeitig auf der DB liegen.
+        //
+        // env -i: der schedule:work-Prozess traegt diese .env im Environment
+        // (putenv), u. a. DB_DATABASE=pokerth_ranking. Ein per exec() gestarteter
+        // Kindprozess erbt das, und phpdotenv der Zielapp ueberschreibt bereits
+        // gesetzte Variablen nicht - die App liefe also gegen die falsche DB.
+        // Mit leerem Environment (nur PATH fuer php/bash, HOME fuer Tooling)
+        // liest jede App ausschliesslich ihre eigene .env.
         foreach ([
             'monthlycup' => '25 4,16 * * *',
             'bbc'        => '30 4,16 * * *',
             'wec'        => '35 4,16 * * *',
         ] as $app => $cron) {
-            $schedule->exec("cd /var/www/{$app} && php artisan sitemap:generate")
+            $schedule->exec("env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/root bash -c 'cd /var/www/{$app} && php artisan sitemap:generate'")
                 ->cron($cron)
                 ->withoutOverlapping()
+                ->appendOutputTo(storage_path("logs/sitemap-{$app}.log"))
                 ->onFailure(fn () => logger()->error("sitemap:generate failed for {$app}"));
         }
     })
