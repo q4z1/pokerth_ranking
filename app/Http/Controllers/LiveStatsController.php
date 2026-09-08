@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * "PokerTH right now" - Livezahlen fuer die Seitenleiste auf pokerth.net.
@@ -43,15 +44,49 @@ class LiveStatsController extends Controller
                 'online' => $online,
                 'tables' => $stale ? null : (int) $row->tables_running,
                 'waiting' => $stale ? null : (int) $row->players_waiting,
-                // Aus der game-Tabelle, unabhaengig vom Heartbeat: heute
-                // begonnene Spiele. start_time ist indiziert.
-                'today' => DB::table('game')
-                    ->where('start_time', '>=', now()->startOfDay())
-                    ->count(),
+                // Heute gespielte Spiele, unabhaengig vom Heartbeat.
+                'today' => $this->gamesToday(),
                 'stale' => $stale,
                 'updated' => $updatedAt?->toIso8601String(),
             ];
         });
+    }
+
+    /**
+     * Heute gespielte Spiele ueber alle PokerTH-Angebote:
+     *  - Lobby-Spiele:  pokerth_ranking.game.start_time
+     *  - Best Brainies Cup:  bbc.games.created_at  (Zeitpunkt des PDB-Uploads)
+     *  - WeCup:              wec.games.created_at
+     *
+     * BBC/WeCup liegen auf derselben MariaDB-Instanz und werden hier per
+     * voll qualifiziertem Tabellennamen quergelesen (der DB-User hat Zugriff).
+     * Beide Apps laufen wie pthranking in Europe/Berlin, "heute" passt also.
+     * Jede Quelle einzeln gekapselt: faellt eine Schwester-DB aus oder wird
+     * eine Tabelle/Spalte umbenannt, bleibt der Rest der Zahl korrekt.
+     */
+    private function gamesToday(): int
+    {
+        $startOfDay = now()->startOfDay();
+
+        $sources = [
+            'lobby' => fn () => DB::table('game')
+                ->where('start_time', '>=', $startOfDay)->count(),
+            'bbc' => fn () => DB::table('bbc.games')
+                ->where('created_at', '>=', $startOfDay)->count(),
+            'wec' => fn () => DB::table('wec.games')
+                ->where('created_at', '>=', $startOfDay)->count(),
+        ];
+
+        $total = 0;
+        foreach ($sources as $name => $query) {
+            try {
+                $total += (int) $query();
+            } catch (\Throwable $e) {
+                Log::warning("live_stats: games-today source '{$name}' failed: ".$e->getMessage());
+            }
+        }
+
+        return $total;
     }
 
     /** Offene Sessions im juengsten Lauf, auf ein Zeitfenster begrenzt. */
