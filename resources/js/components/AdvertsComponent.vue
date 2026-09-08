@@ -8,9 +8,7 @@
         <el-row class="noindex robots-nocontent robots-noindex">
           <el-col v-html="advert.content"></el-col>
         </el-row>
-        <el-row>
-          <el-col><hr /></el-col>
-        </el-row>
+        <hr />
       </el-col>
     </el-row>
     <!--/noindex-->
@@ -55,3 +53,12 @@ export default {
   },
 };
 </script>
+<style lang="scss" scoped>
+/* Der abschliessende <hr> soll wie ueberall ~15px unter dem Inhalt sitzen.
+   Das per v-html eingefuegte Advert-HTML endet auf einem <p> mit ~21px
+   margin-bottom (phpBB) - zusammen mit der margin-top der <hr> saesse die
+   Linie sonst zu tief. Den p-Abstand rausnehmen, die <hr> traegt die 15px. */
+.a-s :deep(p:last-child) {
+    margin-bottom: 0;
+}
+</style>

@@ -704,6 +704,23 @@ html.internals[data-theme='light'] .internals-logo {
     border-radius: 8px;
 }
 
+/* Rechte Seitenleiste: die Vue-Mountpunkte (<champion-of-day-component>,
+   <pokerth-now-component>, ...) sind unbekannte HTML-Elemente und damit
+   display:inline. Als Block verhalten sie sich vorhersehbar im Flow. */
+#vue2 > * {
+    display: block;
+}
+
+/* CLS-Reservierung fuer die Champions-Box steht als min-height:165px inline in
+   overall_header.html. Mit der kompakten Liste (h2 + 3 Namen + <hr>) ist die
+   Box real nur ~117px hoch, d. h. ~48px leerer Reserve-Raum hingen unter der
+   <hr> und schoben den Donate-Button nach unten - ungleich zum 15px-Abstand
+   darunter. Hier auf die echte geladene Hoehe gesetzt (gewinnt per
+   Spezifitaet gegen die Inline-Regel; die Template-Zeile kann entfallen). */
+#vue2 champion-of-day-component {
+    min-height: 132px;
+}
+
 /* ─────────────────────────────────────────────
    Store-Buttons (Web-Client / Download)
    Optik der Store-Badges (SourceForge, Flathub, Snap) auf der

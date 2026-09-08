@@ -1,18 +1,14 @@
 <template>
     <div>
-        <el-row v-if="champions && champions.length > 0">
-            <el-col class="cod">
-                <h2>Champions of the Day</h2>
-                <ol>
-                    <li v-for="(champion, i) in champions.slice(0, 3)" :key="i">
-                        <a :href="champion['url']" v-html="champion['username']" target="_blank"></a>
-                    </li>
-                </ol>
-            </el-col>
-        </el-row>
-        <el-row>
-            <el-col><hr /></el-col>
-        </el-row>
+        <div v-if="champions && champions.length > 0" class="cod">
+            <h2>Champions of the Day</h2>
+            <ol>
+                <li v-for="(champion, i) in champions.slice(0, 3)" :key="i">
+                    <a :href="champion['url']" v-html="champion['username']" target="_blank"></a>
+                </li>
+            </ol>
+        </div>
+        <hr />
     </div>
 </template>
 <script>
@@ -39,7 +35,7 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-    .el-col.cod{
+    .cod{
         * {
             background-color: transparent!important;
         }
