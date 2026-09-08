@@ -2,7 +2,7 @@
     <div class="pth-header-card">
         <div class="pth-header-buttons">
             <download-button-component :href="downloadUrl"></download-button-component>
-            <webclient-button-component :href="webclientUrl"></webclient-button-component>
+            <webclient-button-component :href="webclientUrl" cta></webclient-button-component>
         </div>
     </div>
 </template>

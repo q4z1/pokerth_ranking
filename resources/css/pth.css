@@ -746,6 +746,28 @@ html.internals[data-theme='light'] .internals-logo {
     white-space: nowrap;
 }
 
+/* Textspalte (Label + optionale "Play now!"-Zeile) */
+.pth-store-btn__text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    margin-left: 8px;
+}
+
+.pth-store-btn__text .pth-store-btn__label {
+    margin-left: 0;
+}
+
+/* Call-to-Action-Zeile: einladendes Gruen auf dem fixen dunklen Button */
+.pth-store-btn__cta {
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #4ade80;
+    white-space: nowrap;
+}
+
 .pth-store-btn__badge {
     margin-left: 8px;
     background: #2a2a2a;
@@ -821,6 +843,14 @@ body.navbar_o_header #vue-header {
    groessere Button; align-items: stretch streckt den kleineren nach. */
 .pth-header-buttons .pth-store-btn {
     display: flex;
+}
+
+/* Web-Client-Button im Teaser als CTA: hoeher, damit die zweite Zeile
+   ("Play now!") Platz hat und der Button einladender wirkt. */
+.pth-header-buttons .pth-store-btn--cta {
+    height: auto;
+    min-height: 68px;
+    align-items: center;
 }
 
 .pth-header-buttons .pth-store-btn__badge {
