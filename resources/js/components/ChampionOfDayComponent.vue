@@ -48,6 +48,9 @@ export default {
         text-align: center;
         h2 {
             text-align: left;
+            /* phpBB gibt h2 sonst margin-bottom: 30px - viel zu viel Luft
+               zwischen Ueberschrift und Liste. */
+            margin-bottom: 0.4em;
         }
         ol{
             list-style-position: inside;

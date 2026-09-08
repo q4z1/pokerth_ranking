@@ -43,6 +43,11 @@ class LiveStatsController extends Controller
                 'online' => $online,
                 'tables' => $stale ? null : (int) $row->tables_running,
                 'waiting' => $stale ? null : (int) $row->players_waiting,
+                // Aus der game-Tabelle, unabhaengig vom Heartbeat: heute
+                // begonnene Spiele. start_time ist indiziert.
+                'today' => DB::table('game')
+                    ->where('start_time', '>=', now()->startOfDay())
+                    ->count(),
                 'stale' => $stale,
                 'updated' => $updatedAt?->toIso8601String(),
             ];

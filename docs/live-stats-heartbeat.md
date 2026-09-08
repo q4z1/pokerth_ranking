@@ -209,6 +209,8 @@ Sanity:
   later if it ever wants a graph.)
 * No per-game or per-player detail — that is what `server_session` and the
   spectator protocol are for.
+* No "games today" counter — the website derives that itself from the `game`
+  table the server already writes. The heartbeat is live lobby state only.
 * No new network endpoint or message type on the server.
 * Website side (read route, caching, the Vue component, staleness handling) is
   handled separately in the `pthranking` app and does not concern the server.
