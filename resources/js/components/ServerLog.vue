@@ -38,6 +38,10 @@
                 </div>
             </div>
 
+            <!-- Livewerte des Game-Servers (Heartbeat), gleiche Quelle wie die
+                 Sidebar-Box auf pokerth.net. -->
+            <pokerth-now-component variant="strip" />
+
             <div class="serverlog-panel">
                 <div class="serverlog-panel__head">
                     <h4>Daily active registered accounts</h4>
@@ -242,6 +246,7 @@
 import AdminPanel from './AdminPanel.vue'
 import BarChartComponent from './BarChartComponent.vue'
 import LineChartComponent from './LineChartComponent.vue'
+import PokerthNowComponent from './PokerthNowComponent.vue'
 import { apiGet, formatDateTime, notice, reportError } from '../admin/adminUtils.js'
 import { CHART_TEXT_COLOR, CHART_GRID_COLOR } from '../chartColors.js'
 import { nightBandPlugin, weekMeansPlugin, valueLabelsPlugin } from '../admin/chartPlugins.js'
@@ -256,7 +261,7 @@ const MUTED = 'rgba(154, 152, 143, 1)'
 
 export default {
     name: 'ServerLog',
-    components: { AdminPanel, BarChartComponent, LineChartComponent },
+    components: { AdminPanel, BarChartComponent, LineChartComponent, PokerthNowComponent },
     data() {
         return {
             loading: false,
