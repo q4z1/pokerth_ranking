@@ -1,0 +1,40 @@
+# Dependabot-Konfiguration fuer q4z1/pokerth_ranking
+#
+# Angelegt am 2026-09-09. Anders als bei bbc_wec_site war hier nichts falsch
+# adressiert: main ist der Default-Branch und zugleich der produktive Stand
+# (/var/www/pokerth/pthranking laeuft direkt darauf), die sieben offenen PRs
+# vom Sommer 2026 (#39-#45) trafen also den richtigen Dependency-Baum.
+#
+# Sie sind trotzdem erledigt: "npm audit fix" am 2026-09-09 hat alle sechs
+# gemeldeten Luecken (axios, form-data, immutable, nanoid, postcss, vite) in
+# einem Lockfile-Update geschlossen, ohne package.json anzufassen. Die PRs
+# koennen geschlossen werden.
+#
+# Die Gruppierung unten verhindert, dass sich das wiederholt: statt sieben
+# einzelner PRs fuer transitive Pakete entsteht ein gebuendelter, der sich in
+# einem Rutsch pruefen und mergen laesst.
+#
+# Achtung beim Mergen: pth.js wird ohne Hash und ohne Cache-Control
+# ausgeliefert. Nach einem Build braucht es einen Hard-Reload, sonst laeuft
+# weiter der alte Chunk.
+
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      npm-dependencies:
+        patterns: ["*"]
+
+  - package-ecosystem: "composer"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      composer-dependencies:
+        patterns: ["*"]
