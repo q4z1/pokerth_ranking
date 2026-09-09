@@ -48,6 +48,14 @@
   --pth-grad-start:      #859398;
   --pth-grad-end:        #283048;
 
+  /* "Live"/Go-Grün (Online-Status, Play-now-CTA). Auf dunklem Grund darf es
+     kräftig sein - wie die "Play now!"-Zeile im Teaser-Button. */
+  --pth-live:            #4ade80;
+
+  /* Dekorative Icons (Listen-Symbole in der Seitenleiste). Gedämpft, aber
+     klar sichtbar - im Light Theme dunkler, damit sie nicht ausbleichen. */
+  --pth-icon:            #5a6270;
+
   /* Text (aus dark.css) */
   --pth-text:            #cccccc;  /* High-contrast Text */
   --pth-text-secondary:  #838b98;  /* Subtle text (body, labels) */
@@ -81,6 +89,10 @@
   /* Gradient */
   --pth-grad-start:      #859398;
   --pth-grad-end:        #283048;
+
+  /* Grün / Icons: auf hellem Grund gedeckter, sonst schrill bzw. blass */
+  --pth-live:            #1a7f37;
+  --pth-icon:            #6b7280;
 
   /* Text (base.css body color) */
   --pth-text:            #333333;  /* Primärtext */

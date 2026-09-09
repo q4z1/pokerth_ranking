@@ -161,12 +161,12 @@ export default {
         width: 1.05em;
         height: 1.05em;
         flex-shrink: 0;
-        color: var(--pth-text-dimmed, #5a6270);
+        color: var(--pth-icon, #5a6270);
     }
 
     // Statuspunkt-Ersatz: das User-Icon wird gruen, solange der Server lebt.
     &__ico--live {
-        color: var(--pth-pot, #5fc35f);
+        color: var(--pth-live, #4ade80);
     }
 
     &__cta {
@@ -174,8 +174,9 @@ export default {
         font-size: larger;
 
         a {
-            // Gleiches Gruen wie die "Play now!"-Zeile im Teaser-Button.
-            color: #4ade80;
+            // "Go"-Gruen, theme-abhaengig (colors.css) - im Light Theme
+            // gedeckter, damit es nicht schrill wirkt.
+            color: var(--pth-live, #4ade80);
             font-weight: 700;
             text-decoration: none;
 
