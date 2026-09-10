@@ -10,16 +10,16 @@
         "@element-plus/icons-vue": "^2.3",
         "axios": "^1.15",
         "chart.js": "^4.4",
-        "element-plus": "^2.9",
-        "pinia": "^2.3",
+        "element-plus": "^2.14",
+        "pinia": "^4.0",
         "vue": "^3.5",
         "vue-chartjs": "^5.3",
-        "vue-router": "^4.5"
+        "vue-router": "^5.3"
     },
     "devDependencies": {
-        "@tailwindcss/vite": "^4.0",
-        "@vitejs/plugin-vue": "^5.0",
-        "sass": "^1.80",
-        "vite": "^6.4"
+        "@tailwindcss/vite": "^4.3",
+        "@vitejs/plugin-vue": "^6.0",
+        "sass": "^1.104",
+        "vite": "^8.2"
     }
 }
