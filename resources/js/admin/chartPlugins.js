@@ -13,7 +13,10 @@ function slotWidth(scale) {
     return scale.getPixelForTick(1) - scale.getPixelForTick(0)
 }
 
-/** Farbige Fläche über einen Stundenbereich, z. B. das erkannte Ruhefenster. */
+/**
+ * Farbige Fläche über einen Stundenbereich, z. B. das erkannte Ruhefenster.
+ * Ohne Beschriftung - das Fenster steht schon in Überschrift und Fließtext.
+ */
 export const nightBandPlugin = {
     id: 'nightBand',
     beforeDatasetsDraw(chart, args, opts) {
@@ -26,12 +29,6 @@ export const nightBandPlugin = {
         ctx.save()
         ctx.fillStyle = opts.color || 'rgba(235, 104, 52, 0.12)'
         ctx.fillRect(xFrom, chartArea.top, xTo - xFrom, chartArea.bottom - chartArea.top)
-        if (opts.label) {
-            ctx.fillStyle = opts.labelColor || 'rgba(193, 74, 31, 1)'
-            ctx.font = "600 11px 'Inter', sans-serif"
-            ctx.textAlign = 'center'
-            ctx.fillText(opts.label, (xFrom + xTo) / 2, chartArea.top - 6)
-        }
         ctx.restore()
     },
 }

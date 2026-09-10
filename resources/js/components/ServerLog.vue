@@ -561,7 +561,7 @@ export default {
             return {
                 plugins: {
                     legend: { display: false },
-                    nightBand: { from, to, label: this.nightWindow },
+                    nightBand: { from, to },
                 },
             }
         },
@@ -570,7 +570,7 @@ export default {
             return {
                 plugins: {
                     legend: { display: false },
-                    nightBand: { from, to, label: this.nightWindow },
+                    nightBand: { from, to },
                 },
             }
         },
