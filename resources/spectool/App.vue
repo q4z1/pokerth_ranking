@@ -1,38 +1,34 @@
 <template>
-  <div class="flex flex-col bg-pth-elevated border border-pth-border rounded-lg shadow-xl text-pth-text overflow-hidden">
-    <LoginDialog v-if="!connected" />
-    <router-view v-else />
-    <Teleport to="body">
-      <PopupOverlay />
-    </Teleport>
-  </div>
+  <!-- Das Live-/Spectator-Tool läuft nicht mehr hier, sondern in narmods
+       Webclient (Route /live). Wir betten es nur noch ein; die Höhe meldet
+       der Client per postMessage zurück. -->
+  <iframe
+    id="pth-live"
+    src="https://webclient.pokerth.net/live?embed=1"
+    allow="autoplay"
+    title="PokerTH live"
+    :style="{ width: '100%', border: 0, height: height + 'px' }"
+  ></iframe>
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { useGameCacheStore } from '@/stores'
-import { init as initNet } from '@/services/netEventHandler'
-import LoginDialog from '@/components/LoginDialog.vue'
-import PopupOverlay from '@/components/PopupOverlay.vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-const store = useGameCacheStore()
-const router = useRouter()
+const WEBCLIENT_ORIGIN = 'https://webclient.pokerth.net'
 
-// Initialize the network event handler with store and router
-initNet(store, router)
+const height = ref(640)
 
-const connected = computed(() => store.connected)
+function onMessage(ev) {
+  if (ev.origin !== WEBCLIENT_ORIGIN) return
 
-// Route based on active view
-watch(
-  () => store.gameTableActive,
-  (isGame) => {
-    if (isGame) {
-      router.push({ name: 'game' })
-    } else if (store.connected) {
-      router.push({ name: 'lobby' })
-    }
+  const d = ev.data
+  if (!d || d.channel !== 'pokerth-live') return
+
+  if (d.type === 'height' && Number.isFinite(Number(d.height))) {
+    height.value = Number(d.height)
   }
-)
+}
+
+onMounted(() => window.addEventListener('message', onMessage))
+onBeforeUnmount(() => window.removeEventListener('message', onMessage))
 </script>
