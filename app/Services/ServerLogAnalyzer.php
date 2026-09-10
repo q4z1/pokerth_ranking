@@ -117,7 +117,7 @@ class ServerLogAnalyzer
             'hourly' => $hourly,
             'longest_gap' => $gap,
             'client_types' => $this->clientTypeBreakdown($start, $end),
-            'client_platforms' => $this->clientPlatformBreakdown($start, $end),
+            'client_matrix' => $this->clientMatrix($start, $end),
             'guests' => $this->guestBreakdown($start, $end, $dayList),
         ];
     }
@@ -134,9 +134,10 @@ class ServerLogAnalyzer
      * narmods pokerth-web-client meldet Typ 3 (seit 2.1.8-web.0).
      * NULL = Backfill aus server_messages.log ohne Build-ID (vor 2026-08-25).
      *
-     * by_platform bricht dieselben Gast-Sessions nach client_platform auf
-     * (Windows/Linux/Mac/Android/iOS); NULL, solange der Client die Plattform
-     * noch nicht meldet (vor 2.1.9).
+     * by_matrix bricht dieselben Gast-Sessions als Kreuztabelle
+     * client_platform × client_type auf - damit sichtbar bleibt, dass ein
+     * iOS-Gast den Webclient und nicht die native iOS-App nutzen kann.
+     * Plattform ist NULL, solange der Client sie nicht meldet (vor 2.1.9).
      */
     private function guestBreakdown(Carbon $start, Carbon $end, array $dayList): array
     {
@@ -174,13 +175,13 @@ class ServerLogAnalyzer
                 'ips' => (int) $r->ips,
             ])->all();
 
-        $byPlatform = $base()
-            ->selectRaw('client_platform, COUNT(*) as sessions, COUNT(DISTINCT ip) as ips')
-            ->groupBy('client_platform')
-            ->orderByDesc('sessions')
+        $byMatrix = $base()
+            ->selectRaw('client_platform, client_type, COUNT(*) as sessions, COUNT(DISTINCT ip) as ips')
+            ->groupBy('client_platform', 'client_type')
             ->get()
             ->map(fn ($r) => [
                 'platform' => $r->client_platform === null ? null : (int) $r->client_platform,
+                'type' => $r->client_type === null ? null : (int) $r->client_type,
                 'sessions' => (int) $r->sessions,
                 'ips' => (int) $r->ips,
             ])->all();
@@ -191,7 +192,7 @@ class ServerLogAnalyzer
             'total_ips' => (int) $totals->ips,
             'share' => $allSessions ? round($totals->sessions / $allSessions, 3) : 0.0,
             'by_client_type' => $byClient,
-            'by_platform' => $byPlatform,
+            'by_matrix' => $byMatrix,
         ];
     }
 
@@ -219,22 +220,29 @@ class ServerLogAnalyzer
     }
 
     /**
-     * Sessions/Spieler je client_platform im Fenster. Der Gameserver meldet die
-     * Plattform ab Client 2.1.9 mit; alles davor (und jeder Backfill aus
-     * server_messages.log) hat NULL. 1 = Windows, 2 = Linux, 3 = Mac,
-     * 4 = Android, 5 = iOS - siehe Spaltenkommentar in server_session.
+     * Kreuztabelle client_platform × client_type im Fenster.
+     *
+     * client_type und client_platform sind unabhängig: ein iOS-Eintrag kann
+     * die native QML-App ODER den Webclient (im Safari auf dem iPhone) sein.
+     * Deshalb als Matrix statt zweier getrennter Listen - sonst liest sich
+     * "iOS" wie "native iOS-App".
+     *
+     * client_platform: 1 = Windows, 2 = Linux, 3 = Mac, 4 = Android, 5 = iOS;
+     * NULL, solange der Client sie nicht meldet (vor 2.1.9) oder bei Backfill
+     * aus server_messages.log. client_type: 1 = Qt-Widget, 2 = QML, 3 = Web;
+     * NULL ohne client_build_id (Backfill).
      */
-    private function clientPlatformBreakdown(Carbon $start, Carbon $end): array
+    private function clientMatrix(Carbon $start, Carbon $end): array
     {
         $rows = DB::table('server_session')
-            ->selectRaw('client_platform, COUNT(*) as sessions, COUNT(DISTINCT player_id) as players')
+            ->selectRaw('client_platform, client_type, COUNT(*) as sessions, COUNT(DISTINCT player_id) as players')
             ->whereBetween('connected_at', [$start, $end])
-            ->groupBy('client_platform')
-            ->orderByDesc('sessions')
+            ->groupBy('client_platform', 'client_type')
             ->get();
 
         return $rows->map(fn ($r) => [
             'platform' => $r->client_platform === null ? null : (int) $r->client_platform,
+            'type' => $r->client_type === null ? null : (int) $r->client_type,
             'sessions' => (int) $r->sessions,
             'players' => (int) $r->players,
         ])->all();

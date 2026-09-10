@@ -146,46 +146,51 @@
 
             <div class="serverlog-panel">
                 <div class="serverlog-panel__head">
-                    <h4>Client versions</h4>
+                    <h4>Clients</h4>
+                    <span class="serverlog-panel__note">sessions by platform × client — the two are independent</span>
                 </div>
-                <div class="serverlog-retention">
-                    <div v-for="row in clientTypeRows" :key="row.label" class="serverlog-retention__row">
-                        <span class="serverlog-retention__label">{{ row.label }}</span>
-                        <el-progress
-                            class="serverlog-retention__bar"
-                            :percentage="row.pct"
-                            :stroke-width="14"
-                            :show-text="false"
-                            :color="progressColor"
-                        />
-                        <span class="serverlog-retention__value">{{ row.pct }}% ({{ row.sessions }} sessions)</span>
-                    </div>
+                <div class="serverlog-matrix-wrap">
+                    <table class="serverlog-matrix">
+                        <thead>
+                            <tr>
+                                <th>Platform</th>
+                                <th v-for="col in clientMatrix.cols" :key="col.key">{{ col.label }}</th>
+                                <th class="is-total">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in clientMatrix.rows" :key="row.key">
+                                <th>{{ row.label }}</th>
+                                <td
+                                    v-for="col in clientMatrix.cols"
+                                    :key="col.key"
+                                    :class="{ 'is-zero': !row.cells[col.key] }"
+                                >
+                                    {{ row.cells[col.key] ? row.cells[col.key].toLocaleString() : '·' }}
+                                </td>
+                                <td class="is-total">{{ row.total.toLocaleString() }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th>Total</th>
+                                <td v-for="col in clientMatrix.cols" :key="col.key" class="is-total">
+                                    {{ col.total.toLocaleString() }}
+                                </td>
+                                <td class="is-total">{{ clientMatrix.grandTotal.toLocaleString() }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
-                <p v-if="hasUnknownClientType" class="serverlog-panel__note">
-                    "Unknown" is older sessions imported from server_messages.log, which doesn't record the build id.
+                <p class="serverlog-panel__note">
+                    Qt Widget = classic desktop client, QML = native app (desktop and mobile), Web = browser client
+                    (pokerth-web-client, any host). Platform is orthogonal: an "iOS / Web" session is the browser
+                    client on iOS, not the native iOS app.
                 </p>
-            </div>
-
-            <div class="serverlog-panel">
-                <div class="serverlog-panel__head">
-                    <h4>Client platforms</h4>
-                </div>
-                <div class="serverlog-retention">
-                    <div v-for="row in clientPlatformRows" :key="row.label" class="serverlog-retention__row">
-                        <span class="serverlog-retention__label">{{ row.label }}</span>
-                        <el-progress
-                            class="serverlog-retention__bar"
-                            :percentage="row.pct"
-                            :stroke-width="14"
-                            :show-text="false"
-                            :color="progressColor"
-                        />
-                        <span class="serverlog-retention__value">{{ row.pct }}% ({{ row.sessions }} sessions)</span>
-                    </div>
-                </div>
-                <p v-if="hasUnknownClientPlatform" class="serverlog-panel__note">
-                    The client reports its platform (Windows, Linux, macOS, Android, iOS) from 2.1.9 on; earlier
-                    sessions and log backfill have none and show as "Unknown".
+                <p v-if="clientMatrix.hasUnknown" class="serverlog-panel__note">
+                    "Unknown" client = sessions imported from server_messages.log, which carries no build id.
+                    "Unknown" platform = client didn't report one; the platform field is populated from 2.1.9 on,
+                    so this share shrinks as clients update.
                 </p>
             </div>
 
@@ -201,33 +206,38 @@
                         :plugins="[valueLabelsPlugin]"
                     />
                 </div>
-                <p class="serverlog-panel__note">By client</p>
-                <div class="serverlog-retention">
-                    <div v-for="row in guestClientRows" :key="row.label" class="serverlog-retention__row">
-                        <span class="serverlog-retention__label">{{ row.label }}</span>
-                        <el-progress
-                            class="serverlog-retention__bar"
-                            :percentage="row.pct"
-                            :stroke-width="14"
-                            :show-text="false"
-                            :color="progressColor"
-                        />
-                        <span class="serverlog-retention__value">{{ row.pct }}% ({{ row.sessions }} sessions, {{ row.ips }} IPs)</span>
-                    </div>
-                </div>
-                <p class="serverlog-panel__note">By platform</p>
-                <div class="serverlog-retention">
-                    <div v-for="row in guestPlatformRows" :key="row.label" class="serverlog-retention__row">
-                        <span class="serverlog-retention__label">{{ row.label }}</span>
-                        <el-progress
-                            class="serverlog-retention__bar"
-                            :percentage="row.pct"
-                            :stroke-width="14"
-                            :show-text="false"
-                            :color="progressColor"
-                        />
-                        <span class="serverlog-retention__value">{{ row.pct }}% ({{ row.sessions }} sessions, {{ row.ips }} IPs)</span>
-                    </div>
+                <div class="serverlog-matrix-wrap">
+                    <table class="serverlog-matrix">
+                        <thead>
+                            <tr>
+                                <th>Platform</th>
+                                <th v-for="col in guestMatrix.cols" :key="col.key">{{ col.label }}</th>
+                                <th class="is-total">Sessions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in guestMatrix.rows" :key="row.key">
+                                <th>{{ row.label }}</th>
+                                <td
+                                    v-for="col in guestMatrix.cols"
+                                    :key="col.key"
+                                    :class="{ 'is-zero': !row.cells[col.key] }"
+                                >
+                                    {{ row.cells[col.key] ? row.cells[col.key].toLocaleString() : '·' }}
+                                </td>
+                                <td class="is-total">{{ row.total.toLocaleString() }}</td>
+                            </tr>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th>Sessions</th>
+                                <td v-for="col in guestMatrix.cols" :key="col.key" class="is-total">
+                                    {{ col.total.toLocaleString() }}
+                                </td>
+                                <td class="is-total">{{ guestMatrix.grandTotal.toLocaleString() }}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
                 <p class="serverlog-panel__note">{{ guestNote }}</p>
             </div>
@@ -401,29 +411,8 @@ export default {
         seenPct() {
             return this.data.new_total ? Math.round((100 * this.data.new_seen) / this.data.new_total) : 0
         },
-        clientTypeRows() {
-            const rows = this.data.client_types || []
-            const totalSessions = rows.reduce((sum, r) => sum + r.sessions, 0)
-            return rows.map((r) => ({
-                label: r.type === null ? 'Unknown' : (CLIENT_TYPE_LABELS[r.type] || `Type ${r.type}`),
-                sessions: r.sessions,
-                pct: totalSessions ? Math.round((100 * r.sessions) / totalSessions) : 0,
-            }))
-        },
-        hasUnknownClientType() {
-            return (this.data.client_types || []).some((r) => r.type === null)
-        },
-        clientPlatformRows() {
-            const rows = this.data.client_platforms || []
-            const totalSessions = rows.reduce((sum, r) => sum + r.sessions, 0)
-            return rows.map((r) => ({
-                label: r.platform === null ? 'Unknown' : (PLATFORM_LABELS[r.platform] || `Platform ${r.platform}`),
-                sessions: r.sessions,
-                pct: totalSessions ? Math.round((100 * r.sessions) / totalSessions) : 0,
-            }))
-        },
-        hasUnknownClientPlatform() {
-            return (this.data.client_platforms || []).some((r) => r.platform === null)
+        clientMatrix() {
+            return this.buildClientMatrix(this.data.client_matrix || [])
         },
         guestSubtitle() {
             const g = this.data.guests
@@ -465,25 +454,8 @@ export default {
                 },
             }
         },
-        guestClientRows() {
-            const rows = this.data.guests.by_client_type || []
-            const total = rows.reduce((sum, r) => sum + r.sessions, 0)
-            return rows.map((r) => ({
-                label: r.type === null ? 'Unknown' : (CLIENT_TYPE_LABELS[r.type] || `Type ${r.type}`),
-                sessions: r.sessions,
-                ips: r.ips,
-                pct: total ? Math.round((100 * r.sessions) / total) : 0,
-            }))
-        },
-        guestPlatformRows() {
-            const rows = this.data.guests.by_platform || []
-            const total = rows.reduce((sum, r) => sum + r.sessions, 0)
-            return rows.map((r) => ({
-                label: r.platform === null ? 'Unknown' : (PLATFORM_LABELS[r.platform] || `Platform ${r.platform}`),
-                sessions: r.sessions,
-                ips: r.ips,
-                pct: total ? Math.round((100 * r.sessions) / total) : 0,
-            }))
+        guestMatrix() {
+            return this.buildClientMatrix(this.data.guests.by_matrix || [])
         },
         guestNote() {
             const web = (this.data.guests.by_client_type || []).find((r) => r.type === 3)
@@ -611,6 +583,47 @@ export default {
     },
     methods: {
         formatDateTime,
+        /**
+         * Kreuztabelle client_platform × client_type aus einer flachen Liste
+         * {platform, type, sessions}. Spalten/Zeilen in fester Reihenfolge,
+         * "Unknown" (NULL) ans Ende, und nur was tatsächlich vorkommt.
+         */
+        buildClientMatrix(raw) {
+            const typeKey = (t) => (t === null ? 'u' : String(t))
+            const platKey = (p) => (p === null ? 'u' : String(p))
+            const TYPE_ORDER = [1, 2, 3, null]
+            const PLAT_ORDER = [1, 2, 3, 4, 5, null]
+
+            const typesSeen = new Set(raw.map((r) => r.type))
+            const platsSeen = new Set(raw.map((r) => r.platform))
+
+            const cols = TYPE_ORDER.filter((t) => typesSeen.has(t)).map((t) => ({
+                key: typeKey(t),
+                label: t === null ? 'Unknown' : (CLIENT_TYPE_LABELS[t] || `Type ${t}`),
+                total: 0,
+            }))
+            const rows = PLAT_ORDER.filter((p) => platsSeen.has(p)).map((p) => ({
+                key: platKey(p),
+                label: p === null ? 'Unknown' : (PLATFORM_LABELS[p] || `Platform ${p}`),
+                cells: {},
+                total: 0,
+            }))
+            const rowByKey = Object.fromEntries(rows.map((r) => [r.key, r]))
+            const colByKey = Object.fromEntries(cols.map((c) => [c.key, c]))
+
+            let grandTotal = 0
+            for (const r of raw) {
+                const row = rowByKey[platKey(r.platform)]
+                const col = colByKey[typeKey(r.type)]
+                if (!row || !col) continue
+                row.cells[col.key] = (row.cells[col.key] || 0) + r.sessions
+                row.total += r.sessions
+                col.total += r.sessions
+                grandTotal += r.sessions
+            }
+
+            return { cols, rows, grandTotal, hasUnknown: typesSeen.has(null) || platsSeen.has(null) }
+        },
         signed(v) {
             return v > 0 ? `+${v}` : `${v}`
         },

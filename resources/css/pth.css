@@ -453,6 +453,52 @@ html.internals[data-theme='light'] .internals-logo {
     flex: 0 0 auto;
 }
 
+.serverlog-matrix-wrap {
+    overflow-x: auto;
+}
+
+.serverlog-matrix {
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    min-width: 100%;
+}
+
+.serverlog-matrix th,
+.serverlog-matrix td {
+    padding: 0.4rem 0.75rem;
+    text-align: right;
+    border-bottom: 1px solid var(--pth-border);
+    white-space: nowrap;
+}
+
+.serverlog-matrix thead th,
+.serverlog-matrix tbody th {
+    text-align: left;
+    color: var(--pth-text-muted);
+    font-weight: 600;
+}
+
+.serverlog-matrix tbody td {
+    color: var(--pth-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.serverlog-matrix td.is-zero {
+    color: var(--pth-text-muted);
+    opacity: 0.5;
+}
+
+.serverlog-matrix .is-total {
+    font-weight: 700;
+    color: var(--pth-text);
+}
+
+.serverlog-matrix tfoot th,
+.serverlog-matrix tfoot td {
+    border-bottom: none;
+    border-top: 2px solid var(--pth-border);
+}
+
 .serverlog-summary {
     background-color: var(--pth-surface);
     border: 1px solid var(--pth-border);
