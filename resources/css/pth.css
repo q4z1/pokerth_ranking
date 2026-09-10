@@ -468,7 +468,19 @@ html.internals[data-theme='light'] .internals-logo {
     padding: 0.4rem 0.75rem;
     text-align: right;
     border-bottom: 1px solid var(--pth-border);
+    border-right: 1px solid var(--pth-border);
     white-space: nowrap;
+}
+
+.serverlog-matrix th:last-child,
+.serverlog-matrix td:last-child {
+    border-right: none;
+}
+
+/* Kräftigerer Trenner vor der Summenspalte. */
+.serverlog-matrix th:nth-last-child(2),
+.serverlog-matrix td:nth-last-child(2) {
+    border-right-width: 2px;
 }
 
 .serverlog-matrix thead th,
