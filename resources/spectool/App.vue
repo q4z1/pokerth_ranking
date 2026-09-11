@@ -2,17 +2,14 @@
   <!-- Das Live-/Spectator-Tool laeuft nicht mehr hier, sondern in narmods
        Webclient. Wir betten es nur noch ein und geben ihm die Hoehe.
 
-       Bewusst OHNE ?embed=1: in dessen Embed-Modus nimmt das CSS der
-       Lobby-Liste (#live-lobby-list) ihr overflow-y:auto weg, weil die Seite
-       dort in voller Hoehe wachsen und der Host das iframe nachziehen soll.
-       Der Hoehen-Handshake dafuer misst aber documentElement, das in Live-CSS
-       auf 100% + overflow:hidden geklemmt ist – gemeldet wird also immer
-       exakt die Hoehe, die wir gerade gesetzt haben. Ergebnis: das iframe
-       waechst nie, und die Spielerliste ist abgeschnitten und nicht
-       scrollbar. Ohne embed=1 behaelt die Liste ihren eigenen Scroller. -->
+       ?embed=1 schaltet dort Ton per Default aus, unterdrueckt den
+       Install-Prompt und blendet (via data-framed) den Fullscreen-Button aus.
+       Eine Hoehe meldet der Client bewusst nicht zurueck: /live fuellt seinen
+       Viewport und scrollt intern, es gibt also keine Inhaltshoehe – der Host
+       gibt die Hoehe vor. Genau das passiert hier. -->
   <iframe
     id="pth-live"
-    src="https://webclient.pokerth.net/live"
+    src="https://webclient.pokerth.net/live?embed=1"
     allow="autoplay"
     title="PokerTH live"
     :style="{ width: '100%', border: 0, height: height + 'px' }"
