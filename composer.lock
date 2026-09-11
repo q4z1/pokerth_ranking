@@ -18,13 +18,7 @@
                 "type": "zip",
                 "url": "https://api.github.com/repos/HuasoFoundries/jpgraph/zipball/e196d51a520a4182cc26240b4a0744495706f11a",
                 "reference": "e196d51a520a4182cc26240b4a0744495706f11a",
-                "shasum": "",
-                "mirrors": [
-                    {
-                        "url": "https://mirrors.aliyun.com/composer/dists/%package%/%reference%.%type%",
-                        "preferred": true
-                    }
-                ]
+                "shasum": ""
             },
             "require": {
                 "ext-gd": "*",
@@ -45,11 +39,11 @@
             },
             "type": "library",
             "extra": {
+                "version": "4.1.1",
                 "composer-normalize": {
                     "indent-size": 4,
                     "indent-style": "space"
-                },
-                "version": "4.1.1"
+                }
             },
             "autoload": {
                 "psr-4": {
