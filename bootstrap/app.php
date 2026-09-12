@@ -28,6 +28,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->call(new SeasonSwitch)->cron('0 0 01 */3 *');
         $schedule->command('attack:check')->cron('*/5 * * * *');
 
+        // Stuendlich statt taeglich: die Platte stand am 23.08.2026 bei 95%,
+        // und pokerth_access.log waechst unter Angriff um mehrere hundert MB
+        // am Tag. Rotiert wird ohnehin nur, was ueber der Groessenschwelle
+        // liegt - laeuft der Aufruf leer, kostet er nichts.
+        $schedule->command('logs:rotate-nginx')->hourly()->withoutOverlapping();
+
         // Snapshot des neuesten PokerTH-Releases von GitHub frisch halten. Nach
         // einem Release kann man `php artisan downloads:sync` auch direkt
         // aufrufen, statt bis zum nächsten Lauf zu warten.
@@ -69,7 +75,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'bbc'        => '30 4,16 * * *',
             'wec'        => '35 4,16 * * *',
         ] as $app => $cron) {
-            $schedule->exec("env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/root bash -c 'cd /var/www/{$app} && php artisan sitemap:generate'")
+            $schedule->exec("env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/devuser bash -c 'cd /var/www/{$app} && php artisan sitemap:generate'")
                 ->cron($cron)
                 ->withoutOverlapping()
                 ->appendOutputTo(storage_path("logs/sitemap-{$app}.log"))
