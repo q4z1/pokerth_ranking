@@ -368,6 +368,18 @@ class AttackCheck extends Command
      * log so a 5 minute window is not read from disk twice. All logs share
      * nginx's "main" format, so the timestamp is field 4 everywhere and compares
      * correctly as an ISO 8601 string.
+     *
+     * Field 1 is $http_cf_connecting_ip, not the socket address. Requests that did
+     * not come through Cloudflare log "-" there, and those are skipped: the filter
+     * this command switches is a Cloudflare rule, so traffic that bypasses
+     * Cloudflare can neither be stopped by it nor should it be able to trigger it.
+     * Three of the first ten automatic switches (2026-08-28, 09-04, 09-12) were
+     * exactly that: secret scanners sweeping the bare origin IP for .env, .git and
+     * .ssh files, 2,700 to 4,100 requests in well under a minute, 90% without the
+     * header. Each one put real visitors behind the challenge for an hour while
+     * the scan itself was untouched. The only legitimate traffic without the
+     * header is internal (game server, LAN clients via split DNS or NAT
+     * reflection), a few requests per window, so nothing real is lost.
      */
     protected function countHits($since)
     {
@@ -381,7 +393,7 @@ class AttackCheck extends Command
 
             // tail -n +2 drops the first line, which tail -c is free to cut in half.
             $command = "tail -c " . $this->access_log_tail . " " . escapeshellarg($path)
-                . " | tail -n +2 | awk '$4 > \"[$since]\" { total++; if (!seen[$1]++) uniq++ } "
+                . " | tail -n +2 | awk '$4 > \"[$since]\" && $1 != \"-\" { total++; if (!seen[$1]++) uniq++ } "
                 . "END { print (total+0) \"|\" (uniq+0) }'";
 
             [$total, $unique] = explode("|", trim(shell_exec($command)));
