@@ -3,6 +3,7 @@
         <div class="pth-header-buttons">
             <download-button-component :href="downloadUrl"></download-button-component>
             <webclient-button-component :href="webclientUrl" cta></webclient-button-component>
+            <google-play-button-component></google-play-button-component>
         </div>
     </div>
 </template>

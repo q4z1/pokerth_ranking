@@ -854,6 +854,42 @@ html.internals[data-theme='light'] .internals-logo {
     white-space: nowrap;
 }
 
+/* Google-Play-Badge: an das offizielle Badge angelehnt (schwarz, grauer
+   Rand, "GET IT ON / Google Play"). Inline statt Googles PNG, weil dessen
+   transparenter Rand das Badge bei 52 px Hoehe sichtbar kleiner macht. */
+.pth-store-btn--play {
+    background: #000;
+    border: 1px solid #a6a6a6;
+    padding: 8px 16px 8px 12px;
+}
+
+.pth-store-btn__play-logo {
+    width: 30px;
+    height: 32px;
+    flex-shrink: 0;
+}
+
+.pth-store-btn--play .pth-store-btn__text {
+    margin-left: 10px;
+    text-align: left;
+}
+
+.pth-store-btn__play-small {
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    color: #fff;
+    opacity: 0.85;
+}
+
+.pth-store-btn__play-big {
+    font-size: 19px;
+    font-weight: 500;
+    line-height: 1.15;
+    color: #fff;
+    white-space: nowrap;
+}
+
 /* ─────────────────────────────────────────────
    Teaser-Header: Button-Spalte rechts
    Sitzt in .particles_container neben #site-description (float: left).

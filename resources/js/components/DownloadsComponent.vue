@@ -97,6 +97,8 @@
                                     src="https://snapcraft.io/en/dark/install.svg" />
                             </a>
 
+                            <google-play-button-component></google-play-button-component>
+
                             <div style="
                                     display:inline-flex;
                                     align-items:center;
