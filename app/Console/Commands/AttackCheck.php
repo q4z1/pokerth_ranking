@@ -138,6 +138,16 @@ class AttackCheck extends Command
      */
     public function handle()
     {
+        // Muss ganz am Anfang stehen, nicht erst vor der Messung: der Zweig fuer
+        // --enable/--disable weiter unten kehrt vorher zurueck, und logEvent() dort
+        // schrieb seine Zeitstempel deshalb in der App-Zeitzone (Europe/Berlin),
+        // waehrend automatische Schaltungen in UTC protokolliert wurden. Im
+        // attack_events.log standen dadurch beide Zeitzonen nebeneinander - am
+        // 2026-09-19 etwa ein Ausloeser um 17:05:03 und die 18 Minuten spaetere
+        // Abschaltung von Hand als 19:22:53. Das verfaelscht auch die Dauer, die
+        // WebServerLogAnalyzer aus solchen Paaren errechnet.
+        date_default_timezone_set('UTC');
+
 
         if($this->option('enable') && $this->option('disable')){
             $this->error('Use either --enable or --disable, not both.');
@@ -190,7 +200,6 @@ class AttackCheck extends Command
         $rule_disable['enabled'] = false;
         $rule_enable['enabled'] = true;
 
-        date_default_timezone_set('UTC');
         $last5min = date("c", strtotime("-5 minutes"));
 
         [$hits, $uniqueIps] = $this->countHits($last5min);
