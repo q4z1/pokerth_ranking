@@ -43,6 +43,19 @@ class AdminController extends Controller
   public const PLAYER_BANNED = 4;
   public const PLAYER_ACTIVE = 1;
 
+  /** Offenes Ende laut Server-Doku; alles ab hier gilt als dauerhaft. */
+  private const SHADOW_MUTE_PERMANENT = '9999-12-31 23:59:59';
+
+  /** Erlaubte Mute-Dauern → MySQL-INTERVAL-Ausdruck. */
+  private const SHADOW_MUTE_DURATIONS = [
+    '1h'  => '1 HOUR',
+    '1d'  => '1 DAY',
+    '3d'  => '3 DAY',
+    '7d'  => '7 DAY',
+    '30d' => '30 DAY',
+    '90d' => '90 DAY',
+  ];
+
   /**
    * Beide Report-Arten teilen sich dieselbe Logik, unterscheiden sich aber in
    * Tabelle und Spaltennamen.
@@ -359,6 +372,69 @@ class AdminController extends Controller
         ? $this->resolveOpenReports($player->player_id, self::STATE_CREATOR_BANNED)
         : 0;
       return ['success' => true, 'msg' => 'Player banned.', 'resolved_reports' => $resolved];
+    }
+
+    return ['success' => false, 'msg' => 'Unknown action.'];
+  }
+
+  /**
+   * Shadow Mute: der Game-Server stellt Chatzeilen des Spielers niemandem
+   * sonst zu, solange player.shadow_mute_until > NOW() ist (siehe
+   * docs/server_shadow_mute_schema.sql im pokerth-Repo) und liest die Liste
+   * alle paar Sekunden neu – kein Re-Login nötig.
+   *
+   * Alle Zeitrechnungen laufen über die DB-Uhr, weil der Server genau die
+   * prüft; PHP läuft auf Europe/Berlin, MariaDB auf UTC.
+   */
+  public function shadowMute(Request $request, Player $player)
+  {
+    if ($request->isMethod('GET')) {
+      $rows = DB::table('player')->whereNotNull('shadow_mute_until')
+        ->orderBy('shadow_mute_until', 'DESC')
+        ->get([
+          'player_id', 'username', 'last_login', 'active', 'shadow_mute_until',
+          DB::raw('shadow_mute_until > NOW() AS muted'),
+          DB::raw('GREATEST(TIMESTAMPDIFF(SECOND, NOW(), shadow_mute_until), 0) AS remaining'),
+        ]);
+      $totals = $this->reportTotals($rows->pluck('player_id')->all());
+      return [
+        'success' => true,
+        'list' => $rows->map(function ($row) use ($totals) {
+          $permanent = $row->shadow_mute_until >= self::SHADOW_MUTE_PERMANENT;
+          return [
+            'player_id'     => (int) $row->player_id,
+            'username'      => $row->username,
+            'last_login'    => $row->last_login,
+            'banned'        => (int) $row->active === self::PLAYER_BANNED,
+            'until'         => $permanent ? null : $row->shadow_mute_until,
+            'permanent'     => $permanent,
+            'muted'         => (bool) $row->muted,
+            'remaining'     => $permanent ? null : (int) $row->remaining,
+            'total_reports' => $totals[$row->player_id]['total'] ?? 0,
+          ];
+        })->values(),
+      ];
+    }
+
+    $action = $request->input('action', null);
+    if (is_null($action)) return ['success' => false, 'msg' => 'Action not found.'];
+    if (!$player->exists) return ['success' => false, 'msg' => 'Player not found.'];
+
+    $query = DB::table('player')->where('player_id', $player->player_id);
+    if ($action === 'unmute') {
+      $query->update(['shadow_mute_until' => null]);
+      return ['success' => true, 'msg' => 'Shadow mute lifted.'];
+    } else if ($action === 'mute') {
+      $duration = $request->input('duration', '');
+      if ($duration === 'permanent') {
+        $query->update(['shadow_mute_until' => self::SHADOW_MUTE_PERMANENT]);
+      } else if (isset(self::SHADOW_MUTE_DURATIONS[$duration])) {
+        // Intervall stammt aus der Whitelist, kein User-Input im SQL.
+        $query->update(['shadow_mute_until' => DB::raw('NOW() + INTERVAL ' . self::SHADOW_MUTE_DURATIONS[$duration])]);
+      } else {
+        return ['success' => false, 'msg' => 'Unknown duration.'];
+      }
+      return ['success' => true, 'msg' => 'Player shadow muted.'];
     }
 
     return ['success' => false, 'msg' => 'Unknown action.'];

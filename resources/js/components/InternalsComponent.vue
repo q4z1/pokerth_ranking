@@ -19,7 +19,11 @@
                     <el-menu-item index="reports-gamename">Table names</el-menu-item>
                     <el-menu-item index="reports-avatar">Avatars</el-menu-item>
                 </el-sub-menu>
-                <el-menu-item index="banlist">Banlist</el-menu-item>
+                <el-sub-menu index="moderation">
+                    <template #title>Banlist</template>
+                    <el-menu-item index="banlist">Banned players</el-menu-item>
+                    <el-menu-item index="shadowmute">Shadow mutes</el-menu-item>
+                </el-sub-menu>
                 <el-menu-item index="adverts">Adverts</el-menu-item>
                 <el-menu-item index="serverlog">Game-Server Log</el-menu-item>
                 <el-menu-item index="webserverlog">Webserver Log</el-menu-item>
@@ -88,6 +92,7 @@
                     @changed="revision++"
                 />
                 <ban-list v-else-if="view === 'banlist'" :key="'banlist-' + revision" @changed="revision++" />
+                <shadow-mute-list v-else-if="view === 'shadowmute'" />
                 <adverts v-else-if="view === 'adverts'" />
                 <server-log v-else-if="view === 'serverlog'" />
                 <web-server-log v-else-if="view === 'webserverlog'" />
@@ -103,13 +108,14 @@ import BanList from './BanList.vue'
 import OffendersTable from './OffendersTable.vue'
 import ReportsTable from './ReportsTable.vue'
 import ServerLog from './ServerLog.vue'
+import ShadowMuteList from './ShadowMuteList.vue'
 import WebServerLog from './WebServerLog.vue'
 import { apiGet, apiPost, notice, reportError } from '../admin/adminUtils.js'
 import { applyTheme, preferredTheme } from '../admin/theme.js'
 
 export default {
     name: 'InternalsComponent',
-    components: { Adverts, BanList, OffendersTable, ReportsTable, ServerLog, WebServerLog },
+    components: { Adverts, BanList, OffendersTable, ReportsTable, ServerLog, ShadowMuteList, WebServerLog },
     props: ['authenticated'],
     data() {
         return {

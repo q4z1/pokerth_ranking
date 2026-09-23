@@ -31,6 +31,8 @@ Route::get('/logout', [App\Http\Controllers\AdminController::class, 'logout']);
 
 Route::post('/banlist/{player}', [App\Http\Controllers\AdminController::class, 'banlist']);
 Route::get('/banlist', [App\Http\Controllers\AdminController::class, 'banlist']);
+Route::post('/shadowmute/{player}', [App\Http\Controllers\AdminController::class, 'shadowMute']);
+Route::get('/shadowmute', [App\Http\Controllers\AdminController::class, 'shadowMute']);
 Route::post('/adverts', [App\Http\Controllers\AdminController::class, 'adverts']);
 Route::get('/adverts', [App\Http\Controllers\AdminController::class, 'adverts']);
 Route::get('/serverlog', [App\Http\Controllers\AdminController::class, 'serverLog']);

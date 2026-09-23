@@ -15,7 +15,7 @@ class Player extends Authenticatable
 
     protected $primaryKey = 'player_id';
 
-    protected $hidden = ['password', 'email', 'fp', 'fpnew', 'last_ip', 'active', 'blocked', 'act_key', 'last_games'];
+    protected $hidden = ['password', 'email', 'fp', 'fpnew', 'last_ip', 'active', 'blocked', 'act_key', 'last_games', 'shadow_mute_until'];
 
     public $timestamps = false;
 
