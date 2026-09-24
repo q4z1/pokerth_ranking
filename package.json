@@ -20,6 +20,6 @@
         "@tailwindcss/vite": "^4.3",
         "@vitejs/plugin-vue": "^6.0",
         "sass": "^1.104",
-        "vite": "^8.2"
+        "vite": "^8.3"
     }
 }
