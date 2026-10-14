@@ -23,6 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
             '/gametable/show',
             '/game/pdb',
         ]);
+
+        // X-Robots-Tag nur auf Testinstanzen (APP_NOINDEX=true in der .env).
+        $middleware->append(\App\Http\Middleware\NoIndex::class);
     })
     ->withSchedule(function (Schedule $schedule) {
         $schedule->call(new SeasonSwitch)->cron('0 0 01 */3 *');
