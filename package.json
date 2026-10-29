@@ -9,17 +9,17 @@
     "dependencies": {
         "@element-plus/icons-vue": "^2.3",
         "axios": "^1.15",
-        "chart.js": "^4.4",
+        "chart.js": "^4.6",
         "element-plus": "^2.14",
-        "pinia": "^4.0",
+        "pinia": "^4.1",
         "vue": "^3.5",
         "vue-chartjs": "^5.3",
-        "vue-router": "^5.3"
+        "vue-router": "^5.4"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.3",
         "@vitejs/plugin-vue": "^6.0",
-        "sass": "^1.104",
+        "sass": "^1.106",
         "vite": "^8.3"
     }
 }
