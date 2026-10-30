@@ -30,4 +30,8 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Lobby-Chat-Mitschnitt des Game-Servers (JSON Lines), siehe
+    // AdminController::lobbyChat().
+    'lobby_chat_log' => env('LOBBY_CHAT_LOG', base_path('../images/avatars/game/chatlog/lobby-chat.log')),
+
 ];

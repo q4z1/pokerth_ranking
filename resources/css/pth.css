@@ -332,6 +332,76 @@ html.internals[data-theme='light'] .internals-logo {
     color: var(--el-color-danger);
 }
 
+/* ── Lobby Chat ── */
+.lobbychat {
+    max-height: calc(100vh - 220px);
+    min-height: 200px;
+    overflow-y: auto;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.lobbychat__empty {
+    padding: 2rem 0;
+    text-align: center;
+}
+
+.lobbychat__line {
+    padding: 0.1rem 0;
+    overflow-wrap: anywhere;
+}
+
+.lobbychat__line:hover {
+    background-color: var(--pth-surface-hover);
+}
+
+.lobbychat__time {
+    margin-right: 0.5rem;
+    color: var(--pth-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+html.internals a.lobbychat__name {
+    margin-right: 0.35rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.lobbychat__msg {
+    color: var(--pth-text);
+}
+
+/* Wie in den Clients: 🌐 nur auf der Zeile unter dem Mauszeiger, auf
+   übersetzten Zeilen dauerhaft (als Weg zurück zum Original). */
+.lobbychat__globe {
+    margin-left: 0.35rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font-size: 0.95em;
+    line-height: 1;
+    visibility: hidden;
+}
+
+.lobbychat__line:hover .lobbychat__globe,
+.lobbychat__line.is-translated .lobbychat__globe,
+.lobbychat__globe.is-busy {
+    visibility: visible;
+}
+
+.lobbychat__globe.is-busy {
+    cursor: progress;
+}
+
+/* Touch-Geräte haben kein Hover: 🌐 immer zeigen. */
+@media (hover: none) {
+    .lobbychat__globe {
+        visibility: visible;
+    }
+}
+
 /* ── Server Log ── */
 .serverlog-empty {
     padding: 2.5rem 1rem;

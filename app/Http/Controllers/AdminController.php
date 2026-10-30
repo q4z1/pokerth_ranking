@@ -329,6 +329,80 @@ class AdminController extends Controller
     return app(WebServerLogAnalyzer::class)->analyze($hours);
   }
 
+  /**
+   * Lobby-Chat-Mitschnitt des Game-Servers, eine JSON-Zeile pro Nachricht
+   * ({ch, msg, name, pid, time, ts}). Anders als serverLog() mit rohen
+   * Nicks und Chattext - daher nur mit Login.
+   *
+   * Gelesen werden nur die letzten `limit` Zeilen, damit die Datei beliebig
+   * wachsen darf. Reicht die aktuelle Datei dafür nicht, wird mit der von
+   * logrotate abgelegten Vorgängerdatei (<log>.1) aufgefüllt.
+   */
+  public function lobbyChat(Request $request)
+  {
+    // Doppelt zur auth-Middleware im Konstruktor: das Log ist absichtlich
+    // nur über PHP erreichbar, ein versehentlicher Eintrag in deren
+    // except-Liste darf es nicht öffentlich machen.
+    if (!Auth::check()) abort(403);
+
+    $limit = (int) $request->query('limit', 1000);
+    $limit = max(100, min(20000, $limit));
+
+    $path = config('services.lobby_chat_log');
+    $rotated = $path . '.1';
+    if (!is_readable($path) && !is_readable($rotated)) {
+      return ['success' => false, 'msg' => 'Lobby chat log not found.'];
+    }
+
+    $lines = is_readable($path) ? $this->tailLines($path, $limit) : [];
+    if (count($lines) < $limit && is_readable($rotated)) {
+      $lines = array_merge($this->tailLines($rotated, $limit - count($lines)), $lines);
+    }
+
+    $list = [];
+    foreach ($lines as $line) {
+      $row = json_decode($line, true);
+      if (!is_array($row) || !isset($row['msg'])) continue;
+      $list[] = [
+        'ts'   => (int) ($row['ts'] ?? 0),
+        'time' => $row['time'] ?? null,
+        'name' => (string) ($row['name'] ?? ''),
+        'pid'  => isset($row['pid']) ? (int) $row['pid'] : null,
+        'ch'   => (string) ($row['ch'] ?? 'lobby'),
+        'msg'  => (string) $row['msg'],
+      ];
+    }
+
+    return [
+      'success'  => true,
+      'list'     => $list,
+      'limit'    => $limit,
+      'modified' => is_readable($path) ? filemtime($path) : filemtime($rotated),
+    ];
+  }
+
+  /** Die letzten $count nicht-leeren Zeilen einer Datei, blockweise von hinten gelesen. */
+  private function tailLines(string $path, int $count): array
+  {
+    $fh = fopen($path, 'rb');
+    if (!$fh) return [];
+    fseek($fh, 0, SEEK_END);
+    $pos = ftell($fh);
+    $buffer = '';
+    while ($pos > 0 && substr_count($buffer, "\n") <= $count) {
+      $read = min(65536, $pos);
+      $pos -= $read;
+      fseek($fh, $pos);
+      $buffer = fread($fh, $read) . $buffer;
+    }
+    fclose($fh);
+
+    $lines = array_values(array_filter(explode("\n", $buffer), 'strlen'));
+    // Ohne Dateianfang ist die erste Zeile womöglich angeschnitten.
+    if ($pos > 0) array_shift($lines);
+    return array_slice($lines, -$count);
+  }
+
   public function banlist(Request $request, Player $player)
   {
     if ($request->isMethod('GET')) {

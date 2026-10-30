@@ -27,6 +27,7 @@
                 <el-menu-item index="adverts">Adverts</el-menu-item>
                 <el-menu-item index="serverlog">Game-Server Log</el-menu-item>
                 <el-menu-item index="webserverlog">Webserver Log</el-menu-item>
+                <el-menu-item index="lobbychat">Lobby Chat</el-menu-item>
             </el-menu>
             <div v-else class="internals-nav internals-nav--empty"></div>
 
@@ -96,6 +97,7 @@
                 <adverts v-else-if="view === 'adverts'" />
                 <server-log v-else-if="view === 'serverlog'" />
                 <web-server-log v-else-if="view === 'webserverlog'" />
+                <lobby-chat v-else-if="view === 'lobbychat'" />
             </template>
         </main>
     </div>
@@ -105,6 +107,7 @@
 import { Lock, Moon, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import Adverts from './Adverts.vue'
 import BanList from './BanList.vue'
+import LobbyChat from './LobbyChat.vue'
 import OffendersTable from './OffendersTable.vue'
 import ReportsTable from './ReportsTable.vue'
 import ServerLog from './ServerLog.vue'
@@ -115,7 +118,7 @@ import { applyTheme, preferredTheme } from '../admin/theme.js'
 
 export default {
     name: 'InternalsComponent',
-    components: { Adverts, BanList, OffendersTable, ReportsTable, ServerLog, ShadowMuteList, WebServerLog },
+    components: { Adverts, BanList, LobbyChat, OffendersTable, ReportsTable, ServerLog, ShadowMuteList, WebServerLog },
     props: ['authenticated'],
     data() {
         return {

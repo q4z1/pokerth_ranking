@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Invokes\SeasonSwitch;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -23,6 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
             '/gametable/show',
             '/game/pdb',
         ]);
+
+        // Kein Login-Redirect: die auth-Middleware würde sonst schon vor der
+        // AuthenticationException route('login') auflösen (gibt es nicht ->
+        // 500). Der 401 kommt aus withExceptions() unten.
+        $middleware->redirectGuestsTo(fn () => null);
 
         // X-Robots-Tag nur auf Testinstanzen (APP_NOINDEX=true in der .env).
         $middleware->append(\App\Http\Middleware\NoIndex::class);
@@ -86,5 +92,10 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Das Backend hat keine Login-Route (Anmeldung im Vue-Frontend), der
+        // Standard-Redirect auf route('login') endete deshalb als 500. Nicht
+        // eingeloggt = immer 401, auch für normale Browser-Aufrufe.
+        $exceptions->render(function (AuthenticationException $e) {
+            return response()->json(['success' => false, 'msg' => 'Unauthenticated.'], 401);
+        });
     })->create();
