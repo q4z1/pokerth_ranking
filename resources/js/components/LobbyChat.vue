@@ -53,6 +53,7 @@ import { apiGet, notice, reportError } from '../admin/adminUtils.js'
 import { TRANSLATE_LANGUAGES, normalizeLangCode, translateText } from '../admin/chatTranslator.js'
 
 const LANG_KEY = 'pth-lobbychat-lang'
+const POLL_MS = 30000
 
 function storedLang() {
     try {
@@ -113,13 +114,44 @@ export default {
     },
     mounted() {
         this.load()
+        this.timer = setInterval(() => {
+            if (!document.hidden) this.poll()
+        }, POLL_MS)
+        document.addEventListener('visibilitychange', this.onVisible)
+    },
+    beforeUnmount() {
+        clearInterval(this.timer)
+        document.removeEventListener('visibilitychange', this.onVisible)
     },
     methods: {
+        onVisible() {
+            if (!document.hidden) this.poll()
+        },
         formatTime(ts) {
             if (!ts) return '—'
             const d = new Date(ts * 1000)
             const p = (n) => String(n).padStart(2, '0')
             return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+        },
+        isAtBottom() {
+            const box = this.$refs.box
+            return !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40
+        },
+        /**
+         * Stabiler Key je Zeile (statt Index), damit Übersetzungen einen
+         * Reload überleben, auch wenn vorne Zeilen herausrotieren.
+         */
+        buildRows(list) {
+            const old = new Map(this.rows.map((r) => [r.key, r]))
+            const seen = new Map()
+            return list.map((r) => {
+                const base = `${r.ts}|${r.name}|${r.msg}`
+                const n = (seen.get(base) || 0) + 1
+                seen.set(base, n)
+                const key = `${base}|${n}`
+                const prev = old.get(key)
+                return { ...r, key, translation: prev?.translation ?? null, shown: prev?.shown ?? false, busy: prev?.busy ?? false }
+            })
         },
         scrollToBottom() {
             this.$nextTick(() => {
@@ -132,7 +164,7 @@ export default {
             try {
                 const data = await apiGet('/lobbychat', { limit: this.limit })
                 if (data.success) {
-                    this.rows = data.list.map((r, i) => ({ ...r, key: `${r.ts}-${i}`, translation: null, shown: false, busy: false }))
+                    this.rows = this.buildRows(data.list)
                     this.modified = data.modified
                     this.scrollToBottom()
                 } else {
@@ -143,6 +175,24 @@ export default {
                 reportError(err, 'Could not load the lobby chat.')
             } finally {
                 this.loading = false
+            }
+        },
+        /**
+         * Stiller 30s-Reload: kein Spinner, keine Fehler-Toasts. Gescrollt
+         * wird nur, wenn man ohnehin unten stand - wer hochgescrollt hat
+         * und liest, wird nicht weggerissen.
+         */
+        async poll() {
+            if (this.loading) return
+            try {
+                const data = await apiGet('/lobbychat', { limit: this.limit })
+                if (!data.success || data.modified === this.modified) return
+                const stick = this.isAtBottom()
+                this.rows = this.buildRows(data.list)
+                this.modified = data.modified
+                if (stick) this.scrollToBottom()
+            } catch (err) {
+                console.warn('LobbyChat: refresh failed', err)
             }
         },
         /** Wie in den Clients: 🌐 schaltet zwischen Übersetzung und Original um, ⏳ = läuft. */
