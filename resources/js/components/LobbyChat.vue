@@ -26,9 +26,15 @@
 
         <div ref="box" v-loading="loading" class="lobbychat">
             <div v-if="!filteredRows.length" class="lobbychat__empty admin-muted">{{ emptyText }}</div>
-            <div v-for="row in filteredRows" :key="row.key" class="lobbychat__line" :class="{ 'is-translated': row.shown }">
+            <div
+                v-for="row in filteredRows"
+                :key="row.key"
+                class="lobbychat__line"
+                :class="{ 'is-translated': row.shown, 'is-notice': row.ch === 'notice' }"
+            >
                 <span class="lobbychat__time" :title="row.time">{{ formatTime(row.ts) }}</span>
-                <a class="lobbychat__name" href="#" title="Filter by this player" @click.prevent="search = row.name">{{ row.name }}:</a>
+                <span v-if="row.ch === 'notice'" class="lobbychat__name" :title="'Global notice sent by ' + row.name">📢 Global notice:</span>
+                <a v-else class="lobbychat__name" href="#" title="Filter by this player" @click.prevent="search = row.name">{{ row.name }}:</a>
                 <span class="lobbychat__msg">
                     <i v-if="row.shown">{{ row.translation }}</i>
                     <template v-else>{{ row.msg }}</template>
@@ -43,13 +49,29 @@
                 >{{ row.busy ? '⏳' : '🌐' }}</button>
             </div>
         </div>
+
+        <form class="lobbychat__notice" @submit.prevent="sendNotice">
+            <el-input
+                v-model="noticeText"
+                class="lobbychat__notice-input"
+                placeholder="Global notice to all connected players (lobby and tables)"
+                :disabled="sending"
+                clearable
+            >
+                <template #prefix>📢</template>
+                <template #suffix>
+                    <span class="lobbychat__notice-count" :class="{ 'is-over': noticeBytes > noticeMax }">{{ noticeBytes }}/{{ noticeMax }}</span>
+                </template>
+            </el-input>
+            <el-button type="primary" native-type="submit" :loading="sending" :disabled="!canSendNotice">Send</el-button>
+        </form>
     </admin-panel>
 </template>
 
 <script>
 import { Search } from '@element-plus/icons-vue'
 import AdminPanel from './AdminPanel.vue'
-import { apiGet, notice, reportError } from '../admin/adminUtils.js'
+import { apiGet, apiPost, confirmAction, notice, reportError } from '../admin/adminUtils.js'
 import { TRANSLATE_LANGUAGES, normalizeLangCode, translateText } from '../admin/chatTranslator.js'
 
 const LANG_KEY = 'pth-lobbychat-lang'
@@ -78,6 +100,9 @@ export default {
             targetLang: storedLang(),
             languages: TRANSLATE_LANGUAGES,
             modified: null,
+            noticeText: '',
+            noticeMax: 128,
+            sending: false,
             Search,
         }
     },
@@ -90,6 +115,13 @@ export default {
         subtitle() {
             const last = this.modified ? ' · last write ' + this.formatTime(this.modified) : ''
             return 'local time' + last
+        },
+        /** Der Server prüft Bytes (UTF-8), nicht Zeichen. */
+        noticeBytes() {
+            return new TextEncoder().encode(this.noticeText.trim()).length
+        },
+        canSendNotice() {
+            return !this.sending && this.noticeBytes > 0 && this.noticeBytes <= this.noticeMax
         },
         emptyText() {
             return this.loading ? 'Loading…' : 'No chat messages.'
@@ -166,6 +198,7 @@ export default {
                 if (data.success) {
                     this.rows = this.buildRows(data.list)
                     this.modified = data.modified
+                    if (data.notice_bytes) this.noticeMax = data.notice_bytes
                     this.scrollToBottom()
                 } else {
                     this.rows = []
@@ -193,6 +226,33 @@ export default {
                 if (stick) this.scrollToBottom()
             } catch (err) {
                 console.warn('LobbyChat: refresh failed', err)
+            }
+        },
+        async sendNotice() {
+            if (!this.canSendNotice) return
+            const text = this.noticeText.trim()
+            try {
+                await confirmAction(`Send to everyone connected to the game server: “${text}”`, 'Global notice')
+            } catch (e) {
+                return
+            }
+            this.sending = true
+            try {
+                const data = await apiPost('/lobbychat/notice', { text })
+                if (data.success) {
+                    notice(data.msg, 'success')
+                    this.noticeText = ''
+                    // Erzwingt den Reload, auch wenn mtime in derselben Sekunde liegt.
+                    this.modified = null
+                    await this.poll()
+                    this.scrollToBottom()
+                } else {
+                    notice(data.msg || 'The global notice could not be sent.', 'error')
+                }
+            } catch (err) {
+                reportError(err, 'The global notice could not be sent.')
+            } finally {
+                this.sending = false
             }
         },
         /** Wie in den Clients: 🌐 schaltet zwischen Übersetzung und Original um, ⏳ = läuft. */

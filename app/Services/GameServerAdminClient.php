@@ -6,13 +6,17 @@ use RuntimeException;
 
 /**
  * Minimaler PokerTH-Client über die WebSocket-Schnittstelle des Game-Servers,
- * nur für Admin-Aktionen (derzeit: Kickban).
+ * nur für Admin-Aktionen (Kickban, Global Notice).
  *
  * Ablauf (siehe ServerLobbyThread im pokerth-Repo):
  *   Announce ← | → Init (authenticatedLogin, Passwort in clientUserData)
  *   AuthServerChallenge ← | → AuthClientResponse (leer, SCRAM ist serverseitig entfernt)
  *   InitAck ← | PlayerList(new)* ← | → PlayerInfoRequest | PlayerInfoReply* ←
  *   → AdminBanPlayer(uniqueId) | AdminBanPlayerAck(pending) ← | AdminBanPlayerAck(accepted|dbError) ←
+ *
+ * Global Notice: nach InitAck → AdminGlobalNotice(text) | AdminGlobalNoticeAck ←.
+ * Der Server schickt den Text als chatTypeBroadcast-ChatMessage an alle
+ * Sessions (Lobby und Tische), daher dieselben 128 Byte wie jeder Chattext.
  *
  * AdminBanPlayerMessage erwartet die *Unique-Player-ID der laufenden Session*,
  * nicht die DB-player_id – daher der Umweg über PlayerList/PlayerInfo und die
@@ -38,6 +42,11 @@ class GameServerAdminClient
     private const T_ERROR           = 73;
     private const T_ADMIN_BAN       = 76;
     private const T_ADMIN_BAN_ACK   = 77;
+    private const T_GLOBAL_NOTICE   = 82;
+    private const T_GLOBAL_NOTICE_ACK = 83;
+
+    /** Grenze aus NetPacketValidator::ValidateAdminGlobalNoticeMessage (Bytes). */
+    public const NOTICE_MAX_BYTES = 128;
 
     private const BAN_RESULTS = [
         0 => 'accepted',
@@ -136,6 +145,53 @@ class GameServerAdminClient
             ][$label] ?? "Unknown ban result ({$result}).";
 
             return ['ok' => $ok, 'code' => $label, 'msg' => $msg, 'unique_id' => $uniqueId];
+        } catch (RuntimeException $e) {
+            return ['ok' => false, 'code' => 'error', 'msg' => $e->getMessage()];
+        } finally {
+            $this->close();
+        }
+    }
+
+    /**
+     * Schickt eine Global Notice an alle verbundenen Clients.
+     *
+     * @return array{ok:bool, code:string, msg:string}
+     */
+    public function globalNotice(string $text): array
+    {
+        if (!$this->isConfigured()) {
+            return ['ok' => false, 'code' => 'not_configured', 'msg' => 'Game server admin account is not configured (PTH_ADMIN_BOT_* in .env).'];
+        }
+        $text = trim($text);
+        if ($text === '') return ['ok' => false, 'code' => 'invalid', 'msg' => 'The notice is empty.'];
+        if (!mb_check_encoding($text, 'UTF-8')) return ['ok' => false, 'code' => 'invalid', 'msg' => 'The notice is not valid UTF-8.'];
+        if (strlen($text) > self::NOTICE_MAX_BYTES) {
+            return ['ok' => false, 'code' => 'invalid', 'msg' => 'The notice is longer than ' . self::NOTICE_MAX_BYTES . ' bytes (' . strlen($text) . ').'];
+        }
+
+        try {
+            $this->connect();
+            $this->login();
+            $this->send(self::T_GLOBAL_NOTICE, $this->pbBytes(1, $text));
+
+            $deadline = microtime(true) + (float) $this->cfg['timeout'];
+            while (microtime(true) < $deadline) {
+                $msg = $this->receive(max(0.1, $deadline - microtime(true)));
+                if ($msg === null) break;
+                [$type, $body] = $msg;
+                if ($type === self::T_ERROR) {
+                    // Ein Server ohne AdminGlobalNotice verwirft den Typ als ungültiges Paket.
+                    $reason = (int) ($this->pbFirst($this->pbDecode($body), 1) ?? 0);
+                    $hint = $reason === 9 ? ' – the game server probably does not support global notices yet' : '';
+                    throw new RuntimeException('Game server error: ' . $this->errorText($body) . $hint . '.');
+                }
+                if ($type !== self::T_GLOBAL_NOTICE_ACK) continue;
+                $result = (int) ($this->pbFirst($this->pbDecode($body), 1) ?? 1);
+                return $result === 0
+                    ? ['ok' => true, 'code' => 'accepted', 'msg' => 'Global notice sent to all connected players.']
+                    : ['ok' => false, 'code' => 'invalid', 'msg' => 'The game server rejected the notice (bot is not an admin?).'];
+            }
+            return ['ok' => false, 'code' => 'error', 'msg' => 'No answer from the game server to the global notice (it may or may not have been sent).'];
         } catch (RuntimeException $e) {
             return ['ok' => false, 'code' => 'error', 'msg' => $e->getMessage()];
         } finally {

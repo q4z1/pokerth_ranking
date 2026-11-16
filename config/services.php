@@ -34,6 +34,11 @@ return [
     // AdminController::lobbyChat().
     'lobby_chat_log' => env('LOBBY_CHAT_LOG', base_path('../images/avatars/game/chatlog/lobby-chat.log')),
 
+    // Über das Backend gesendete Global Notices (JSON Lines). Der Game-Server
+    // schreibt Broadcasts nicht ins Chat-Log, deshalb mischt lobbyChat() sie
+    // aus dieser Datei dazu.
+    'global_notice_log' => env('GLOBAL_NOTICE_LOG', storage_path('app/global-notices.log')),
+
     // Lokale GeoIP-Datenbank (DB-IP City Lite, CC BY 4.0), aktualisiert
     // monatlich per `php artisan geoip:update`.
     'geoip' => [

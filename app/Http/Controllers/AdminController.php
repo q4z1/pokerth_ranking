@@ -361,6 +361,37 @@ class AdminController extends Controller
       $lines = array_merge($this->tailLines($rotated, $limit - count($lines)), $lines);
     }
 
+    $list = $this->chatRows($lines);
+    $modified = is_readable($path) ? filemtime($path) : filemtime($rotated);
+
+    // Global Notices nur aus dem Zeitraum des Chat-Ausschnitts, sonst
+    // stünden alte Notices vor dem ersten geladenen Chat-Eintrag.
+    $noticeLog = config('services.global_notice_log');
+    if (is_readable($noticeLog)) {
+      $from = $list ? $list[0]['ts'] : 0;
+      $notices = array_filter($this->chatRows($this->tailLines($noticeLog, 500)), fn ($r) => $r['ts'] >= $from);
+      if ($notices) {
+        $list = array_merge($list, $notices);
+        // Stabil nach Zeit sortieren: gleiche Sekunde behält die Reihenfolge.
+        $keyed = array_map(null, $list, array_keys($list));
+        usort($keyed, fn ($a, $b) => [$a[0]['ts'], $a[1]] <=> [$b[0]['ts'], $b[1]]);
+        $list = array_slice(array_column($keyed, 0), -$limit);
+      }
+      $modified = max($modified, filemtime($noticeLog));
+    }
+
+    return [
+      'success'      => true,
+      'list'         => $list,
+      'limit'        => $limit,
+      'modified'     => $modified,
+      'notice_bytes' => GameServerAdminClient::NOTICE_MAX_BYTES,
+    ];
+  }
+
+  /** JSON-Lines-Zeilen des Chat-Logs → Zeilen für das Backend. */
+  private function chatRows(array $lines): array
+  {
     $list = [];
     foreach ($lines as $line) {
       $row = json_decode($line, true);
@@ -374,13 +405,30 @@ class AdminController extends Controller
         'msg'  => (string) $row['msg'],
       ];
     }
+    return $list;
+  }
 
-    return [
-      'success'  => true,
-      'list'     => $list,
-      'limit'    => $limit,
-      'modified' => is_readable($path) ? filemtime($path) : filemtime($rotated),
-    ];
+  /**
+   * Global Notice live über die WebSocket-Schnittstelle des Game-Servers:
+   * geht als Broadcast-Chat an alle verbundenen Clients (Lobby und Tische).
+   */
+  public function globalNotice(Request $request)
+  {
+    $text = trim((string) $request->input('text', ''));
+    $admin = Auth::user()->name ?? null;
+
+    $result = app(GameServerAdminClient::class)->globalNotice($text);
+    \Log::info('Admin global notice', ['admin' => $admin, 'text' => $text, 'code' => $result['code'], 'msg' => $result['msg']]);
+
+    if ($result['ok']) {
+      $now = time();
+      $line = json_encode([
+        'ts' => $now, 'time' => gmdate('Y-m-d\TH:i:s\Z', $now), 'name' => (string) $admin, 'ch' => 'notice', 'msg' => $text,
+      ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+      @file_put_contents(config('services.global_notice_log'), $line . "\n", FILE_APPEND | LOCK_EX);
+    }
+
+    return ['success' => $result['ok'], 'code' => $result['code'], 'msg' => $result['msg']];
   }
 
   /** Die letzten $count nicht-leeren Zeilen einer Datei, blockweise von hinten gelesen. */

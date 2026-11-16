@@ -38,6 +38,7 @@ Route::get('/adverts', [App\Http\Controllers\AdminController::class, 'adverts'])
 Route::get('/serverlog', [App\Http\Controllers\AdminController::class, 'serverLog']);
 Route::get('/webserverlog', [App\Http\Controllers\AdminController::class, 'webServerLog']);
 Route::get('/lobbychat', [App\Http\Controllers\AdminController::class, 'lobbyChat']);
+Route::post('/lobbychat/notice', [App\Http\Controllers\AdminController::class, 'globalNotice'])->middleware('throttle:10,1');
 Route::get('/players', [App\Http\Controllers\AdminController::class, 'players']);
 Route::get('/players/online', [App\Http\Controllers\AdminController::class, 'onlinePlayers']);
 Route::get('/players/ip', [App\Http\Controllers\AdminController::class, 'ipNicks']);
