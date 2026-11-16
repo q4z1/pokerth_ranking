@@ -1,57 +1,48 @@
 <template>
-    <!-- Kompakter Streifen fuer das Game-Server-Log-Dashboard (Internals):
-         dieselben Livewerte wie in der Sidebar, aber als Badge-Zeile unter den
-         Kacheln statt als Box mit Ueberschrift. -->
-    <div v-if="strip" class="pth-now-strip">
-        <span class="pth-now-strip__badge" :class="{ 'pth-now-strip__badge--live': live }">
-            <i class="pth-now-strip__dot" />{{ badgeLabel }}
+    <!-- Kopfleisten-Variante fuer die Internals-Seiten: nur Statuspunkt,
+         Icons und Zahlen. Die Bedeutung steht im Tooltip (title), damit die
+         Leiste auf allen Admin-Seiten schmal bleibt. -->
+    <div v-if="header" class="pth-now-bar" :class="{ 'pth-now-bar--off': !live }"
+         role="status" :aria-label="statusLabel">
+        <span class="pth-now-bar__dot" :class="{ 'pth-now-bar__dot--live': live }" :title="statusLabel" />
+
+        <span class="pth-now-bar__item" :title="live ? plural(online, 'player', 'players') + ' online' : statusLabel">
+            <svg class="pth-now-bar__ico" viewBox="0 0 24 24" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+            </svg>
+            <strong>{{ live ? online : '–' }}</strong>
         </span>
 
-        <span v-if="!live" class="pth-now-strip__item pth-now-strip__item--note">
-            {{ loaded ? 'no heartbeat from the game server' : 'checking game server …' }}
+        <span class="pth-now-bar__item" :title="live ? plural(tables, 'table', 'tables') + ' running' : statusLabel">
+            <svg class="pth-now-bar__ico" viewBox="0 0 24 24" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <strong>{{ live ? tables : '–' }}</strong>
         </span>
 
-        <template v-else>
-            <span class="pth-now-strip__item">
-                <svg class="pth-now-strip__ico" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                    <circle cx="12" cy="7" r="4" />
-                </svg>
-                <span><strong>{{ online }}</strong> {{ online === 1 ? 'player' : 'players' }} online</span>
-            </span>
+        <span class="pth-now-bar__item" :title="live ? plural(waiting, 'player', 'players') + ' waiting for games' : statusLabel">
+            <svg class="pth-now-bar__ico" viewBox="0 0 24 24" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <polyline points="12 7 12 12 16 14" />
+            </svg>
+            <strong>{{ live ? waiting : '–' }}</strong>
+        </span>
 
-            <span class="pth-now-strip__item">
-                <svg class="pth-now-strip__ico" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="14" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" />
-                </svg>
-                <span><strong>{{ tables }}</strong> {{ tables === 1 ? 'table' : 'tables' }} running</span>
-            </span>
-
-            <span class="pth-now-strip__item">
-                <svg class="pth-now-strip__ico" viewBox="0 0 24 24"
-                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="9" />
-                    <polyline points="12 7 12 12 16 14" />
-                </svg>
-                <span><strong>{{ waiting }}</strong> {{ waiting === 1 ? 'player' : 'players' }} waiting</span>
-            </span>
-        </template>
-
-        <span v-if="loaded" class="pth-now-strip__item pth-now-strip__item--stat">
-            <svg class="pth-now-strip__ico" viewBox="0 0 24 24" fill="currentColor">
+        <!-- Tageszahl kommt aus der DB, nicht vom Heartbeat - auch offline gueltig. -->
+        <span class="pth-now-bar__item pth-now-bar__item--stat"
+              :title="loaded ? plural(today, 'game', 'games') + ' today' : statusLabel">
+            <svg class="pth-now-bar__ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M12 3s7 6.5 7 11a3.5 3.5 0 0 1-6.1 2.4c.2 2 1 3.4 2.6 4.6H8.5c1.6-1.2 2.4-2.6 2.6-4.6A3.5 3.5 0 0 1 5 14c0-4.5 7-11 7-11z" />
             </svg>
-            <span><strong>{{ today }}</strong> {{ today === 1 ? 'game' : 'games' }} today</span>
+            <strong>{{ loaded ? today : '–' }}</strong>
         </span>
-
-        <a v-if="loaded" class="pth-now-strip__cta" href="https://webclient.pokerth.net" target="_blank" rel="noopener">
-            Play now &rarr;
-        </a>
     </div>
 
     <div v-else-if="visible">
@@ -112,7 +103,7 @@ const POLL_MS = 60000
 export default {
     props: {
         // "sidebar" (Default): Box mit Ueberschrift fuer die phpBB-Seitenleiste.
-        // "strip": einzeilige Badge-Variante fuer das Internals-Dashboard.
+        // "header": Icon-Leiste fuer die Kopfzeile der Internals-Seiten.
         variant: { type: String, default: 'sidebar' },
     },
     data() {
@@ -127,22 +118,22 @@ export default {
         }
     },
     computed: {
-        strip() {
-            return this.variant === 'strip'
+        header() {
+            return this.variant === 'header'
         },
         // Livewerte sind erst nach dem ersten erfolgreichen Poll aussagekraeftig.
         live() {
             return this.loaded && !this.stale
         },
-        badgeLabel() {
-            if (!this.loaded) return 'Checking'
-            return this.stale ? 'Offline' : 'Live'
+        statusLabel() {
+            if (!this.loaded) return 'Game server: checking …'
+            return this.stale ? 'Game server: no heartbeat' : 'Game server: live'
         },
         // Vor dem ersten Laden nichts rendern (kein Layout-Sprung).
         // Server tot UND keine offenen Sessions mehr: Box ganz weglassen.
         //
-        // Gilt nur fuer die Sidebar: im Dashboard ist "Server ist tot" selbst
-        // eine Information, die der Streifen offline anzeigt statt zu
+        // Gilt nur fuer die Sidebar: in der Admin-Kopfleiste ist "Server ist
+        // tot" selbst eine Information, die Leiste wird dann grau statt zu
         // verschwinden.
         visible() {
             if (!this.loaded) return false
@@ -161,11 +152,14 @@ export default {
         document.removeEventListener('visibilitychange', this.onVisible)
     },
     methods: {
+        plural(n, one, many) {
+            return `${n} ${n === 1 ? one : many}`
+        },
         onVisible() {
             if (!document.hidden) this.fetch()
         },
         fetch() {
-            // Timeout, damit ein haengender Request den Streifen nicht dauerhaft
+            // Timeout, damit ein haengender Request die Leiste nicht dauerhaft
             // im 'Checking'-Zustand stehen laesst.
             axios.get('/pthranking/live', { timeout: 10000 })
                 .then(res => {
@@ -270,71 +264,50 @@ hr {
     margin-bottom: 1em;
 }
 
-/* ── Dashboard-Variante ─────────────────────────────────────────────
-   Kartenoptik wie .serverlog-tile (pth.css), nur einzeilig. Die
-   Aussenabstaende passen zum Kachelraster darueber. */
-.pth-now-strip {
-    display: flex;
-    flex-wrap: wrap;
+/* ── Kopfleisten-Variante (Internals) ──────────────────────────────
+   Sitzt in .internals-actions neben dem Theme-Schalter. */
+.pth-now-bar {
+    display: inline-flex;
     align-items: center;
-    gap: .5rem 1.4rem;
-    margin: 0 1rem 1.25rem;
-    padding: .7rem 1rem;
-    background-color: var(--pth-surface);
+    gap: .9rem;
+    padding: .3rem .8rem;
     border: 1px solid var(--pth-border);
-    border-radius: 8px;
-    font-size: .88rem;
+    border-radius: 999px;
+    font-size: .85rem;
+    line-height: 1;
     color: var(--pth-text-muted);
-
-    &__badge {
-        display: inline-flex;
-        align-items: center;
-        gap: .4rem;
-        padding: .12rem .55rem;
-        border: 1px solid var(--pth-border);
-        border-radius: 999px;
-        font-size: .7rem;
-        font-weight: 700;
-        letter-spacing: .04em;
-        text-transform: uppercase;
-
-        &--live {
-            border-color: var(--pth-live);
-            color: var(--pth-live);
-        }
-    }
+    white-space: nowrap;
+    cursor: default;
 
     &__dot {
-        width: .5rem;
-        height: .5rem;
+        width: .55rem;
+        height: .55rem;
         border-radius: 50%;
-        background-color: currentColor;
-    }
+        background-color: var(--pth-text-muted);
 
-    // Nur solange der Server lebt pulsiert der Punkt.
-    &__badge--live &__dot {
-        animation: pth-now-pulse 2s ease-in-out infinite;
+        // Nur solange der Server lebt: gruen und pulsierend.
+        &--live {
+            background-color: var(--pth-live);
+            animation: pth-now-pulse 2s ease-in-out infinite;
+        }
     }
 
     &__item {
         display: inline-flex;
         align-items: center;
-        gap: .45rem;
+        gap: .3rem;
 
         strong {
             font-weight: 700;
+            font-variant-numeric: tabular-nums;
             color: var(--pth-text);
         }
     }
 
     // Tageszahl ist kein Livewert - per Trennstrich absetzen.
     &__item--stat {
-        padding-left: 1.4rem;
+        padding-left: .9rem;
         border-left: 1px solid var(--pth-border);
-    }
-
-    &__item--note {
-        font-style: italic;
     }
 
     &__ico {
@@ -344,16 +317,11 @@ hr {
         color: var(--pth-icon);
     }
 
-    &__cta {
-        margin-left: auto;
-        color: var(--pth-live);
-        font-weight: 700;
-        text-decoration: none;
+}
 
-        &:hover {
-            text-decoration: underline;
-        }
-    }
+// Kein Heartbeat: Livewerte ausgegraut ("–"), Tageszahl bleibt normal.
+.pth-now-bar--off .pth-now-bar__item:not(.pth-now-bar__item--stat) strong {
+    color: var(--pth-text-muted);
 }
 
 @keyframes pth-now-pulse {
@@ -361,22 +329,18 @@ hr {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .pth-now-strip__badge--live .pth-now-strip__dot {
+    .pth-now-bar__dot--live {
         animation: none;
     }
 }
 
 @media (max-width: 768px) {
-    .pth-now-strip {
-        gap: .4rem .9rem;
+    .pth-now-bar {
+        gap: .6rem;
+        padding: .25rem .6rem;
 
         &__item--stat {
-            padding-left: 0;
-            border-left: 0;
-        }
-
-        &__cta {
-            margin-left: 0;
+            padding-left: .6rem;
         }
     }
 }

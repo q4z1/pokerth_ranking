@@ -14,9 +14,9 @@
                 @select="navigate"
             >
                 <el-menu-item index="players">Players</el-menu-item>
-                <el-menu-item index="offenders">Repeat offenders</el-menu-item>
                 <el-sub-menu index="reports">
                     <template #title>Reports</template>
+                    <el-menu-item index="offenders">Repeat offenders</el-menu-item>
                     <el-menu-item index="reports-gamename">Table names</el-menu-item>
                     <el-menu-item index="reports-avatar">Avatars</el-menu-item>
                 </el-sub-menu>
@@ -36,6 +36,8 @@
             <div v-else class="internals-nav internals-nav--empty"></div>
 
             <div class="internals-actions">
+                <!-- Livewerte des Game-Servers (Heartbeat) auf jeder Admin-Seite. -->
+                <pokerth-now-component v-if="auth" variant="header" />
                 <el-tooltip :content="theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'" placement="bottom">
                     <el-switch
                         v-model="darkMode"
@@ -115,6 +117,7 @@ import BanList from './BanList.vue'
 import LobbyChat from './LobbyChat.vue'
 import OffendersTable from './OffendersTable.vue'
 import PlayerAdmin from './PlayerAdmin.vue'
+import PokerthNowComponent from './PokerthNowComponent.vue'
 import ReportsTable from './ReportsTable.vue'
 import ServerLog from './ServerLog.vue'
 import ShadowMuteList from './ShadowMuteList.vue'
@@ -124,7 +127,7 @@ import { applyTheme, preferredTheme } from '../admin/theme.js'
 
 export default {
     name: 'InternalsComponent',
-    components: { Adverts, BanList, LobbyChat, OffendersTable, PlayerAdmin, ReportsTable, ServerLog, ShadowMuteList, WebServerLog },
+    components: { Adverts, BanList, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ShadowMuteList, WebServerLog },
     props: ['authenticated'],
     data() {
         return {
@@ -132,7 +135,7 @@ export default {
             busy: false,
             username: null,
             password: null,
-            view: 'offenders',
+            view: 'lobbychat',
             preset: '',
             revision: 0,
             theme: preferredTheme(),
