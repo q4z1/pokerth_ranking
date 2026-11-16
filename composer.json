@@ -8,12 +8,13 @@
     ],
     "license": "MIT",
     "require": {
-        "symfony/console": "^7.2",
         "php": "^8.2",
         "amenadiel/jpgraph": "^4",
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^12.0",
-        "laravel/tinker": "^3.0"
+        "laravel/tinker": "^3.0",
+        "maxmind-db/reader": "^1.12",
+        "symfony/console": "^7.2"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

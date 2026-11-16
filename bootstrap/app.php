@@ -50,6 +50,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // 2x täglich, versetzt zur vollen Stunde – öfter bringt nichts, die
         // Suchmaschinen holen die Sitemap ohnehin nur etwa einmal am Tag ab.
         $schedule->command('sitemap:generate')->cron('20 4,16 * * *');
+        // GeoIP-Datenbank fürs Admin-Backend (DB-IP City Lite, erscheint
+        // monatlich). Täglich prüfen; lädt nur, wenn der Monat neu ist.
+        $schedule->command('geoip:update')->cron('10 5 * * *')->withoutOverlapping();
 
         // Backup (loest ~/.local/bin/backup.sh + automysqlbackup ab, Details im
         // Doc-Block von App\Console\Commands\Backup). Alle 4 h nur DB-Dump,

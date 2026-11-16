@@ -13,6 +13,7 @@
                 :ellipsis="false"
                 @select="navigate"
             >
+                <el-menu-item index="players">Players</el-menu-item>
                 <el-menu-item index="offenders">Repeat offenders</el-menu-item>
                 <el-sub-menu index="reports">
                     <template #title>Reports</template>
@@ -25,8 +26,11 @@
                     <el-menu-item index="shadowmute">Shadow mutes</el-menu-item>
                 </el-sub-menu>
                 <el-menu-item index="adverts">Adverts</el-menu-item>
-                <el-menu-item index="serverlog">Game-Server Log</el-menu-item>
-                <el-menu-item index="webserverlog">Webserver Log</el-menu-item>
+                <el-sub-menu index="logs">
+                    <template #title>Logs</template>
+                    <el-menu-item index="serverlog">Game-Server Log</el-menu-item>
+                    <el-menu-item index="webserverlog">Webserver Log</el-menu-item>
+                </el-sub-menu>
                 <el-menu-item index="lobbychat">Lobby Chat</el-menu-item>
             </el-menu>
             <div v-else class="internals-nav internals-nav--empty"></div>
@@ -72,8 +76,9 @@
             </div>
 
             <template v-else>
+                <player-admin v-if="view === 'players'" />
                 <offenders-table
-                    v-if="view === 'offenders'"
+                    v-else-if="view === 'offenders'"
                     :key="'offenders-' + revision"
                     @show-reports="showReports"
                     @changed="revision++"
@@ -109,6 +114,7 @@ import Adverts from './Adverts.vue'
 import BanList from './BanList.vue'
 import LobbyChat from './LobbyChat.vue'
 import OffendersTable from './OffendersTable.vue'
+import PlayerAdmin from './PlayerAdmin.vue'
 import ReportsTable from './ReportsTable.vue'
 import ServerLog from './ServerLog.vue'
 import ShadowMuteList from './ShadowMuteList.vue'
@@ -118,7 +124,7 @@ import { applyTheme, preferredTheme } from '../admin/theme.js'
 
 export default {
     name: 'InternalsComponent',
-    components: { Adverts, BanList, LobbyChat, OffendersTable, ReportsTable, ServerLog, ShadowMuteList, WebServerLog },
+    components: { Adverts, BanList, LobbyChat, OffendersTable, PlayerAdmin, ReportsTable, ServerLog, ShadowMuteList, WebServerLog },
     props: ['authenticated'],
     data() {
         return {

@@ -16,11 +16,14 @@
                 if (theme === 'dark') document.documentElement.classList.add('dark');
             })();
         </script>
-        <link href="/pthranking/css/pth.css" rel="stylesheet">
+        @php($pth = \App\Support\ViteAssets::entry('resources/js/app.js', 'js/pth.js', ['css/pth.css']))
+        @foreach ($pth['css'] as $css)
+        <link href="{{ $css }}" rel="stylesheet">
+        @endforeach
         <title>PokerTH Internal</title>
     </head>
     <body>
       <div id="vue1"><internals-component :authenticated="{{ json_encode(!is_null(auth()->user()), true) }}"></internals-component></div>
     </body>
-    <script type="module" src="/pthranking/js/pth.js"></script>
+    <script type="module" src="{{ $pth['js'] }}"></script>
 </html>

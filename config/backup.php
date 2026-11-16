@@ -71,7 +71,7 @@ return [
             '/var/www/wec',
             '/home/devuser/.local/bin',
         ],
-        'excludes' => ['*.log', '**/.git/*', '**/node_modules/*', '**/vendor/*'],
+        'excludes' => ['*.log', '**/.git/*', '**/node_modules/*', '**/vendor/*', '*.mmdb'],
     ],
 
 ];

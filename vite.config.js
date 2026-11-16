@@ -24,27 +24,23 @@ export default defineConfig({
     build: {
         outDir: 'public',
         emptyOutDir: false,
+        // public/.vite/manifest.json: Einstieg → gehashte Dateinamen. Wird
+        // serverseitig gelesen (App\Support\ViteAssets für die Backend-Seite,
+        // ext/inquies/pokerth/event/listener.php fürs Forum).
+        manifest: true,
         rollupOptions: {
             input: {
                 pth: 'resources/js/app.js',
                 spectool: 'resources/js/spectool.js',
             },
             output: {
-                // Stable entry filenames so phpbb can hardcode them
-                entryFileNames: 'js/[name].js',
-                // Shared chunks (Vue, Element Plus) get hashed names
+                // Alles mit Content-Hash im Namen: eine neue Version hat eine
+                // neue URL, Browser und Cloudflare können nichts Veraltetes
+                // ausliefern, ein Cache-Purge ist nie nötig.
+                entryFileNames: 'js/[name]-[hash].js',
                 chunkFileNames: 'js/chunks/[name]-[hash].js',
                 assetFileNames: (assetInfo) => {
                     const name = assetInfo.names?.[0] ?? assetInfo.name ?? ''
-                    // pth.css und spectool.css sind in den phpBB-Templates fest
-                    // verlinkt (mit ?v=filemtime) und müssen stabil heißen.
-                    if (name === 'pth.css' || name === 'spectool.css') {
-                        return 'css/[name][extname]'
-                    }
-                    // Alle anderen Stylesheets werden zur Laufzeit von Vite
-                    // nachgeladen (lazy Komponenten-Chunks, Element-Plus-Bundle).
-                    // Die brauchen einen Hash im Namen, sonst hängt in Browsern
-                    // eine alte Version im Cache, während pth.js schon neu ist.
                     if (name.endsWith('.css')) {
                         return 'css/[name]-[hash][extname]'
                     }
