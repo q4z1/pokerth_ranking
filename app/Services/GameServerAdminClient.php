@@ -19,6 +19,11 @@ use RuntimeException;
  * Lobby sieht. lobbySnapshot() liest sie samt Spielerliste nur mit und meldet
  * sich wieder ab.
  *
+ * Private Nachricht: → ChatRequest(targetPlayerId, text). Der Server bestätigt
+ * nicht; Fehlschlag = ChatReject mit unserem Text. Sitzt das Ziel an einem
+ * laufenden Tisch, hält der Server die PM bis Spielende zurück (bzw. lehnt
+ * sie bei älteren Servern ab). Antworten an den Bot liest niemand.
+ *
  * Global Notice: nach InitAck → AdminGlobalNotice(text) | AdminGlobalNoticeAck ←.
  * Der Server schickt den Text als chatTypeBroadcast-ChatMessage an alle
  * Sessions (Lobby und Tische), daher dieselben 128 Byte wie jeder Chattext.
@@ -48,6 +53,8 @@ class GameServerAdminClient
     private const T_GAME_LIST_LEFT  = 16;
     private const T_PLAYER_INFO_REQ = 18;
     private const T_PLAYER_INFO_REP = 19;
+    private const T_CHAT_REQUEST    = 63;
+    private const T_CHAT_REJECT     = 65;
     private const T_ERROR           = 73;
     private const T_ADMIN_BAN       = 76;
     private const T_ADMIN_BAN_ACK   = 77;
@@ -125,17 +132,7 @@ class GameServerAdminClient
             $this->login();
             $players = $this->collectPlayers();
 
-            $uniqueId = null;
-            foreach ($players as $id => $name) {
-                if ($name === $nick) { $uniqueId = $id; break; }
-            }
-            if ($uniqueId === null) {
-                // Der Server vergleicht Namen ohne Groß-/Kleinschreibung (PAD SPACE /
-                // ci-Collation), also als zweiter Versuch ebenso.
-                foreach ($players as $id => $name) {
-                    if (strcasecmp($name, $nick) === 0) { $uniqueId = $id; break; }
-                }
-            }
+            $uniqueId = $this->findUniqueId($players, $nick);
             if ($uniqueId === null) {
                 return ['ok' => false, 'code' => 'not_online', 'msg' => "\"{$nick}\" is not online on the game server.", 'online' => count($players)];
             }
@@ -154,6 +151,58 @@ class GameServerAdminClient
             ][$label] ?? "Unknown ban result ({$result}).";
 
             return ['ok' => $ok, 'code' => $label, 'msg' => $msg, 'unique_id' => $uniqueId];
+        } catch (RuntimeException $e) {
+            return ['ok' => false, 'code' => 'error', 'msg' => $e->getMessage()];
+        } finally {
+            $this->close();
+        }
+    }
+
+    /**
+     * Schickt dem Spieler mit diesem Nickname eine private Nachricht vom Bot.
+     *
+     * @return array{ok:bool, code:string, msg:string}
+     */
+    public function privateMessage(string $nick, string $text): array
+    {
+        if (!$this->isConfigured()) {
+            return ['ok' => false, 'code' => 'not_configured', 'msg' => 'Game server admin account is not configured (PTH_ADMIN_BOT_* in .env).'];
+        }
+        $nick = trim($nick);
+        $text = trim($text);
+        if ($nick === '') return ['ok' => false, 'code' => 'invalid', 'msg' => 'No nickname given.'];
+        if ($text === '') return ['ok' => false, 'code' => 'invalid', 'msg' => 'The message is empty.'];
+        if (!mb_check_encoding($text, 'UTF-8')) return ['ok' => false, 'code' => 'invalid', 'msg' => 'The message is not valid UTF-8.'];
+        if (strlen($text) > self::NOTICE_MAX_BYTES) {
+            return ['ok' => false, 'code' => 'invalid', 'msg' => 'The message is longer than ' . self::NOTICE_MAX_BYTES . ' bytes (' . strlen($text) . ').'];
+        }
+
+        try {
+            $this->connect();
+            $this->login();
+            $uniqueId = $this->findUniqueId($this->collectPlayers(), $nick);
+            if ($uniqueId === null) {
+                return ['ok' => false, 'code' => 'not_online', 'msg' => "\"{$nick}\" is not online on the game server."];
+            }
+
+            $this->send(self::T_CHAT_REQUEST, $this->pbVarint(2, $uniqueId) . $this->pbBytes(3, $text));
+
+            // Kein Ack bei Erfolg – nur ein ChatReject käme zurück.
+            $deadline = microtime(true) + 2;
+            while (microtime(true) < $deadline) {
+                $msg = $this->receive(max(0.1, $deadline - microtime(true)));
+                if ($msg === null) break;
+                [$type, $body] = $msg;
+                if ($type === self::T_ERROR) throw new RuntimeException('Game server error: ' . $this->errorText($body) . '.');
+                if ($type !== self::T_CHAT_REJECT) continue;
+                $f = $this->pbDecode($body);
+                if ((string) ($this->pbFirst($f, 1) ?? '') !== $text) continue;
+                $why = (int) ($this->pbFirst($f, 2) ?? 0) === 1
+                    ? 'too many messages are already waiting for this player (they are at a running table).'
+                    : 'player is at a running table, or the bot hit the chat rate limit.';
+                return ['ok' => false, 'code' => 'rejected', 'msg' => "The game server rejected the message: {$why}"];
+            }
+            return ['ok' => true, 'code' => 'sent', 'msg' => "Message sent to \"{$nick}\"."];
         } catch (RuntimeException $e) {
             return ['ok' => false, 'code' => 'error', 'msg' => $e->getMessage()];
         } finally {
@@ -394,6 +443,18 @@ class GameServerAdminClient
             }
         }
         return $names;
+    }
+
+    /** Exakter Treffer zuerst, dann ohne Groß-/Kleinschreibung (wie der Server, ci-Collation). */
+    private function findUniqueId(array $players, string $nick): ?int
+    {
+        foreach ($players as $id => $name) {
+            if ($name === $nick) return $id;
+        }
+        foreach ($players as $id => $name) {
+            if (strcasecmp($name, $nick) === 0) return $id;
+        }
+        return null;
     }
 
     private function awaitBanResult(int $uniqueId): int

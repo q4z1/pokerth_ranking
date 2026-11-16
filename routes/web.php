@@ -44,6 +44,7 @@ Route::get('/players/online', [App\Http\Controllers\AdminController::class, 'onl
 Route::get('/players/ip', [App\Http\Controllers\AdminController::class, 'ipNicks']);
 Route::get('/players/{player}', [App\Http\Controllers\AdminController::class, 'playerDetail'])->where('player', '[0-9]+');
 Route::post('/players/kickban', [App\Http\Controllers\AdminController::class, 'kickban'])->middleware('throttle:20,1');
+Route::post('/players/message', [App\Http\Controllers\AdminController::class, 'privateMessage'])->middleware('throttle:20,1');
 Route::get('/reports/offenders', [App\Http\Controllers\AdminController::class, 'offenders']);
 // Muss vor /reports/{type} stehen, sonst greift dort das type-Pattern nicht mehr.
 Route::get('/reports/avatar/image/{hash}', [App\Http\Controllers\AdminController::class, 'avatarImage'])->where('hash', '[0-9a-fA-F]{8,128}');

@@ -845,6 +845,31 @@ class AdminController extends Controller
     return $payload;
   }
 
+  /**
+   * Private Nachricht vom Admin-Bot an einen Online-Spieler. Einweg: Antworten
+   * gehen an das Bot-Konto und werden nicht ausgewertet.
+   */
+  public function privateMessage(Request $request)
+  {
+    $playerId = (int) $request->input('player_id', 0);
+    $nick = trim((string) $request->input('nick', ''));
+    if ($playerId) {
+      // Bei Accounts zählt der Name aus der DB, nicht der vom Browser.
+      $nick = (string) (DB::table('player')->where('player_id', $playerId)->value('username') ?? '');
+      if ($nick === '') return ['success' => false, 'msg' => 'Player not found.'];
+    }
+    if ($nick === '') return ['success' => false, 'msg' => 'No player given.'];
+    $text = trim((string) $request->input('text', ''));
+
+    $result = app(GameServerAdminClient::class)->privateMessage($nick, $text);
+    \Log::info('Admin private message', [
+      'admin' => Auth::user()->name ?? null, 'nick' => $nick, 'player_id' => $playerId ?: null,
+      'text' => $text, 'code' => $result['code'], 'msg' => $result['msg'],
+    ]);
+
+    return ['success' => $result['ok'], 'code' => $result['code'], 'msg' => $result['msg']];
+  }
+
   public function kickban(Request $request)
   {
     $playerId = (int) $request->input('player_id', 0);

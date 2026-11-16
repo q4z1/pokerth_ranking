@@ -115,8 +115,13 @@
             <el-table-column prop="created" label="Registered" width="110" sortable="custom">
                 <template #default="{ row }">{{ formatDate(row.created) }}</template>
             </el-table-column>
-            <el-table-column label="Action" width="210" align="right">
+            <el-table-column label="Action" width="290" align="right">
                 <template #default="{ row }">
+                    <el-tooltip :content="row.online ? 'Private message from the admin bot' : 'Player is not online'" placement="top">
+                        <span>
+                            <el-button size="small" :disabled="!row.online" @click="askMessage(row)">Message</el-button>
+                        </span>
+                    </el-tooltip>
                     <el-tooltip
                         :content="row.online ? 'Kick, 24 h IP ban and account ban – live on the game server' : 'Player is not online'"
                         placement="top"
@@ -170,14 +175,19 @@
             <el-table-column label="Client" width="170">
                 <template #default="{ row }">{{ clientLabel(row.build_id, row.platform) }}</template>
             </el-table-column>
-            <el-table-column prop="game_id" label="Table" width="90" align="right" sortable="custom">
+            <el-table-column prop="table" label="Table" min-width="170" sortable="custom">
                 <template #default="{ row }">
-                    <span v-if="row.game_id">#{{ row.game_id }}</span>
-                    <span v-else class="admin-muted">lobby</span>
+                    <span v-if="row.table" class="player-admin__table" :title="row.table_title">
+                        <span class="player-admin__table-state" :class="{ 'is-running': row.table_running }" />
+                        <span v-if="row.table_spectator" title="spectating">👁 </span>{{ row.table }}
+                    </span>
+                    <span v-else-if="row.table_known" class="admin-muted">lobby</span>
+                    <span v-else class="admin-muted" :title="lobbyError || 'Loading the lobby from the game server …'">{{ lobbyError ? '?' : '…' }}</span>
                 </template>
             </el-table-column>
-            <el-table-column label="Action" width="110" align="right">
+            <el-table-column label="Action" width="190" align="right">
                 <template #default="{ row }">
+                    <el-button size="small" @click="askMessage(row)">Message</el-button>
                     <el-button size="small" type="danger" @click="askKickban(row)">Kickban</el-button>
                 </template>
             </el-table-column>
@@ -191,6 +201,40 @@
             </template>
             <template v-else>GeoIP database missing – run <code>php artisan geoip:update</code>.</template>
         </p>
+
+        <!-- Private Nachricht (Einweg, Antworten werden nicht gelesen) -->
+        <el-dialog v-model="pm.open" title="Private message" width="min(520px, 94vw)" append-to-body>
+            <template v-if="pm.row">
+                <p>
+                    To <strong>{{ pm.row.username }}</strong>
+                    <span v-if="pm.row.guest" class="admin-muted"> (guest)</span>,
+                    sent as a private chat message from the admin bot.
+                </p>
+                <el-input
+                    v-model="pm.text"
+                    type="textarea"
+                    :autosize="{ minRows: 2, maxRows: 5 }"
+                    placeholder="Message"
+                    @keydown.enter.exact.prevent="doMessage"
+                />
+                <div class="player-admin__pm-meta admin-muted">
+                    <span :class="{ 'player-admin__pm-over': pmBytes > PM_MAX_BYTES }">{{ pmBytes }} / {{ PM_MAX_BYTES }} bytes</span>
+                    <span>Replies go to the bot account and are not read.</span>
+                </div>
+                <p class="admin-muted player-admin__pm-hint">
+                    A player at a running table gets the message after the game (servers before that feature reject it).
+                </p>
+            </template>
+            <template #footer>
+                <el-button @click="pm.open = false">Cancel</el-button>
+                <el-button
+                    type="primary"
+                    :loading="pm.busy"
+                    :disabled="!pm.text.trim() || pmBytes > PM_MAX_BYTES"
+                    @click="doMessage"
+                >Send</el-button>
+            </template>
+        </el-dialog>
 
         <!-- Kickban-Bestätigung -->
         <el-dialog v-model="kick.open" title="Kickban player" width="min(520px, 94vw)" append-to-body>
@@ -440,6 +484,8 @@ const SharedCell = {
 }
 
 const ONLINE_REFRESH_MS = 30000
+/** ValidateChatRequestMessage: 1–128 Byte. */
+const PM_MAX_BYTES = 128
 
 export default {
     name: 'PlayerAdmin',
@@ -463,6 +509,13 @@ export default {
             requestNo: 0,
             debounceTimer: null,
             kick: { open: false, busy: false, row: null, resolveReports: true },
+            pm: { open: false, busy: false, row: null, text: '' },
+            // Lobby-Snapshot vom Game-Server (Bot-Login, serverseitig 60 s
+            // gecacht): server_session.last_game_id wird erst beim Disconnect
+            // geschrieben, die aktuelle Tischbelegung kennt nur die Lobby.
+            lobbySeats: null,
+            lobbyError: null,
+            PM_MAX_BYTES,
             detail: { open: false, loading: false, data: null },
             ipNicks: { open: false, loading: false, ip: null, geo: null, list: [] },
             Search,
@@ -475,6 +528,26 @@ export default {
             if (this.filters.ip) parts.push(`IP ${this.filters.ip_scope === 'any' ? 'ever used' : 'last'}: ${this.filters.ip}`)
             if (this.filters.online) parts.push('online only')
             return parts.join(' · ')
+        },
+        /** Online-Zeilen um den aktuellen Tisch aus dem Lobby-Snapshot ergänzt. */
+        baseRows() {
+            if (this.mode !== 'online') return this.rows
+            const seats = this.lobbySeats
+            return this.rows.map((row) => {
+                const seat = seats ? seats.get((row.username || '').toLowerCase()) : undefined
+                return {
+                    ...row,
+                    table: seat?.table ?? null,
+                    table_running: !!seat?.running,
+                    table_spectator: !!seat?.spectator,
+                    table_title: seat?.table ? `${seat.running ? 'Running' : 'Open'} table${seat.spectator ? ', spectating' : ''}` : null,
+                    // Nur wenn der Snapshot den Spieler kennt, ist "lobby" eine Aussage.
+                    table_known: !!seat,
+                }
+            })
+        },
+        pmBytes() {
+            return new TextEncoder().encode(this.pm.text.trim()).length
         },
         kickIp() {
             const r = this.kick.row
@@ -568,8 +641,33 @@ export default {
             // Zurück im Tab: sofort nachziehen statt bis zum nächsten Tick zu warten.
             if (!document.hidden && this.mode === 'online' && !this.loading) this.loadOnline(true)
         },
+        async loadLobbySeats() {
+            try {
+                const data = await apiGet('/live/lobby')
+                if (!data.success) {
+                    this.lobbyError = data.msg || 'Could not read the lobby.'
+                    return
+                }
+                const running = new Map((data.games || []).map((g) => [g.id, g.running]))
+                const seats = new Map()
+                for (const p of data.players || []) {
+                    seats.set((p.name || '').toLowerCase(), {
+                        table: p.game,
+                        running: p.game_id !== null && !!running.get(p.game_id),
+                        spectator: !!p.spectator,
+                    })
+                }
+                this.lobbySeats = seats
+                this.lobbyError = null
+            } catch (err) {
+                console.error(err)
+                this.lobbyError = 'Could not read the lobby.'
+            }
+        },
         /** silent: Hintergrund-Refresh ohne Ladeanzeige und ohne Fehler-Popup. */
         async loadOnline(silent = false) {
+            // Parallel, langsamer (Bot-Login) – die Tabelle wartet nicht darauf.
+            this.loadLobbySeats()
             const no = ++this.requestNo
             if (!silent) this.loading = true
             try {
@@ -638,6 +736,31 @@ export default {
                 reportError(err, 'Could not load nicks.')
             } finally {
                 this.ipNicks.loading = false
+            }
+        },
+        askMessage(row) {
+            if (!row) return
+            this.pm = { open: true, busy: false, row, text: '' }
+        },
+        async doMessage() {
+            const row = this.pm.row
+            const text = this.pm.text.trim()
+            if (!text || this.pmBytes > PM_MAX_BYTES || this.pm.busy) return
+            this.pm.busy = true
+            try {
+                const payload = row.player_id ? { player_id: row.player_id, text } : { nick: row.username, text }
+                const data = await apiPost('/players/message', payload)
+                if (data.success) {
+                    this.pm.open = false
+                    notice(data.msg)
+                } else {
+                    // Dialog offen lassen, damit der Text nicht verloren geht.
+                    notice(data.msg || 'Message failed.', 'error')
+                }
+            } catch (err) {
+                reportError(err, 'Message failed.')
+            } finally {
+                this.pm.busy = false
             }
         },
         askKickban(row) {
@@ -744,6 +867,41 @@ export default {
 }
 .player-admin__inline-geo {
     margin-left: 8px;
+}
+.player-admin__table {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.player-admin__table-state {
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--el-color-warning);
+}
+.player-admin__table-state.is-running {
+    background: var(--el-color-success);
+}
+.player-admin__pm-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+    font-size: 12px;
+}
+.player-admin__pm-over {
+    color: var(--el-color-danger);
+    font-weight: 600;
+}
+.player-admin__pm-hint {
+    margin: 8px 0 0;
+    font-size: 12px;
 }
 .player-admin__note {
     margin: 10px 2px 0;
