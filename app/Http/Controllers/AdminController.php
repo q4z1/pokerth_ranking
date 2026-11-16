@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use App\Models\AdminPlayer;
 use App\Models\Advert;
@@ -810,6 +811,40 @@ class AdminController extends Controller
    * 24-h-IP-Sperre und Account-Bann (player.active = 4) in einem Schritt.
    * Funktioniert nur, solange der Spieler verbunden ist.
    */
+  /**
+   * Tisch- und Spielernamen für die Tooltips der Live-Leiste. Quelle ist die
+   * Lobby, die der Admin-Bot nach dem Login bekommt; ein Login je Minute
+   * reicht, daher gecacht (Fehler nur kurz, damit der nächste Hover neu
+   * versucht).
+   */
+  public function liveLobby()
+  {
+    if (!Auth::check()) abort(403);
+
+    $key = 'live_stats.lobby';
+    if (($cached = Cache::get($key)) !== null) return $cached;
+
+    $result = app(GameServerAdminClient::class)->lobbySnapshot();
+    $games = collect($result['games'] ?? [])
+      ->sortBy(fn ($g) => [$g['running'] ? 0 : 1, mb_strtolower($g['name'])])
+      ->values();
+    $gameNames = $games->pluck('name', 'id');
+    $players = collect($result['players'] ?? [])
+      ->map(fn ($p) => $p + ['game' => $p['game_id'] !== null ? ($gameNames[$p['game_id']] ?? null) : null])
+      ->sortBy(fn ($p) => mb_strtolower($p['name']))
+      ->values();
+
+    $payload = [
+      'success' => $result['ok'],
+      'msg'     => $result['ok'] ? null : $result['msg'],
+      'games'   => $games->all(),
+      'players' => $players->all(),
+      'fetched' => now()->toIso8601String(),
+    ];
+    Cache::put($key, $payload, $result['ok'] ? 60 : 15);
+    return $payload;
+  }
+
   public function kickban(Request $request)
   {
     $playerId = (int) $request->input('player_id', 0);

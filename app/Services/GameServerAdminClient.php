@@ -14,6 +14,11 @@ use RuntimeException;
  *   InitAck ← | PlayerList(new)* ← | → PlayerInfoRequest | PlayerInfoReply* ←
  *   → AdminBanPlayer(uniqueId) | AdminBanPlayerAck(pending) ← | AdminBanPlayerAck(accepted|dbError) ←
  *
+ * Tischliste: nach InitAck kommt je offenem Tisch ein GameListNew (Name,
+ * Modus, Spieler-IDs, NetGameInfo) – dieselbe Liste, die jeder Client in der
+ * Lobby sieht. lobbySnapshot() liest sie samt Spielerliste nur mit und meldet
+ * sich wieder ab.
+ *
  * Global Notice: nach InitAck → AdminGlobalNotice(text) | AdminGlobalNoticeAck ←.
  * Der Server schickt den Text als chatTypeBroadcast-ChatMessage an alle
  * Sessions (Lobby und Tische), daher dieselben 128 Byte wie jeder Chattext.
@@ -37,6 +42,10 @@ class GameServerAdminClient
     private const T_AUTH_RESPONSE   = 4;
     private const T_INIT_ACK        = 6;
     private const T_PLAYER_LIST     = 12;
+    private const T_GAME_LIST_NEW   = 13;
+    private const T_GAME_LIST_UPDATE = 14;
+    private const T_GAME_LIST_JOINED = 15;
+    private const T_GAME_LIST_LEFT  = 16;
     private const T_PLAYER_INFO_REQ = 18;
     private const T_PLAYER_INFO_REP = 19;
     private const T_ERROR           = 73;
@@ -199,6 +208,63 @@ class GameServerAdminClient
         }
     }
 
+    /**
+     * Lobby-Snapshot: Tische (offen = wartet auf Spieler, running = gestartet)
+     * und Spieler mit Namen; "waiting" = an keinem Tisch, auch nicht als
+     * Zuschauer. Der Bot selbst ist nicht enthalten.
+     *
+     * @return array{ok:bool, code:string, msg:string,
+     *   games?:list<array{id:int,name:string,running:bool,players:int,max:int,type:string,private:bool}>,
+     *   players?:list<array{id:int,name:string,game_id:?int,spectator:bool}>}
+     */
+    public function lobbySnapshot(): array
+    {
+        if (!$this->isConfigured()) {
+            return ['ok' => false, 'code' => 'not_configured', 'msg' => 'Game server admin account is not configured (PTH_ADMIN_BOT_* in .env).'];
+        }
+
+        try {
+            $this->connect();
+            $this->login();
+            [$ids, $games] = $this->collectLobby();
+            $names = $this->resolveNames(array_keys($ids));
+
+            $seat = [];   // playerId → [gameId, spectator]
+            foreach ($games as $g) {
+                foreach (array_keys($g['spectators']) as $pid) $seat[$pid] = [$g['id'], true];
+                foreach (array_keys($g['players']) as $pid) $seat[$pid] = [$g['id'], false];
+            }
+
+            $players = [];
+            foreach (array_keys($ids) as $pid) {
+                $name = $names[$pid] ?? null;
+                if ($name !== null && strcasecmp($name, (string) $this->cfg['nick']) === 0) continue;
+                $players[] = [
+                    'id' => $pid,
+                    'name' => $name ?? "#{$pid}",
+                    'game_id' => $seat[$pid][0] ?? null,
+                    'spectator' => $seat[$pid][1] ?? false,
+                ];
+            }
+
+            $list = array_map(fn ($g) => [
+                'id' => $g['id'],
+                'name' => $g['name'],
+                'running' => $g['mode'] === 2, // netGameStarted
+                'players' => count($g['players']),
+                'max' => $g['max'],
+                'type' => $g['type'],
+                'private' => $g['private'],
+            ], array_values($games));
+
+            return ['ok' => true, 'code' => 'ok', 'msg' => count($list) . ' tables, ' . count($players) . ' players', 'games' => $list, 'players' => $players];
+        } catch (RuntimeException $e) {
+            return ['ok' => false, 'code' => 'error', 'msg' => $e->getMessage()];
+        } finally {
+            $this->close();
+        }
+    }
+
     // ── Ablauf ───────────────────────────────────────────────────────────
 
     private function login(): void
@@ -236,22 +302,78 @@ class GameServerAdminClient
      */
     private function collectPlayers(): array
     {
+        [$ids] = $this->collectLobby();
+        return $this->resolveNames(array_keys($ids));
+    }
+
+    /**
+     * Liest Spieler- und Tischliste mit, die der Server nach InitAck schickt,
+     * inkl. Änderungen, die währenddessen eintreffen.
+     *
+     * @return array{0: array<int,true>, 1: array<int,array>} [Spieler-IDs, Tische]
+     */
+    private function collectLobby(): array
+    {
         $ids = [];
-        // Die Liste kommt am Stück; Ende = kurze Funkstille. Die Obergrenze
+        $games = [];
+        // Die Listen kommen am Stück; Ende = kurze Funkstille. Die Obergrenze
         // greift, falls Lobby-Verkehr (Chat, Tischlisten) nie abreißt.
         $until = microtime(true) + 4;
         while (microtime(true) < $until && ($msg = $this->receive(0.6)) !== null) {
             [$type, $body] = $msg;
-            if ($type !== self::T_PLAYER_LIST) continue;
-            $fields = $this->pbDecode($body);
-            $id = (int) ($this->pbFirst($fields, 1) ?? 0);
-            $left = (int) ($this->pbFirst($fields, 2) ?? 0) === 1;
-            if ($left) unset($ids[$id]); else $ids[$id] = true;
-        }
+            $f = $this->pbDecode($body);
+            $id = (int) ($this->pbFirst($f, 1) ?? 0);
 
+            if ($type === self::T_PLAYER_LIST) {
+                $left = (int) ($this->pbFirst($f, 2) ?? 0) === 1;
+                if ($left) unset($ids[$id]); else $ids[$id] = true;
+            } else if ($type === self::T_GAME_LIST_NEW) {
+                $info = $this->pbDecode((string) ($this->pbFirst($f, 6) ?? ''));
+                $games[$id] = [
+                    'id' => $id,
+                    'name' => (string) ($this->pbFirst($info, 1) ?? ''),
+                    'mode' => (int) ($this->pbFirst($f, 2) ?? 1),
+                    'players' => $this->packedIds($f[4] ?? []),
+                    'spectators' => $this->packedIds($f[7] ?? []),
+                    'max' => (int) ($this->pbFirst($info, 3) ?? 0),
+                    'type' => [1 => 'normal', 2 => 'registered', 3 => 'invite', 4 => 'ranking'][(int) ($this->pbFirst($info, 2) ?? 1)] ?? 'normal',
+                    'private' => (bool) ($this->pbFirst($f, 3) ?? 0),
+                ];
+            } else if ($type === self::T_GAME_LIST_UPDATE && isset($games[$id])) {
+                $mode = (int) ($this->pbFirst($f, 2) ?? 1);
+                if ($mode === 3) unset($games[$id]); // netGameClosed
+                else $games[$id]['mode'] = $mode;
+            } else if ($type === self::T_GAME_LIST_JOINED && isset($games[$id])) {
+                $games[$id]['players'][(int) ($this->pbFirst($f, 2) ?? 0)] = true;
+            } else if ($type === self::T_GAME_LIST_LEFT && isset($games[$id])) {
+                unset($games[$id]['players'][(int) ($this->pbFirst($f, 2) ?? 0)]);
+            }
+        }
+        return [$ids, $games];
+    }
+
+    /**
+     * packed repeated uint32 → Set; unpacked (Wire-Typ 0) wäre schon ein int.
+     *
+     * @return array<int,true>
+     */
+    private function packedIds(array $values): array
+    {
+        $out = [];
+        foreach ($values as $v) {
+            if (is_int($v)) { $out[$v] = true; continue; }
+            $pos = 0;
+            while ($pos < strlen($v)) $out[$this->readVarint($v, $pos)] = true;
+        }
+        return $out;
+    }
+
+    /** @return array<int,string> uniqueId → Nickname */
+    private function resolveNames(array $ids): array
+    {
         $names = [];
         if (!$ids) return $names;
-        foreach (array_chunk(array_keys($ids), self::INFO_BATCH) as $chunk) {
+        foreach (array_chunk($ids, self::INFO_BATCH) as $chunk) {
             $packed = '';
             foreach ($chunk as $id) $packed .= $this->varint($id);
             $this->send(self::T_PLAYER_INFO_REQ, $this->pbBytes(1, $packed));

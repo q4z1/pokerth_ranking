@@ -6,34 +6,94 @@
          role="status" :aria-label="statusLabel">
         <span class="pth-now-bar__dot" :class="{ 'pth-now-bar__dot--live': live }" :title="statusLabel" />
 
-        <span class="pth-now-bar__item" :title="live ? plural(online, 'player', 'players') + ' online' : statusLabel">
-            <svg class="pth-now-bar__ico" viewBox="0 0 24 24" aria-hidden="true"
-                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                <circle cx="12" cy="7" r="4" />
-            </svg>
-            <strong>{{ live ? online : '–' }}</strong>
-        </span>
+        <!-- Namen erst beim Hovern holen: jede Abfrage ist ein Bot-Login in
+             der Lobby (serverseitig 60 s gecacht), alle drei Tooltips teilen
+             sich denselben Snapshot. -->
+        <el-tooltip :disabled="!live" placement="bottom" :show-after="150" :offset="10"
+                    effect="light" popper-class="pth-now-popper" @before-show="loadLobby">
+            <template #content>
+                <div class="pth-now-tip">
+                    <div class="pth-now-tip__head">{{ plural(online, 'player', 'players') }} online</div>
+                    <div v-if="lobby.loading && !lobby.data" class="pth-now-tip__muted">Loading names …</div>
+                    <div v-else-if="lobby.error" class="pth-now-tip__muted">{{ lobby.error }}</div>
+                    <div v-else-if="lobby.data" class="pth-now-tip__list">
+                        <div v-if="!lobby.data.players.length" class="pth-now-tip__muted">Nobody online.</div>
+                        <div v-for="p in lobby.data.players" :key="p.id" class="pth-now-tip__row">
+                            <span class="pth-now-tip__name">{{ p.name }}</span>
+                            <span class="pth-now-tip__meta">{{ p.game ? (p.spectator ? '👁 ' : '') + p.game : 'lobby' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <span class="pth-now-bar__item" :title="live ? null : statusLabel">
+                <svg class="pth-now-bar__ico" viewBox="0 0 24 24" aria-hidden="true"
+                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                </svg>
+                <strong>{{ live ? online : '–' }}</strong>
+            </span>
+        </el-tooltip>
 
-        <span class="pth-now-bar__item" :title="live ? plural(tables, 'table', 'tables') + ' running' : statusLabel">
-            <svg class="pth-now-bar__ico" viewBox="0 0 24 24" aria-hidden="true"
-                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1" />
-                <rect x="14" y="3" width="7" height="7" rx="1" />
-                <rect x="14" y="14" width="7" height="7" rx="1" />
-                <rect x="3" y="14" width="7" height="7" rx="1" />
-            </svg>
-            <strong>{{ live ? tables : '–' }}</strong>
-        </span>
+        <el-tooltip :disabled="!live" placement="bottom" :show-after="150" :offset="10"
+                    effect="light" popper-class="pth-now-popper" @before-show="loadLobby">
+            <template #content>
+                <div class="pth-now-tip">
+                    <div class="pth-now-tip__head">{{ plural(tables, 'table', 'tables') }} in the lobby</div>
+                    <div v-if="lobby.loading && !lobby.data" class="pth-now-tip__muted">Loading names …</div>
+                    <div v-else-if="lobby.error" class="pth-now-tip__muted">{{ lobby.error }}</div>
+                    <div v-else-if="lobby.data" class="pth-now-tip__list">
+                        <div v-if="!lobby.data.games.length" class="pth-now-tip__muted">No tables.</div>
+                        <template v-for="group in tableGroups" :key="group.label">
+                            <div v-if="group.games.length" class="pth-now-tip__group">
+                                {{ group.label }} ({{ group.games.length }})
+                            </div>
+                            <div v-for="g in group.games" :key="g.id" class="pth-now-tip__row">
+                                <span class="pth-now-tip__name">{{ g.name }}</span>
+                                <span class="pth-now-tip__meta">
+                                    {{ g.players }}/{{ g.max }}<template v-if="g.type !== 'normal'"> · {{ g.type }}</template><template v-if="g.private"> · 🔒</template>
+                                </span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+            <span class="pth-now-bar__item" :title="live ? null : statusLabel">
+                <svg class="pth-now-bar__ico" viewBox="0 0 24 24" aria-hidden="true"
+                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="14" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                </svg>
+                <strong>{{ live ? tables : '–' }}</strong>
+            </span>
+        </el-tooltip>
 
-        <span class="pth-now-bar__item" :title="live ? plural(waiting, 'player', 'players') + ' waiting for games' : statusLabel">
-            <svg class="pth-now-bar__ico" viewBox="0 0 24 24" aria-hidden="true"
-                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="9" />
-                <polyline points="12 7 12 12 16 14" />
-            </svg>
-            <strong>{{ live ? waiting : '–' }}</strong>
-        </span>
+        <el-tooltip :disabled="!live" placement="bottom" :show-after="150" :offset="10"
+                    effect="light" popper-class="pth-now-popper" @before-show="loadLobby">
+            <template #content>
+                <div class="pth-now-tip">
+                    <div class="pth-now-tip__head">{{ plural(waiting, 'player', 'players') }} waiting for games</div>
+                    <div v-if="lobby.loading && !lobby.data" class="pth-now-tip__muted">Loading names …</div>
+                    <div v-else-if="lobby.error" class="pth-now-tip__muted">{{ lobby.error }}</div>
+                    <div v-else-if="lobby.data" class="pth-now-tip__list">
+                        <div v-if="!waitingPlayers.length" class="pth-now-tip__muted">Nobody waiting.</div>
+                        <div v-for="p in waitingPlayers" :key="p.id" class="pth-now-tip__row">
+                            <span class="pth-now-tip__name">{{ p.name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <span class="pth-now-bar__item" :title="live ? null : statusLabel">
+                <svg class="pth-now-bar__ico" viewBox="0 0 24 24" aria-hidden="true"
+                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <polyline points="12 7 12 12 16 14" />
+                </svg>
+                <strong>{{ live ? waiting : '–' }}</strong>
+            </span>
+        </el-tooltip>
 
         <!-- Tageszahl kommt aus der DB, nicht vom Heartbeat - auch offline gueltig. -->
         <span class="pth-now-bar__item pth-now-bar__item--stat"
@@ -99,6 +159,8 @@
 // Der Server schreibt den Heartbeat minuetlich, die Route cacht 15 s -
 // oefter als einmal pro Minute abzufragen bringt nichts.
 const POLL_MS = 60000
+// Lobby-Snapshot: Server cacht 60 s, im Browser genauso lange behalten.
+const LOBBY_TTL_MS = 60000
 
 export default {
     props: {
@@ -115,6 +177,8 @@ export default {
             today: 0,
             stale: true,
             timer: null,
+            // Nur Kopfleiste (Admin): Lobby-Snapshot fuer die Tooltips.
+            lobby: { loading: false, data: null, error: null, at: 0 },
         }
     },
     computed: {
@@ -128,6 +192,17 @@ export default {
         statusLabel() {
             if (!this.loaded) return 'Game server: checking …'
             return this.stale ? 'Game server: no heartbeat' : 'Game server: live'
+        },
+        tableGroups() {
+            const games = this.lobby.data?.games || []
+            return [
+                { label: 'Running', games: games.filter(g => g.running) },
+                { label: 'Open', games: games.filter(g => !g.running) },
+            ]
+        },
+        // An keinem Tisch, auch nicht als Zuschauer.
+        waitingPlayers() {
+            return (this.lobby.data?.players || []).filter(p => p.game_id === null)
         },
         // Vor dem ersten Laden nichts rendern (kein Layout-Sprung).
         // Server tot UND keine offenen Sessions mehr: Box ganz weglassen.
@@ -154,6 +229,25 @@ export default {
     methods: {
         plural(n, one, many) {
             return `${n} ${n === 1 ? one : many}`
+        },
+        loadLobby() {
+            const l = this.lobby
+            if (l.loading || (l.data && Date.now() - l.at < LOBBY_TTL_MS)) return
+            l.loading = true
+            l.error = null
+            // Bot-Login + Lobbyliste + Namensaufloesung dauert ein paar Sekunden.
+            axios.get('/pthranking/live/lobby', { timeout: 20000 })
+                .then(res => {
+                    const d = res.data
+                    if (d.success) {
+                        l.data = { games: d.games || [], players: d.players || [] }
+                        l.at = Date.now()
+                    } else {
+                        l.error = d.msg || 'Could not read the lobby.'
+                    }
+                })
+                .catch(() => { l.error = 'Could not read the lobby.' })
+                .finally(() => { l.loading = false })
         },
         onVisible() {
             if (!document.hidden) this.fetch()
@@ -342,6 +436,80 @@ hr {
         &__item--stat {
             padding-left: .6rem;
         }
+    }
+}
+</style>
+
+<!-- Popper haengt am body, daher ungescoped. Farben aus colors.css
+     (--pth-* an html[data-theme]), damit Light und Dark passen. -->
+<style lang="scss">
+.el-popper.pth-now-popper {
+    max-width: min(420px, 92vw);
+    padding: .5rem .75rem;
+    background: var(--pth-surface);
+    color: var(--pth-text);
+    border: 1px solid var(--pth-border);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .25);
+
+    > .el-popper__arrow::before {
+        background: var(--pth-surface);
+        border: 1px solid var(--pth-border);
+    }
+}
+
+.pth-now-tip {
+    font-size: .8rem;
+    line-height: 1.45;
+    min-width: 200px;
+
+    &__head {
+        font-weight: 700;
+        margin-bottom: .25rem;
+        padding-bottom: .25rem;
+        border-bottom: 1px solid var(--pth-border);
+    }
+
+    // Ab ca. 15 Zeilen scrollt nur die Liste, die Kopfzeile bleibt stehen.
+    // (Nicht der Popper selbst: overflow dort schneidet den Pfeil ab.)
+    &__list {
+        max-height: min(50vh, 22em);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        padding-right: .25rem;
+        scrollbar-width: thin;
+        scrollbar-color: var(--pth-text-dimmed) transparent;
+    }
+
+    &__group {
+        margin-top: .45rem;
+        font-weight: 600;
+        color: var(--pth-text-secondary);
+    }
+
+    &__row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    &__name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    &__meta {
+        flex-shrink: 0;
+        max-width: 55%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--pth-text-muted);
+        font-variant-numeric: tabular-nums;
+    }
+
+    &__muted {
+        color: var(--pth-text-muted);
     }
 }
 </style>

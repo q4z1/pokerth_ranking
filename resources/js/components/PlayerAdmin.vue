@@ -184,7 +184,7 @@
         </el-table>
 
         <p class="player-admin__note admin-muted">
-            Online = open session in the current game-server run. Times are server time (Europe/Berlin).
+            Online = open session in the current game-server run, refreshed every 30 s. Times are server time (Europe/Berlin).
             “IP shared” = distinct nicks on that IP in the last 14 days.
             <template v-if="geoip">
                 <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>.
@@ -439,13 +439,20 @@ const SharedCell = {
     },
 }
 
+const ONLINE_REFRESH_MS = 30000
+
 export default {
     name: 'PlayerAdmin',
     components: { AdminPanel, IpCell, GeoCell, SharedCell },
     mixins: [listMixin],
     data() {
         return {
-            mode: 'accounts',
+            // Startansicht: wer gerade online ist, ist im Alltag die häufigste Frage.
+            mode: 'online',
+            // Mixin-Defaults für die Online-Ansicht (wie in onModeChange).
+            sortProp: 'online_since',
+            sortOrder: 'descending',
+            refreshTimer: null,
             filters: { q: '', ip: '', ip_scope: 'last', status: 'all', online: false },
             sort: 'last_login',
             dir: 'desc',
@@ -485,9 +492,16 @@ export default {
     },
     mounted() {
         this.load()
+        // Online-Tabelle aktuell halten; nur sichtbar und nur in der Online-Ansicht.
+        this.refreshTimer = setInterval(() => {
+            if (this.mode === 'online' && !document.hidden && !this.loading) this.loadOnline(true)
+        }, ONLINE_REFRESH_MS)
+        document.addEventListener('visibilitychange', this.onVisible)
     },
     beforeUnmount() {
         clearTimeout(this.debounceTimer)
+        clearInterval(this.refreshTimer)
+        document.removeEventListener('visibilitychange', this.onVisible)
     },
     methods: {
         formatDate,
@@ -550,9 +564,14 @@ export default {
                 if (no === this.requestNo) this.loading = false
             }
         },
-        async loadOnline() {
+        onVisible() {
+            // Zurück im Tab: sofort nachziehen statt bis zum nächsten Tick zu warten.
+            if (!document.hidden && this.mode === 'online' && !this.loading) this.loadOnline(true)
+        },
+        /** silent: Hintergrund-Refresh ohne Ladeanzeige und ohne Fehler-Popup. */
+        async loadOnline(silent = false) {
             const no = ++this.requestNo
-            this.loading = true
+            if (!silent) this.loading = true
             try {
                 const data = await apiGet('/players/online')
                 if (no !== this.requestNo) return
@@ -560,7 +579,8 @@ export default {
                 this.onlineTotal = this.rows.length
                 this.geoip = data.geoip
             } catch (err) {
-                reportError(err, 'Could not load online players.')
+                if (silent) console.error(err)
+                else reportError(err, 'Could not load online players.')
             } finally {
                 if (no === this.requestNo) this.loading = false
             }

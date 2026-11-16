@@ -51,6 +51,7 @@ Route::get('/reports/{type}', [App\Http\Controllers\AdminController::class, 'rep
 Route::post('/reports/{type}', [App\Http\Controllers\AdminController::class, 'reportAction'])->where('type', 'avatar|gamename');
 
 Route::get('/live', [App\Http\Controllers\LiveStatsController::class, 'now']);
+Route::get('/live/lobby', [App\Http\Controllers\AdminController::class, 'liveLobby']);
 
 Route::get('/html/{title}', [App\Http\Controllers\HtmlBlockController::class, 'getBlock']);
 Route::get('/a/{position}', [App\Http\Controllers\AdvertController::class, 'getAdverts']);
