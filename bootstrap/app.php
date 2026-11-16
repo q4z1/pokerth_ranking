@@ -90,6 +90,15 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->appendOutputTo(storage_path("logs/sitemap-{$app}.log"))
                 ->onFailure(fn () => logger()->error("sitemap:generate failed for {$app}"));
         }
+
+        // BBC: 1000/2000/3000-Games-Awards automatisch vergeben (nur additiv).
+        // Nach dem Ende des Spieltags (01:00) und vor dem schweren Backup um 04:00.
+        // env -i aus demselben Grund wie oben.
+        $schedule->exec("env -i PATH=/usr/local/bin:/usr/bin:/bin HOME=/home/devuser bash -c 'cd /var/www/bbc && php artisan awards:games'")
+            ->cron('15 3 * * *')
+            ->withoutOverlapping()
+            ->appendOutputTo(storage_path('logs/awards-bbc.log'))
+            ->onFailure(fn () => logger()->error('awards:games failed for bbc'));
     })
     ->withExceptions(function (Exceptions $exceptions) {
         // Das Backend hat keine Login-Route (Anmeldung im Vue-Frontend), der
