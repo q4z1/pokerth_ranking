@@ -29,6 +29,7 @@
                 <el-sub-menu index="logs">
                     <template #title>Logs</template>
                     <el-menu-item index="serverlog">Game-Server Log</el-menu-item>
+                    <el-menu-item index="servermessages">Game-Server Messages</el-menu-item>
                     <el-menu-item index="webserverlog">Webserver Log</el-menu-item>
                 </el-sub-menu>
                 <el-menu-item index="lobbychat">Lobby Chat</el-menu-item>
@@ -103,6 +104,7 @@
                 <shadow-mute-list v-else-if="view === 'shadowmute'" />
                 <adverts v-else-if="view === 'adverts'" />
                 <server-log v-else-if="view === 'serverlog'" />
+                <server-messages v-else-if="view === 'servermessages'" />
                 <web-server-log v-else-if="view === 'webserverlog'" />
                 <lobby-chat v-else-if="view === 'lobbychat'" />
             </template>
@@ -120,6 +122,7 @@ import PlayerAdmin from './PlayerAdmin.vue'
 import PokerthNowComponent from './PokerthNowComponent.vue'
 import ReportsTable from './ReportsTable.vue'
 import ServerLog from './ServerLog.vue'
+import ServerMessages from './ServerMessages.vue'
 import ShadowMuteList from './ShadowMuteList.vue'
 import WebServerLog from './WebServerLog.vue'
 import { apiGet, apiPost, notice, reportError } from '../admin/adminUtils.js'
@@ -127,7 +130,7 @@ import { applyTheme, preferredTheme } from '../admin/theme.js'
 
 export default {
     name: 'InternalsComponent',
-    components: { Adverts, BanList, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ShadowMuteList, WebServerLog },
+    components: { Adverts, BanList, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ServerMessages, ShadowMuteList, WebServerLog },
     props: ['authenticated'],
     data() {
         return {

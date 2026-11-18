@@ -413,6 +413,83 @@ html.internals a.lobbychat__name {
     color: var(--el-color-warning-dark-2);
 }
 
+/* Game-Server Messages: Kopie von server_messages.log, sonst wie der Lobby-Chat. */
+.srvmsg {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.82rem;
+}
+
+.srvmsg__level {
+    display: inline-block;
+    width: 2.6em;
+    margin-right: 0.5rem;
+    font-weight: 600;
+    color: var(--pth-text-muted);
+}
+
+.srvmsg__line.is-err .srvmsg__level,
+.srvmsg__line.is-err .lobbychat__msg {
+    color: var(--el-color-danger);
+}
+
+.srvmsg__line.is-out .srvmsg__level {
+    color: var(--el-color-warning-dark-2);
+}
+
+.srvmsg__meta a {
+    margin-left: 0.6rem;
+    font-size: 0.95em;
+    text-decoration: none;
+    white-space: nowrap;
+    opacity: 0.75;
+}
+
+.srvmsg__line:hover .srvmsg__meta a {
+    opacity: 1;
+}
+
+.srvmsg__older {
+    padding: 0.25rem 0 0.5rem;
+    text-align: center;
+}
+
+.admin-panel__tools .srvmsg__levels {
+    width: 140px;
+}
+
+.admin-panel__tools .srvmsg__range {
+    width: 330px;
+    flex-grow: 0;
+}
+
+.srvmsg__dl p {
+    margin: 0 0 0.6rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    word-break: normal;
+}
+
+.srvmsg__dl .srvmsg__dl-field {
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.srvmsg__dl-window {
+    margin-bottom: 0.6rem;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.srvmsg__dl-nav {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
+}
+
+.srvmsg__dl-nav .el-button + .el-button {
+    margin-left: 0;
+}
+
 .lobbychat__notice {
     display: flex;
     gap: 0.5rem;
@@ -663,7 +740,9 @@ html.internals a.lobbychat__name {
     }
 
     .admin-panel__tools .admin-toolbar__search,
-    .admin-panel__tools .admin-toolbar__select {
+    .admin-panel__tools .admin-toolbar__select,
+    .admin-panel__tools .srvmsg__levels,
+    .admin-panel__tools .srvmsg__range {
         width: 100%;
     }
 
