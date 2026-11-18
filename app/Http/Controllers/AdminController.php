@@ -70,12 +70,13 @@ class AdminController extends Controller
 
   public function __construct()
   {
-    // serverLog()/webServerLog() sind bewusst öffentlich: beide Analyzer
-    // liefern nur Aggregate (Tageszahlen, Prozentwerte, Trefferzahlen je
-    // Vhost), nie rohe IPs, Nicks oder Player-IDs - keine privaten Daten,
-    // also kein Login nötig. So kann z. B. der Adminbereich des Webclients
-    // die Zahlen direkt abrufen.
-    $this->middleware('auth', ['except' => ['login', 'serverLog', 'webServerLog']]);
+    // serverLog()/webServerLog() waren bis 2026-11-18 öffentlich (nur
+    // Aggregate). Beim WebSocket-Angriff in der Nacht 17./18.11. haben die
+    // Angreifer sie als Rückkanal benutzt, um die Wirkung ihrer Tests auf den
+    // Game-Server live zu sehen - daher jetzt nur noch mit Login. Falls der
+    // Webclient-Adminbereich (narmod) die Zahlen braucht: eigenes Token statt
+    // offenem Endpunkt.
+    $this->middleware('auth', ['except' => ['login']]);
   }
 
   public function login(Request $request)
@@ -311,7 +312,7 @@ class AdminController extends Controller
 
   /**
    * Lobby-Aktivität aus server_run / server_session, siehe ServerLogAnalyzer.
-   * Öffentlich erreichbar, siehe Kommentar im Konstruktor.
+   * Nur mit Login, siehe Kommentar im Konstruktor.
    */
   public function serverLog(Request $request)
   {
@@ -322,8 +323,8 @@ class AdminController extends Controller
 
   /**
    * Webserver-Traffic und Cloudflare-Filterhistorie aus AttackCheck's
-   * Logdateien, siehe WebServerLogAnalyzer. Öffentlich erreichbar, siehe
-   * Kommentar im Konstruktor.
+   * Logdateien, siehe WebServerLogAnalyzer. Nur mit Login, siehe Kommentar
+   * im Konstruktor.
    */
   public function webServerLog(Request $request)
   {
