@@ -15,10 +15,22 @@
             >
                 <el-menu-item index="players">Players</el-menu-item>
                 <el-sub-menu index="reports">
-                    <template #title>Reports</template>
+                    <template #title>
+                        <el-badge :value="unseenTotal" :hidden="!unseenTotal" :max="99" class="internals-badge">
+                            Reports
+                        </el-badge>
+                    </template>
                     <el-menu-item index="offenders">Repeat offenders</el-menu-item>
-                    <el-menu-item index="reports-gamename">Table names</el-menu-item>
-                    <el-menu-item index="reports-avatar">Avatars</el-menu-item>
+                    <el-menu-item index="reports-gamename">
+                        <el-badge :value="unseen.gamename.count" :hidden="!unseen.gamename.count" :max="99" class="internals-badge">
+                            Table names
+                        </el-badge>
+                    </el-menu-item>
+                    <el-menu-item index="reports-avatar">
+                        <el-badge :value="unseen.avatar.count" :hidden="!unseen.avatar.count" :max="99" class="internals-badge">
+                            Avatars
+                        </el-badge>
+                    </el-menu-item>
                 </el-sub-menu>
                 <el-sub-menu index="moderation">
                     <template #title>Banlist</template>
@@ -91,14 +103,14 @@
                     :key="'gamename-' + revision"
                     type="gamename"
                     :preset="preset"
-                    @changed="revision++"
+                    @changed="onReportsChanged('gamename')"
                 />
                 <reports-table
                     v-else-if="view === 'reports-avatar'"
                     :key="'avatar-' + revision"
                     type="avatar"
                     :preset="preset"
-                    @changed="revision++"
+                    @changed="onReportsChanged('avatar')"
                 />
                 <ban-list v-else-if="view === 'banlist'" :key="'banlist-' + revision" @changed="revision++" />
                 <shadow-mute-list v-else-if="view === 'shadowmute'" />
@@ -128,6 +140,9 @@ import WebServerLog from './WebServerLog.vue'
 import { apiGet, apiPost, notice, reportError } from '../admin/adminUtils.js'
 import { applyTheme, preferredTheme } from '../admin/theme.js'
 
+const UNSEEN_POLL_MS = 60000
+const SEEN_AFTER_MS = 10000
+
 export default {
     name: 'InternalsComponent',
     components: { Adverts, BanList, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ServerMessages, ShadowMuteList, WebServerLog },
@@ -142,6 +157,9 @@ export default {
             preset: '',
             revision: 0,
             theme: preferredTheme(),
+            unseen: { gamename: { count: 0, max_id: 0 }, avatar: { count: 0, max_id: 0 } },
+            unseenTimer: null,
+            seenTimer: null,
             Lock,
             Moon,
             Sunny,
@@ -150,6 +168,13 @@ export default {
         }
     },
     computed: {
+        unseenTotal() {
+            return this.unseen.gamename.count + this.unseen.avatar.count
+        },
+        /** Report-Typ der aktuellen Seite, sonst null. */
+        reportType() {
+            return { 'reports-gamename': 'gamename', 'reports-avatar': 'avatar' }[this.view] ?? null
+        },
         darkMode: {
             get() {
                 return this.theme === 'dark'
@@ -159,11 +184,65 @@ export default {
             },
         },
     },
+    watch: {
+        auth: {
+            immediate: true,
+            handler(value) {
+                clearInterval(this.unseenTimer)
+                this.unseenTimer = null
+                if (!value) return
+                this.loadUnseen()
+                this.unseenTimer = setInterval(() => {
+                    if (!document.hidden) this.loadUnseen()
+                }, UNSEEN_POLL_MS)
+            },
+        },
+        /** 10 s auf einer Report-Seite gelten als "gesehen". */
+        reportType: {
+            immediate: true,
+            handler(type) {
+                clearTimeout(this.seenTimer)
+                this.seenTimer = null
+                if (type) this.seenTimer = setTimeout(() => this.markSeen(type), SEEN_AFTER_MS)
+            },
+        },
+    },
     mounted() {
         this.auth = this.authenticated === true || this.authenticated === 'true'
         applyTheme(this.theme)
+        document.addEventListener('visibilitychange', this.onVisible)
+    },
+    beforeUnmount() {
+        clearInterval(this.unseenTimer)
+        clearTimeout(this.seenTimer)
+        document.removeEventListener('visibilitychange', this.onVisible)
     },
     methods: {
+        onVisible() {
+            if (!document.hidden && this.auth) this.loadUnseen()
+        },
+        async loadUnseen() {
+            try {
+                const data = await apiGet('/reports/unseen')
+                if (data.success) this.unseen = data.types
+            } catch {
+                // Badge ist Komfort – Fehler hier nicht aufdrängen.
+            }
+        },
+        async markSeen(type) {
+            if (!this.unseen[type]?.count) return
+            try {
+                const data = await apiPost('/reports/seen', { type, upto: this.unseen[type].max_id })
+                if (data.success) this.unseen = data.types
+            } catch {
+                // siehe loadUnseen
+            }
+        },
+        /** Aktion auf einer Report-Seite (Ban, Ignore, …) gilt ebenfalls als "gesehen". */
+        onReportsChanged(type) {
+            this.revision++
+            this.markSeen(type)
+        },
         navigate(index) {
             if (index === this.view) return
             this.preset = ''

@@ -27,6 +27,7 @@ import 'element-plus/theme-chalk/base.css'
 // Direkt im Markup verwendet.
 import 'element-plus/theme-chalk/el-alert.css'
 import 'element-plus/theme-chalk/el-autocomplete.css'
+import 'element-plus/theme-chalk/el-badge.css'
 import 'element-plus/theme-chalk/el-button.css'
 import 'element-plus/theme-chalk/el-card.css'
 import 'element-plus/theme-chalk/el-checkbox.css'

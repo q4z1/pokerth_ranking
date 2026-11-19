@@ -151,6 +151,45 @@ class AdminController extends Controller
   }
 
   /**
+   * Neue (noch nicht gesehene) offene Reports je Typ für den Admin – speist
+   * das Badge im Menü. "Gesehen" wird pro Admin im Cache gemerkt (letzte
+   * gesehene Report-ID je Typ); gilt also geräteübergreifend.
+   */
+  public function reportsUnseen(Request $request)
+  {
+    $out = [];
+    foreach (self::REPORT_TYPES as $type => $cfg) {
+      $seen = (int) Cache::get($this->reportsSeenKey($type), 0);
+      $out[$type] = [
+        'count'  => DB::table($cfg['table'])->where('state', self::STATE_NEW)->where('id', '>', $seen)->count(),
+        'max_id' => (int) DB::table($cfg['table'])->max('id'),
+      ];
+    }
+    return ['success' => true, 'types' => $out];
+  }
+
+  /**
+   * Markiert Reports eines Typs bis einschließlich `upto` als gesehen. `upto`
+   * kommt aus dem letzten reportsUnseen()-Poll, damit ein Report, der genau
+   * währenddessen eingeht, nicht stillschweigend mit verschluckt wird.
+   */
+  public function reportsSeen(Request $request)
+  {
+    $type = $request->input('type');
+    if (!isset(self::REPORT_TYPES[$type])) return ['success' => false, 'msg' => 'Unknown Type.'];
+    $max = (int) DB::table(self::REPORT_TYPES[$type]['table'])->max('id');
+    $upto = min(max(0, (int) $request->input('upto', $max)), $max);
+    $key = $this->reportsSeenKey($type);
+    if ($upto > (int) Cache::get($key, 0)) Cache::forever($key, $upto);
+    return $this->reportsUnseen($request);
+  }
+
+  private function reportsSeenKey(string $type): string
+  {
+    return 'admin_reports_seen.' . Auth::id() . '.' . $type;
+  }
+
+  /**
    * Aggregierte Sicht: pro gemeldetem Spieler die Summe aller Meldungen über
    * beide Report-Arten hinweg. Das ist die Arbeitsgrundlage, um Wiederholungs-
    * täter zu bannen.
@@ -788,6 +827,8 @@ class AdminController extends Controller
         'online_geo'   => $geo[$row->online_ip ?? ''] ?? null,
         'ip_accounts'  => $row->online_ip ? ($shared[$row->online_ip] ?? 0) : ($row->last_ip ? ($shared[$row->last_ip] ?? 0) : 0),
         'reports'      => $totals,
+        'avatar_hash'  => $row->avatar_hash ?: null,
+        'avatar_blacklisted' => app(AvatarBlacklistService::class)->isBlacklisted($row->avatar_hash ?: null),
         'recent_reports' => $totals['total'] ? ($this->recentReports([$id])[$id] ?? []) : [],
       ],
       'sessions' => $sessions->map(fn ($s) => [

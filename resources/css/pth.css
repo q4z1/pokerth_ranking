@@ -117,6 +117,17 @@ html.internals[data-theme='light'] .internals-logo {
     background-color: transparent !important;
 }
 
+/* Badge für neue Reports im Menü: el-badge erbt sonst die 60px-Zeilenhöhe
+   des Menüs und das Zähler-Bubble säße am oberen Rand abgeschnitten. */
+.internals-badge {
+    line-height: normal;
+    vertical-align: middle;
+}
+.internals-badge .el-badge__content.is-fixed {
+    top: 2px;
+    right: calc(-4px + var(--el-badge-size) / 2);
+}
+
 .internals-actions {
     display: flex;
     align-items: center;

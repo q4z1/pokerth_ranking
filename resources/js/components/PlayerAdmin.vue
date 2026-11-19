@@ -172,7 +172,12 @@
                 <template #default="{ row }"><geo-cell :geo="row.geo" /></template>
             </el-table-column>
             <el-table-column prop="ip_accounts" label="IP shared" width="100" align="right" sortable="custom">
-                <template #default="{ row }"><shared-cell :count="row.ip_accounts" :ip="row.ip" @show="showIpNicks" /></template>
+                <template #default="{ row }">
+                    <!-- Gäste zählen nicht mit; eine 0 ohne Accounts auf der IP ist nur Rauschen. -->
+                    <shared-cell v-if="!row.guest || row.ip_accounts" :count="row.ip_accounts" :ip="row.ip" @show="showIpNicks" />
+                    <!-- Leerer Slot würde el-table auf den prop-Rohwert (0) zurückfallen lassen. -->
+                    <span v-else></span>
+                </template>
             </el-table-column>
             <el-table-column label="Client" width="170">
                 <template #default="{ row }">{{ clientLabel(row.build_id, row.platform) }}</template>
@@ -313,9 +318,34 @@
         </el-dialog>
 
         <!-- Details -->
-        <el-drawer v-model="detail.open" :title="detail.data ? detail.data.player.username : 'Player'" size="min(820px, 100vw)" append-to-body>
-            <div v-loading="detail.loading" class="player-admin__detail">
+        <el-drawer v-model="detail.open" :title="detail.title || 'Player'" size="min(820px, 100vw)" append-to-body>
+            <div
+                v-loading="detail.loading"
+                element-loading-text="Loading player…"
+                class="player-admin__detail"
+                :class="{ 'is-loading': detail.loading }"
+            >
                 <template v-if="detail.data">
+                    <div class="player-admin__overview">
+                    <div class="player-admin__avatar">
+                        <el-image
+                            v-if="detail.data.player.avatar_hash"
+                            :src="avatarUrl(detail.data.player.avatar_hash)"
+                            :preview-src-list="[avatarUrl(detail.data.player.avatar_hash)]"
+                            preview-teleported
+                            hide-on-click-modal
+                            fit="cover"
+                        >
+                            <template #error><span class="admin-muted">no file</span></template>
+                        </el-image>
+                        <span v-else class="admin-muted">no avatar</span>
+                        <el-tag
+                            v-if="detail.data.player.avatar_blacklisted"
+                            size="small"
+                            type="danger"
+                            disable-transitions
+                        >blacklisted</el-tag>
+                    </div>
                     <el-descriptions :column="2" border size="small">
                         <el-descriptions-item label="ID">{{ detail.data.player.player_id }}</el-descriptions-item>
                         <el-descriptions-item label="Status">
@@ -354,6 +384,7 @@
                             <el-button v-else size="small" type="danger" plain @click="setBan(detailAsRow, true)">Ban</el-button>
                         </el-descriptions-item>
                     </el-descriptions>
+                    </div>
 
                     <h4>Other accounts on these IPs</h4>
                     <el-table :data="detail.data.related" size="small" class="admin-table" empty-text="None.">
@@ -607,7 +638,7 @@ export default {
             lobbySeats: null,
             lobbyError: null,
             PM_MAX_BYTES,
-            detail: { open: false, loading: false, data: null },
+            detail: { open: false, loading: false, data: null, title: '', requestId: 0 },
             ipNicks: { open: false, loading: false, ip: null, geo: null, list: [] },
             Search,
         }
@@ -668,6 +699,10 @@ export default {
         document.removeEventListener('visibilitychange', this.onVisible)
     },
     methods: {
+        /** Admin-Route liefert auch gesperrte (quarantänierte) Avatare aus. */
+        avatarUrl(hash) {
+            return `${API_BASE}/reports/avatar/image/${hash}`
+        },
         /** Sprung in die Report-Liste, vorgefiltert auf diesen Spieler. */
         showReports(player) {
             const c = player.reports || {}
@@ -814,15 +849,20 @@ export default {
             this.reload()
         },
         async openDetail(row) {
-            this.detail = { open: true, loading: true, data: this.detail.data }
+            // Alte Daten sofort weg, sonst steht kurz der vorherige Spieler unter dem Spinner.
+            const requestId = this.detail.requestId + 1
+            this.detail = { open: true, loading: true, data: null, title: row.username || row.nick || '', requestId }
             try {
                 const data = await apiGet(`/players/${row.player_id}`)
+                // Inzwischen wurde ein anderer Spieler geöffnet (z.B. über "Other accounts").
+                if (this.detail.requestId !== requestId) return
                 if (!data.success) return notice(data.msg || 'Could not load player.', 'warning')
                 this.detail.data = data
+                this.detail.title = data.player.username
             } catch (err) {
-                reportError(err, 'Could not load player.')
+                if (this.detail.requestId === requestId) reportError(err, 'Could not load player.')
             } finally {
-                this.detail.loading = false
+                if (this.detail.requestId === requestId) this.detail.loading = false
             }
         },
         async showIpNicks(ip) {
@@ -1020,9 +1060,52 @@ export default {
 :deep(.player-admin__old td.el-table__cell) {
     opacity: 0.55;
 }
+.player-admin__overview {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+.player-admin__overview > .el-descriptions {
+    flex: 1;
+    min-width: 0;
+}
+.player-admin__avatar {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 96px;
+    font-size: 12px;
+    text-align: center;
+}
+.player-admin__avatar .el-image {
+    width: 96px;
+    height: 96px;
+    border-radius: 6px;
+    border: 1px solid var(--el-border-color);
+    cursor: zoom-in;
+}
+.player-admin__avatar > .admin-muted {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 96px;
+    height: 96px;
+    border-radius: 6px;
+    border: 1px dashed var(--el-border-color);
+}
+@media (max-width: 600px) {
+    .player-admin__overview {
+        flex-direction: column;
+    }
+}
 .player-admin__live {
     color: var(--el-color-success);
     font-weight: 600;
+}
+.player-admin__detail.is-loading {
+    min-height: 240px;
 }
 .player-admin__detail h4 {
     margin: 22px 0 8px;
