@@ -345,6 +345,20 @@
                         </el-descriptions-item>
                     </el-descriptions>
 
+                    <h4>Other accounts on these IPs</h4>
+                    <el-table :data="detail.data.related" size="small" class="admin-table" empty-text="None.">
+                        <el-table-column label="Nickname" min-width="150">
+                            <template #default="{ row }">
+                                <el-link type="primary" :underline="false" @click="openDetail(row)">{{ row.username }}</el-link>
+                                <el-tag v-if="row.banned" size="small" type="danger" disable-transitions>banned</el-tag>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="ips" label="Shared IP(s)" min-width="180" />
+                        <el-table-column label="Last login" width="140">
+                            <template #default="{ row }">{{ formatDateTime(row.last_login) }}</template>
+                        </el-table-column>
+                    </el-table>
+
                     <h4>IP addresses <span class="admin-muted">(since 2026-08-05)</span></h4>
                     <el-table :data="detail.data.ips" size="small" class="admin-table" empty-text="No sessions recorded.">
                         <el-table-column label="IP" min-width="140">
@@ -359,20 +373,6 @@
                         </el-table-column>
                         <el-table-column label="Last seen" width="140">
                             <template #default="{ row }">{{ formatDateTime(row.last_seen) }}</template>
-                        </el-table-column>
-                    </el-table>
-
-                    <h4>Other accounts on these IPs</h4>
-                    <el-table :data="detail.data.related" size="small" class="admin-table" empty-text="None.">
-                        <el-table-column label="Nickname" min-width="150">
-                            <template #default="{ row }">
-                                <el-link type="primary" :underline="false" @click="openDetail(row)">{{ row.username }}</el-link>
-                                <el-tag v-if="row.banned" size="small" type="danger" disable-transitions>banned</el-tag>
-                            </template>
-                        </el-table-column>
-                        <el-table-column prop="ips" label="Shared IP(s)" min-width="180" />
-                        <el-table-column label="Last login" width="140">
-                            <template #default="{ row }">{{ formatDateTime(row.last_login) }}</template>
                         </el-table-column>
                     </el-table>
 
