@@ -595,6 +595,7 @@ class AdminController extends Controller
 
     $query = DB::table('player as p')
       ->leftJoinSub($this->onlineSessionsQuery(), 'o', 'o.player_id', '=', 'p.player_id');
+    $query->whereNotIn('p.player_id', $this->botIds());
 
     $q = trim((string) $request->query('q', ''));
     if ($q !== '') {
@@ -660,8 +661,8 @@ class AdminController extends Controller
           'online'        => !is_null($row->online_since),
           'online_since'  => $row->online_since,
           'online_ip'     => $row->online_ip,
-          'geo'           => $geo[$row->last_ip] ?? null,
-          'online_geo'    => $geo[$row->online_ip] ?? null,
+          'geo'           => $geo[$row->last_ip ?? ''] ?? null,
+          'online_geo'    => $geo[$row->online_ip ?? ''] ?? null,
           'total_reports' => $totals[$row->player_id]['total'] ?? 0,
           'ip_accounts'   => $row->last_ip ? ($shared[$row->last_ip] ?? 0) : 0,
         ];
@@ -679,6 +680,7 @@ class AdminController extends Controller
       ->leftJoin('player as p', 'p.player_id', '=', 's.player_id')
       ->where('s.run_id', DB::raw('(SELECT MAX(run_id) FROM server_run)'))
       ->whereNull('s.disconnected_at')
+      ->where(fn ($w) => $w->whereNull('s.player_id')->orWhereNotIn('s.player_id', $this->botIds()))
       ->orderBy('s.connected_at', 'DESC')
       ->get([
         's.session_id', 's.player_id', 's.nick', 's.is_guest', 's.client_platform', 's.client_build_id',
@@ -702,7 +704,7 @@ class AdminController extends Controller
           'online_since' => $row->connected_at,
           'game_id'      => $row->last_game_id ? (int) $row->last_game_id : null,
           'ip'           => $row->ip,
-          'geo'          => $geo[$row->ip] ?? null,
+          'geo'          => $geo[$row->ip ?? ''] ?? null,
           'banned'       => (int) $row->active === self::PLAYER_BANNED,
           'ip_accounts'  => $row->ip ? ($shared[$row->ip] ?? 0) : 0,
         ];
@@ -745,9 +747,10 @@ class AdminController extends Controller
              UNION
              SELECT player_id, last_ip FROM player WHERE last_ip IN (" . implode(',', array_fill(0, count($ipList), '?')) . ") AND player_id <> ?
            ) x JOIN player p ON p.player_id = x.player_id
+          WHERE p.player_id NOT IN (" . $this->botPlaceholders() . ")
           GROUP BY p.player_id, p.username, p.active, p.last_login
           ORDER BY p.last_login DESC LIMIT 100",
-        array_merge($ipList, [$id], $ipList, [$id])
+        array_merge($ipList, [$id], $ipList, [$id], $this->botIds())
       ));
     }
 
@@ -769,14 +772,14 @@ class AdminController extends Controller
         'created'      => $row->created,
         'last_login'   => $row->last_login,
         'last_ip'      => $row->last_ip ?: null,
-        'geo'          => $geo[$row->last_ip] ?? null,
+        'geo'          => $geo[$row->last_ip ?? ''] ?? null,
         'country'      => $row->country_iso ?: null,
         'banned'       => (int) $row->active === self::PLAYER_BANNED,
         'muted'        => (bool) $row->muted,
         'online'       => !is_null($row->online_since),
         'online_since' => $row->online_since,
         'online_ip'    => $row->online_ip,
-        'online_geo'   => $geo[$row->online_ip] ?? null,
+        'online_geo'   => $geo[$row->online_ip ?? ''] ?? null,
         'ip_accounts'  => $row->online_ip ? ($shared[$row->online_ip] ?? 0) : ($row->last_ip ? ($shared[$row->last_ip] ?? 0) : 0),
         'reports'      => $totals,
       ],
@@ -791,11 +794,11 @@ class AdminController extends Controller
         'close_reason'    => $s->close_reason,
         'game_id'         => $s->last_game_id ? (int) $s->last_game_id : null,
         'ip'              => $s->ip,
-        'geo'             => $geo[$s->ip] ?? null,
+        'geo'             => $geo[$s->ip ?? ''] ?? null,
       ])->values(),
       'ips' => $ips->map(fn ($r) => [
         'ip' => $r->ip, 'sessions' => (int) $r->sessions, 'first_seen' => $r->first_seen, 'last_seen' => $r->last_seen,
-        'geo' => $geo[$r->ip] ?? null, 'accounts_14d' => $shared[$r->ip] ?? 0,
+        'geo' => $geo[$r->ip ?? ''] ?? null, 'accounts_14d' => $shared[$r->ip] ?? 0,
       ])->values(),
       'related' => $related->map(fn ($r) => [
         'player_id'  => (int) $r->player_id,
@@ -917,11 +920,11 @@ class AdminController extends Controller
               MAX(s.disconnected_at IS NULL AND s.run_id = (SELECT MAX(run_id) FROM server_run)) AS online,
               p.active
          FROM server_session s LEFT JOIN player p ON p.player_id = s.player_id
-        WHERE s.ip = INET6_ATON(?) AND s.is_guest = 0
+        WHERE s.ip = INET6_ATON(?) AND s.is_guest = 0 AND s.player_id NOT IN (" . $this->botPlaceholders() . ")
         GROUP BY s.nick, s.player_id, p.active
         ORDER BY last_seen DESC
         LIMIT 500",
-      [$ip]
+      array_merge([$ip], $this->botIds())
     );
     $seen = array_filter(array_map(fn ($r) => $r->player_id, $rows));
     $lastIpOnly = DB::table('player')->where('last_ip', $ip)
@@ -955,6 +958,35 @@ class AdminController extends Controller
     ];
   }
 
+  /** Bot-Konten neben dem Admin-Bot (PTH_ADMIN_BOT_NICK), die ebenfalls ausgeblendet werden. */
+  private const BOT_NICKS = ['bbcbot'];
+
+  /**
+   * player_ids der Bot-Konten (Admin-Bot + BOT_NICKS). Ihre Logins sind für
+   * die Moderation irrelevant und bleiben daher aus Spielerliste,
+   * Online-Liste, IP-Zählern und verwandten Accounts draußen. Nie leer
+   * ([0] als Platzhalter), damit NOT IN (...) gültig bleibt.
+   *
+   * @return int[]
+   */
+  private function botIds(): array
+  {
+    static $ids = null;
+    if ($ids !== null) return $ids;
+    $nicks = array_values(array_unique(array_filter(
+      array_merge([(string) config('services.game_server_admin.nick')], self::BOT_NICKS)
+    )));
+    $ids = Cache::remember('bot_player_ids.' . md5(implode("\n", $nicks)), 3600, fn () =>
+      DB::table('player')->whereIn('username', $nicks)->pluck('player_id')->map(fn ($v) => (int) $v)->all()
+    ) ?: [0];
+    return $ids;
+  }
+
+  private function botPlaceholders(): string
+  {
+    return implode(',', array_fill(0, count($this->botIds()), '?'));
+  }
+
   /** Offene Sessions des laufenden Server-Runs, je Account die jüngste. */
   private function onlineSessionsQuery()
   {
@@ -962,6 +994,7 @@ class AdminController extends Controller
       ->where('run_id', DB::raw('(SELECT MAX(run_id) FROM server_run)'))
       ->whereNull('disconnected_at')
       ->whereNotNull('player_id')
+      ->whereNotIn('player_id', $this->botIds())
       ->groupBy('player_id')
       ->select('player_id', DB::raw('MAX(connected_at) AS connected_at'), DB::raw('INET6_NTOA(MAX(ip)) AS ip'));
   }
@@ -991,7 +1024,8 @@ class AdminController extends Controller
   /** Sessions, deren IP zum Filter passt – volle Adresse und CIDR nutzen den Index. */
   private function sessionIpFilter(string $ip)
   {
-    $q = DB::table('server_session')->whereNotNull('player_id');
+    $q = DB::table('server_session')->whereNotNull('player_id')
+      ->whereNotIn('player_id', $this->botIds());
     if ($range = $this->cidrRange($ip)) {
       $q->whereRaw('ip BETWEEN INET6_ATON(?) AND INET6_ATON(?)', $range)->whereRaw('LENGTH(ip) = 4');
     } else if (filter_var($ip, FILTER_VALIDATE_IP)) {
@@ -1016,8 +1050,9 @@ class AdminController extends Controller
     $in = implode(',', array_fill(0, count($ips), 'INET6_ATON(?)'));
     $rows = DB::select(
       "SELECT INET6_NTOA(ip) AS ip, COUNT(DISTINCT nick) AS n FROM server_session
-        WHERE ip IN ({$in}) AND is_guest = 0 AND connected_at > NOW() - INTERVAL 14 DAY GROUP BY ip",
-      $ips
+        WHERE ip IN ({$in}) AND is_guest = 0 AND connected_at > NOW() - INTERVAL 14 DAY
+          AND (player_id IS NULL OR player_id NOT IN (" . $this->botPlaceholders() . ")) GROUP BY ip",
+      array_merge($ips, $this->botIds())
     );
     $out = [];
     foreach ($rows as $r) $out[$r->ip] = (int) $r->n;
