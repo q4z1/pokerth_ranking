@@ -106,10 +106,12 @@
             </el-table-column>
             <el-table-column label="Reports" width="90" align="right">
                 <template #default="{ row }">
-                    <el-tag v-if="row.total_reports" size="small" type="warning" effect="plain" disable-transitions>
-                        {{ row.total_reports }}
-                    </el-tag>
-                    <span v-else class="admin-muted">—</span>
+                    <reports-cell
+                        :total="row.total_reports"
+                        :counts="row.reports"
+                        :recent="row.recent_reports"
+                        @show="showReports(row)"
+                    />
                 </template>
             </el-table-column>
             <el-table-column prop="created" label="Registered" width="110" sortable="custom">
@@ -331,7 +333,15 @@
                         </el-descriptions-item>
                         <el-descriptions-item label="Location"><geo-cell :geo="detail.data.player.geo" /></el-descriptions-item>
                         <el-descriptions-item label="Reports">
-                            {{ detail.data.player.reports.total }} ({{ detail.data.player.reports.open }} open)
+                            <reports-cell
+                                :total="detail.data.player.reports.total"
+                                :counts="detail.data.player.reports"
+                                :recent="detail.data.player.recent_reports"
+                                @show="showReports(detail.data.player)"
+                            />
+                            <span v-if="detail.data.player.reports.total" class="admin-muted">
+                                ({{ detail.data.player.reports.open }} open)
+                            </span>
                         </el-descriptions-item>
                         <el-descriptions-item label="Action">
                             <el-button
@@ -407,7 +417,18 @@
 import { h, resolveComponent } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import AdminPanel from './AdminPanel.vue'
-import { apiGet, apiPost, confirmAction, formatDate, formatDateTime, listMixin, notice, reportError } from '../admin/adminUtils.js'
+import {
+    API_BASE,
+    apiGet,
+    apiPost,
+    confirmAction,
+    formatDate,
+    formatDateTime,
+    listMixin,
+    notice,
+    reportError,
+    stateMeta,
+} from '../admin/adminUtils.js'
 
 const PLATFORMS = ['', 'Windows', 'Linux', 'macOS', 'Android', 'iOS']
 const CLIENT_TYPES = { 1: 'Qt Widget', 2: 'QML', 3: 'Web' }
@@ -482,14 +503,85 @@ const SharedCell = {
     },
 }
 
+/**
+ * Anzahl Meldungen gegen den Spieler; Tooltip zeigt die letzten Reports,
+ * Klick springt in die passende Report-Liste (vorgefiltert auf den Spieler).
+ */
+const ReportsCell = {
+    props: {
+        total: { type: Number, default: 0 },
+        counts: { type: Object, default: null },
+        recent: { type: Array, default: () => [] },
+    },
+    emits: ['show'],
+    setup(props, { emit }) {
+        const line = (r) => {
+            const meta = stateMeta(r.state)
+            const what =
+                r.type === 'avatar'
+                    ? [
+                          h('img', {
+                              class: 'player-admin__report-avatar',
+                              src: `${API_BASE}/reports/avatar/image/${r.avatar_hash}`,
+                              alt: '',
+                              loading: 'lazy',
+                          }),
+                          h('span', 'Avatar'),
+                      ]
+                    : [h('span', { class: 'player-admin__report-label' }, 'Table:'), h('span', { class: 'player-admin__report-name' }, r.game_name || '—')]
+            return h('li', { class: 'player-admin__report' }, [
+                h('span', { class: 'player-admin__report-date' }, formatDate(r.timestamp)),
+                h(resolveComponent('ElTag'), { size: 'small', type: meta.type, disableTransitions: true }, () => meta.label),
+                ...what,
+            ])
+        }
+        return () => {
+            if (!props.total) return h('span', { class: 'admin-muted' }, '—')
+            const c = props.counts || {}
+            const parts = []
+            if (c.gamename) parts.push(`${c.gamename} table name`)
+            if (c.avatar) parts.push(`${c.avatar} avatar`)
+            const more = props.total - props.recent.length
+            return h(
+                resolveComponent('ElTooltip'),
+                { placement: 'left', effect: 'light', showAfter: 150 },
+                {
+                    content: () =>
+                        h('div', { class: 'player-admin__reports-tip' }, [
+                            h('div', { class: 'player-admin__reports-head' }, [
+                                h('strong', `${props.total} report(s)`),
+                                parts.length ? ` – ${parts.join(', ')}` : '',
+                                c.open ? `, ${c.open} open` : '',
+                            ]),
+                            h('ul', props.recent.map(line)),
+                            more > 0 ? h('div', { class: 'admin-muted' }, `… and ${more} older`) : null,
+                            h('div', { class: 'admin-muted player-admin__reports-hint' }, 'Click to open the report list'),
+                        ]),
+                    default: () =>
+                        h(
+                            'button',
+                            {
+                                type: 'button',
+                                class: 'player-admin__shared el-tag el-tag--warning el-tag--small el-tag--plain',
+                                onClick: () => emit('show'),
+                            },
+                            String(props.total)
+                        ),
+                }
+            )
+        }
+    },
+}
+
 const ONLINE_REFRESH_MS = 30000
 /** ValidateChatRequestMessage: 1–128 Byte. */
 const PM_MAX_BYTES = 128
 
 export default {
     name: 'PlayerAdmin',
-    components: { AdminPanel, IpCell, GeoCell, SharedCell },
+    components: { AdminPanel, IpCell, GeoCell, SharedCell, ReportsCell },
     mixins: [listMixin],
+    emits: ['show-reports'],
     data() {
         return {
             // Startansicht: wer gerade online ist, ist im Alltag die häufigste Frage.
@@ -576,6 +668,17 @@ export default {
         document.removeEventListener('visibilitychange', this.onVisible)
     },
     methods: {
+        /** Sprung in die Report-Liste, vorgefiltert auf diesen Spieler. */
+        showReports(player) {
+            const c = player.reports || {}
+            this.detail.open = false
+            this.$emit('show-reports', {
+                player_id: player.player_id,
+                username: player.username,
+                gamename_reports: c.gamename || 0,
+                avatar_reports: c.avatar || 0,
+            })
+        },
         formatDate,
         formatDateTime,
         matches(row, term) {
@@ -926,5 +1029,51 @@ export default {
 }
 .el-alert {
     margin: 8px 0 12px;
+}
+</style>
+
+<style>
+/* Tooltip-Inhalt wird per Teleport in <body> gerendert – daher nicht scoped. */
+.player-admin__reports-tip {
+    max-width: 380px;
+    font-size: 12px;
+    line-height: 1.4;
+}
+.player-admin__reports-head {
+    margin-bottom: 6px;
+}
+.player-admin__reports-tip ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.player-admin__report {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+}
+.player-admin__report-date {
+    color: var(--el-text-color-secondary);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.player-admin__report-label {
+    color: var(--el-text-color-secondary);
+}
+.player-admin__report-name {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.player-admin__report-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+    object-fit: cover;
+}
+.player-admin__reports-hint {
+    margin-top: 6px;
 }
 </style>

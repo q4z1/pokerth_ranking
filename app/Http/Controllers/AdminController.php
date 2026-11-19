@@ -33,6 +33,9 @@ class AdminController extends Controller
   public const STATE_REPORTER_SURE  = 4;
   public const STATE_REPORTER_SPAM  = 5;
 
+  /** Diese Zustände gelten als Falschmeldung und zählen nicht als Vergehen. */
+  private const UNCOUNTED_STATES = [self::STATE_IGNORED, self::STATE_REPORTER_SPAM];
+
   public const STATES = [
     self::STATE_NEW,
     self::STATE_IGNORED,
@@ -638,6 +641,7 @@ class AdminController extends Controller
 
     $ids = $rows->pluck('player_id')->all();
     $totals = $this->reportTotals($ids);
+    $recent = $this->recentReports(array_keys($totals));
     $shared = $this->sharedIpCounts($rows->pluck('last_ip')->filter()->unique()->values()->all());
     $geo = app(GeoIpService::class)->lookupMany($rows->pluck('last_ip')->merge($rows->pluck('online_ip')));
 
@@ -648,7 +652,7 @@ class AdminController extends Controller
       'page'    => $page,
       'per_page' => $perPage,
       'online_total' => DB::query()->fromSub($this->onlineSessionsQuery(), 'o')->count(),
-      'list' => $rows->map(function ($row) use ($totals, $shared, $geo) {
+      'list' => $rows->map(function ($row) use ($totals, $recent, $shared, $geo) {
         return [
           'player_id'     => (int) $row->player_id,
           'username'      => $row->username,
@@ -664,6 +668,8 @@ class AdminController extends Controller
           'geo'           => $geo[$row->last_ip ?? ''] ?? null,
           'online_geo'    => $geo[$row->online_ip ?? ''] ?? null,
           'total_reports' => $totals[$row->player_id]['total'] ?? 0,
+          'reports'       => $totals[$row->player_id] ?? null,
+          'recent_reports' => $recent[$row->player_id] ?? [],
           'ip_accounts'   => $row->last_ip ? ($shared[$row->last_ip] ?? 0) : 0,
         ];
       })->values(),
@@ -782,6 +788,7 @@ class AdminController extends Controller
         'online_geo'   => $geo[$row->online_ip ?? ''] ?? null,
         'ip_accounts'  => $row->online_ip ? ($shared[$row->online_ip] ?? 0) : ($row->last_ip ? ($shared[$row->last_ip] ?? 0) : 0),
         'reports'      => $totals,
+        'recent_reports' => $totals['total'] ? ($this->recentReports([$id])[$id] ?? []) : [],
       ],
       'sessions' => $sessions->map(fn ($s) => [
         'session_id'      => (int) $s->session_id,
@@ -1121,17 +1128,59 @@ class AdminController extends Controller
   }
 
   /**
+   * Die letzten Meldungen je Spieler (beide Report-Arten) – für den Tooltip
+   * in der Spielerverwaltung.
+   *
+   * @return array<int, array<int, array{type:string, state:int, timestamp:string, game_name:?string, avatar_hash:?string}>>
+   */
+  private function recentReports(array $ids, int $limit = 5)
+  {
+    $ids = array_values(array_filter(array_map('intval', $ids)));
+    if (!count($ids)) return [];
+    $inList = implode(',', $ids);
+    $countable = implode(',', self::UNCOUNTED_STATES);
+    $rows = DB::select(
+      "SELECT pid, kind, state, ts, game_name, avatar_hash FROM (
+         SELECT r.*, ROW_NUMBER() OVER (PARTITION BY pid ORDER BY ts DESC, id DESC) AS rn FROM (
+           SELECT id, game_creator_idplayer AS pid, state, timestamp AS ts, 'gamename' AS kind,
+                  game_name, NULL AS avatar_hash
+             FROM reported_gamename WHERE game_creator_idplayer IN ({$inList}) AND state NOT IN ({$countable})
+           UNION ALL
+           SELECT id, idplayer AS pid, state, timestamp AS ts, 'avatar' AS kind,
+                  NULL AS game_name, avatar_hash
+             FROM reported_avatar WHERE idplayer IN ({$inList}) AND state NOT IN ({$countable})
+         ) r
+       ) x WHERE rn <= ? ORDER BY pid, ts DESC",
+      [$limit]
+    );
+    $out = [];
+    foreach ($rows as $row) {
+      $out[(int) $row->pid][] = [
+        'type'        => $row->kind,
+        'state'       => (int) $row->state,
+        'timestamp'   => $row->ts,
+        'game_name'   => $row->game_name,
+        'avatar_hash' => $row->avatar_hash,
+      ];
+    }
+    return $out;
+  }
+
+  /**
    * Vereinigt beide Report-Tabellen und aggregiert je gemeldetem Spieler.
    * Optional auf eine Liste von Spieler-IDs eingeschränkt; die IDs werden als
    * Integer inlined, da PDO keine Array-Bindings für IN() kennt.
    */
   private function offenderSql(?array $ids = null)
   {
-    $gameFilter = $avatarFilter = '';
+    // Ignorierte Meldungen und Report-Spam waren Falschmeldungen und zählen
+    // nicht gegen den Spieler (Badges, Offender-Liste, Wiederholungstäter).
+    $countable = ' AND state NOT IN (' . implode(',', self::UNCOUNTED_STATES) . ')';
+    $gameFilter = $avatarFilter = $countable;
     if (!is_null($ids)) {
       $inList = implode(',', array_map('intval', $ids));
-      $gameFilter = " AND game_creator_idplayer IN ({$inList})";
-      $avatarFilter = " AND idplayer IN ({$inList})";
+      $gameFilter .= " AND game_creator_idplayer IN ({$inList})";
+      $avatarFilter .= " AND idplayer IN ({$inList})";
     }
     return "SELECT pid,
                    SUM(kind = 'gamename')      AS gamename_reports,

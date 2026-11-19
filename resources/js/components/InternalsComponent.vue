@@ -79,7 +79,7 @@
             </div>
 
             <template v-else>
-                <player-admin v-if="view === 'players'" />
+                <player-admin v-if="view === 'players'" @show-reports="showReports" />
                 <offenders-table
                     v-else-if="view === 'offenders'"
                     :key="'offenders-' + revision"
