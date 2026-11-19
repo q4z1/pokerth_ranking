@@ -96,7 +96,8 @@ Konfiguration: `config/backup.php` (Pfade, Retention, DB-Ausschlüsse, `nice`/
 Forum-User und Ranking-Player (IDs, E-Mail, Beitrags- und Session-Zahl) und
 fragt nach. Löscht nach phpBB `user_delete()` im Modus „retain“: Forenbeiträge,
 Topics und Anhänge gehen an den Anonymous-User („Deleted“), User-Zeilen in den
-phpBB-Nebentabellen, Sessions, eigene Reports und die hochgeladene Avatar-Datei
+phpBB-Nebentabellen, Sessions, eigene Reports, private Nachrichten (wie phpBB:
+zugestellte PMs bleiben für Empfänger lesbar) und die hochgeladene Avatar-Datei
 werden entfernt, `num_users` sinkt; auf Ranking-Seite verschwinden `player` und
 `player_ranking`. Alles in **einer Transaktion** – schlägt ein Schritt fehl, bleibt
 der Account unverändert. Gibt es den Namen nur auf einer Seite, wird nur diese

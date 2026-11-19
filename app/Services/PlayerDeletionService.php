@@ -20,6 +20,11 @@ class PlayerDeletionService
 {
     private const FORUM_DB = 'pokerth';
 
+    /** phpBB includes/constants.php: PRIVMSGS_NO_BOX / _OUTBOX / _SENTBOX */
+    private const PM_NO_BOX = -3;
+    private const PM_OUTBOX = -2;
+    private const PM_SENTBOX = -1;
+
     /** Tabellen mit Spalte user_id, deren Zeilen phpBB beim Löschen entfernt. */
     private const USER_TABLES = [
         'phpbb_user_group', 'phpbb_topics_watch', 'phpbb_forums_watch', 'phpbb_acl_users', 'phpbb_topics_track',
@@ -115,6 +120,8 @@ class PlayerDeletionService
             DB::table("$db.phpbb_users")->where('user_id', 1)->increment('user_posts', (int) $forum->user_posts);
         }
 
+        $stats += $this->deletePrivateMessages([$uid]);
+
         foreach (self::USER_TABLES as $table) {
             if ($table === 'phpbb_reports') continue;
             $stats[$table] = DB::table("$db.$table")->where('user_id', $uid)->delete();
@@ -124,6 +131,83 @@ class PlayerDeletionService
         if ($stats['phpbb_users'] > 0) {
             DB::update("UPDATE $db.phpbb_config SET config_value = config_value - 1 WHERE config_name = 'num_users'");
         }
+        return $stats;
+    }
+
+    /**
+     * Private Nachrichten der User entfernen – nachgebaut nach phpBB
+     * phpbb_delete_users_pms() (includes/functions_privmsgs.php):
+     *  - eigene Postfach-Einträge (privmsgs_to.user_id) löschen,
+     *  - von ihnen gesendete, noch von niemandem abgeholte PMs ganz löschen,
+     *  - abgeholte PMs bleiben für die Empfänger lesbar, Autor wird Anonymous,
+     *  - PMs ohne verbleibenden Postfach-Eintrag samt Anhang-Zeilen löschen.
+     * Funktioniert auch für bereits gelöschte User-IDs (Aufräumen von Resten).
+     * Anhang-Dateien bleiben liegen (phpBB-Dateiablage, nicht kritisch).
+     *
+     * Muss innerhalb einer Transaktion laufen.
+     *
+     * @param int[] $uids
+     * @return array<string,int>
+     */
+    public function deletePrivateMessages(array $uids): array
+    {
+        $db = self::FORUM_DB;
+        $uids = array_values(array_unique(array_map('intval', $uids)));
+        if (!$uids) return [];
+        $stats = ['phpbb_privmsgs' => 0, 'phpbb_privmsgs_to' => 0];
+
+        $received = DB::table("$db.phpbb_privmsgs_to")->whereIn('user_id', $uids)->distinct()->pluck('msg_id')->all();
+        $pending = DB::table("$db.phpbb_privmsgs_to")->whereIn('author_id', $uids)
+            ->where('folder_id', self::PM_NO_BOX)->distinct()->pluck('msg_id')->all();
+
+        $gone = [];
+        if ($pending) {
+            // Zugestellt = bei irgendeinem Empfänger schon aus NO_BOX in einen Ordner verschoben
+            $delivered = DB::table("$db.phpbb_privmsgs_to")->whereIn('author_id', $uids)->whereIn('msg_id', $pending)
+                ->whereNotIn('folder_id', [self::PM_NO_BOX, self::PM_OUTBOX, self::PM_SENTBOX])
+                ->distinct()->pluck('msg_id')->all();
+            $undelivered = array_values(array_diff($pending, $delivered));
+
+            // Zähler "neue/ungelesene PMs" der Empfänger korrigieren
+            $perUser = DB::table("$db.phpbb_privmsgs_to")->whereIn('author_id', $uids)
+                ->where('folder_id', self::PM_NO_BOX)->whereIn('msg_id', $pending)
+                ->groupBy('user_id')->selectRaw('user_id, COUNT(msg_id) AS n')->get();
+            foreach ($perUser as $r) {
+                DB::table("$db.phpbb_users")->where('user_id', $r->user_id)->update([
+                    'user_new_privmsg'    => DB::raw('GREATEST(CAST(user_new_privmsg AS SIGNED) - ' . (int) $r->n . ', 0)'),
+                    'user_unread_privmsg' => DB::raw('GREATEST(CAST(user_unread_privmsg AS SIGNED) - ' . (int) $r->n . ', 0)'),
+                ]);
+            }
+            if ($delivered) {
+                $stats['phpbb_privmsgs_to'] += DB::table("$db.phpbb_privmsgs_to")
+                    ->where('folder_id', self::PM_NO_BOX)->whereIn('msg_id', $delivered)->delete();
+            }
+            if ($undelivered) {
+                $stats['phpbb_privmsgs_to'] += DB::table("$db.phpbb_privmsgs_to")->whereIn('msg_id', $undelivered)->delete();
+                $gone = $undelivered;
+            }
+        }
+
+        $stats['phpbb_privmsgs_to'] += DB::table("$db.phpbb_privmsgs_to")->whereIn('user_id', $uids)->delete();
+
+        if ($received) {
+            $stillThere = DB::table("$db.phpbb_privmsgs_to")->whereIn('msg_id', $received)->distinct()->pluck('msg_id')->all();
+            $gone = array_merge($gone, array_diff($received, $stillThere));
+        }
+        $gone = array_values(array_unique($gone));
+        if ($gone) {
+            DB::table("$db.phpbb_attachments")->where('in_message', 1)->whereIn('post_msg_id', $gone)->delete();
+            $stats['phpbb_privmsgs'] = DB::table("$db.phpbb_privmsgs")->whereIn('msg_id', $gone)->delete();
+            $pmType = DB::table("$db.phpbb_notification_types")->where('notification_type_name', 'notification.type.pm')->value('notification_type_id');
+            if ($pmType) {
+                DB::table("$db.phpbb_notifications")->where('notification_type_id', $pmType)->whereIn('item_id', $gone)->delete();
+            }
+        }
+
+        // Verbleibende PMs bleiben lesbar, Autor wird Anonymous
+        DB::table("$db.phpbb_privmsgs_to")->whereIn('author_id', $uids)->update(['author_id' => 1]);
+        DB::table("$db.phpbb_privmsgs")->whereIn('author_id', $uids)->update(['author_id' => 1]);
+
         return $stats;
     }
 
