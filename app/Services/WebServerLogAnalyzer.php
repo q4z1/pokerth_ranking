@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
  * (5-Minuten-Trefferzahlen je Lauf, inkl. eindeutiger IPs und Hits je Vhost)
  * und attack_events.log (Filter-Schaltungen mit Grund), siehe dort
  * logEvent(). Reine Aggregate, keine rohen IPs - genau wie ServerLogAnalyzer
- * ist dieser Endpunkt bewusst öffentlich (siehe AdminController).
+ * ist dieser Endpunkt bewusst öffentlich (siehe Admin\AdminBaseController).
  *
  * attack_events.log existiert erst seit seiner Einführung - für die Zeit
  * davor werden hit_spike/sustained_rate-Episoden aus visitor_log.txt

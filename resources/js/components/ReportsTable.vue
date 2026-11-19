@@ -27,6 +27,12 @@
             <el-tooltip content="Only players with repeated reports" placement="top">
                 <el-checkbox v-model="repeatOnly" border>Repeat offenders</el-checkbox>
             </el-tooltip>
+            <el-tooltip
+                content="Archived reports are hidden from this list but still count towards the player's offences"
+                placement="top"
+            >
+                <el-checkbox v-model="showArchived" border>Archived ({{ archivedCount }})</el-checkbox>
+            </el-tooltip>
         </template>
 
         <template v-if="selection.length" #bulk>
@@ -43,7 +49,10 @@
             >
                 Blacklist avatar
             </el-button>
-            <el-button size="small" :icon="Delete" type="danger" plain @click="removeReports(selection)">Delete</el-button>
+            <el-button v-if="showArchived" size="small" :icon="FolderRemove" @click="archiveReports(selection, false)">
+                Restore
+            </el-button>
+            <el-button v-else size="small" :icon="FolderAdd" @click="archiveReports(selection, true)">Archive</el-button>
             <el-button size="small" text @click="clearSelection">Clear</el-button>
         </template>
 
@@ -146,7 +155,8 @@
                                 <el-dropdown-item command="reopen" :disabled="row.state === STATE_NEW" divided>
                                     Reopen
                                 </el-dropdown-item>
-                                <el-dropdown-item command="delete">Delete report</el-dropdown-item>
+                                <el-dropdown-item v-if="row.archived" command="unarchive">Restore from archive</el-dropdown-item>
+                                <el-dropdown-item v-else command="archive">Archive report</el-dropdown-item>
                             </el-dropdown-menu>
                         </template>
                     </el-dropdown>
@@ -157,7 +167,7 @@
 </template>
 
 <script>
-import { Close, Delete, MoreFilled, Picture, Search, Warning } from '@element-plus/icons-vue'
+import { Close, FolderAdd, FolderRemove, MoreFilled, Picture, Search, Warning } from '@element-plus/icons-vue'
 import AdminPanel from './AdminPanel.vue'
 import PlayerRef from './PlayerRef.vue'
 import {
@@ -193,12 +203,15 @@ export default {
         return {
             stateFilter: 'open',
             repeatOnly: false,
+            showArchived: false,
+            archivedCount: 0,
             selection: [],
             sortProp: 'timestamp',
             sortOrder: 'descending',
             states: REPORT_STATES,
             Close,
-            Delete,
+            FolderAdd,
+            FolderRemove,
             MoreFilled,
             Picture,
             Search,
@@ -214,6 +227,7 @@ export default {
             return this.type === 'avatar' ? 'Avatar reports' : 'Table name reports'
         },
         subtitle() {
+            if (this.showArchived) return `${this.rows.length} archived`
             const open = this.rows.filter((r) => r.state === STATE_NEW).length
             return `${open} open of ${this.rows.length}`
         },
@@ -238,6 +252,12 @@ export default {
                 this.selection = []
                 this.load()
             },
+        },
+        showArchived() {
+            this.selection = []
+            // Im Archiv ist "Open only" meist leer – dort standardmäßig alles zeigen.
+            if (this.showArchived && this.stateFilter === 'open') this.stateFilter = 'all'
+            this.load()
         },
         preset: {
             immediate: true,
@@ -280,9 +300,10 @@ export default {
         async load() {
             this.loading = true
             try {
-                const data = await apiGet(`/reports/${this.type}`)
+                const data = await apiGet(`/reports/${this.type}`, this.showArchived ? { archived: 1 } : {})
                 if (data.success) {
                     this.rows = data.list
+                    this.archivedCount = data.archived_count ?? 0
                 } else {
                     this.rows = []
                     notice(data.msg || 'Could not load reports.', 'warning')
@@ -301,7 +322,8 @@ export default {
                 spam: STATE_REPORTER_SPAM,
                 reopen: STATE_NEW,
             }
-            if (command === 'delete') return this.removeReports([row])
+            if (command === 'archive') return this.archiveReports([row], true)
+            if (command === 'unarchive') return this.archiveReports([row], false)
             if (command === 'blacklist') return this.blacklistAvatars([row])
             return this.setState([row], map[command])
         },
@@ -351,25 +373,22 @@ export default {
                 reportError(err, 'Update failed.')
             }
         },
-        async removeReports(rows) {
+        /**
+         * Archivieren statt löschen: die Reports verschwinden aus der Liste, zählen
+         * aber weiter für die Wiederholungstäter-Statistik. Wiederherstellen jederzeit.
+         */
+        async archiveReports(rows, archive) {
             const ids = rows.map((r) => r.id)
             try {
-                await confirmAction(
-                    `Permanently delete ${ids.length} report(s)? This cannot be undone.`,
-                    'Delete reports'
-                )
-            } catch {
-                return
-            }
-            try {
-                const data = await apiPost(`/reports/${this.type}`, { action: 'delete', ids })
-                if (!data.success) return notice(data.msg || 'Deletion failed.', 'error')
+                const data = await apiPost(`/reports/${this.type}`, { action: archive ? 'archive' : 'unarchive', ids })
+                if (!data.success) return notice(data.msg || 'Update failed.', 'error')
                 this.rows = this.rows.filter((r) => !ids.includes(r.id))
+                this.archivedCount = Math.max(0, this.archivedCount + (archive ? 1 : -1) * (data.affected ?? 0))
                 this.clearSelection()
                 notice(data.msg)
                 this.$emit('changed')
             } catch (err) {
-                reportError(err, 'Deletion failed.')
+                reportError(err, 'Update failed.')
             }
         },
         async banCreator(row) {

@@ -23,7 +23,7 @@
         <title>PokerTH Internal</title>
     </head>
     <body>
-      <div id="vue1"><internals-component :authenticated="{{ json_encode(!is_null(auth()->user()), true) }}"></internals-component></div>
+      <div id="vue1"><internals-component :authenticated="{{ json_encode(app(\App\Services\AdminAccess::class)->isAdmin(auth()->user())) }}"></internals-component></div>
     </body>
     <script type="module" src="{{ $pth['js'] }}"></script>
 </html>

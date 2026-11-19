@@ -31,7 +31,7 @@ return [
     ],
 
     // Lobby-Chat-Mitschnitt des Game-Servers (JSON Lines), siehe
-    // AdminController::lobbyChat().
+    // Admin\LogsController::lobbyChat().
     'lobby_chat_log' => env('LOBBY_CHAT_LOG', base_path('../images/avatars/game/chatlog/lobby-chat.log')),
 
     // Über das Backend gesendete Global Notices (JSON Lines). Der Game-Server

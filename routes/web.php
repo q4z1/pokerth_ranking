@@ -26,40 +26,41 @@ Route::get('/player/games/get', [App\Http\Controllers\PlayerController::class, '
 Route::get('/player/season/get/{player}/{season}', [App\Http\Controllers\PlayerController::class, 'getSeason']);
 Route::get('/player/season/get/leaderboard/{season}', [App\Http\Controllers\PlayerController::class, 'getSeasonLeaderboard']);
 
-Route::post('/login', [App\Http\Controllers\AdminController::class, 'login']);
-Route::get('/logout', [App\Http\Controllers\AdminController::class, 'logout']);
+Route::post('/login', [App\Http\Controllers\Admin\AuthController::class, 'login'])->middleware('throttle:admin-login');
+Route::get('/logout', [App\Http\Controllers\Admin\AuthController::class, 'logout']);
 
-Route::post('/banlist/{player}', [App\Http\Controllers\AdminController::class, 'banlist']);
-Route::get('/banlist', [App\Http\Controllers\AdminController::class, 'banlist']);
-Route::post('/shadowmute/{player}', [App\Http\Controllers\AdminController::class, 'shadowMute']);
-Route::get('/shadowmute', [App\Http\Controllers\AdminController::class, 'shadowMute']);
-Route::post('/adverts', [App\Http\Controllers\AdminController::class, 'adverts']);
-Route::get('/adverts', [App\Http\Controllers\AdminController::class, 'adverts']);
-Route::get('/serverlog', [App\Http\Controllers\AdminController::class, 'serverLog']);
-Route::get('/webserverlog', [App\Http\Controllers\AdminController::class, 'webServerLog']);
+Route::post('/banlist/{player}', [App\Http\Controllers\Admin\ModerationController::class, 'banlist']);
+Route::get('/banlist', [App\Http\Controllers\Admin\ModerationController::class, 'banlist']);
+Route::post('/shadowmute/{player}', [App\Http\Controllers\Admin\ModerationController::class, 'shadowMute']);
+Route::get('/shadowmute', [App\Http\Controllers\Admin\ModerationController::class, 'shadowMute']);
+Route::post('/adverts', [App\Http\Controllers\Admin\AdvertsController::class, 'adverts']);
+Route::get('/adverts', [App\Http\Controllers\Admin\AdvertsController::class, 'adverts']);
+Route::get('/serverlog', [App\Http\Controllers\Admin\LogsController::class, 'serverLog']);
+Route::get('/webserverlog', [App\Http\Controllers\Admin\LogsController::class, 'webServerLog']);
 Route::get('/servermessages', [App\Http\Controllers\ServerMessagesController::class, 'index']);
 Route::get('/servermessages/download', [App\Http\Controllers\ServerMessagesController::class, 'download'])->middleware('throttle:10,1');
 Route::get('/gameserver/alerts', [App\Http\Controllers\GameServerAlertsController::class, 'index']);
 Route::get('/gameserver/alerts/unseen', [App\Http\Controllers\GameServerAlertsController::class, 'unseen']);
 Route::post('/gameserver/alerts/seen', [App\Http\Controllers\GameServerAlertsController::class, 'seen']);
-Route::get('/lobbychat', [App\Http\Controllers\AdminController::class, 'lobbyChat']);
-Route::post('/lobbychat/notice', [App\Http\Controllers\AdminController::class, 'globalNotice'])->middleware('throttle:10,1');
-Route::get('/players', [App\Http\Controllers\AdminController::class, 'players']);
-Route::get('/players/online', [App\Http\Controllers\AdminController::class, 'onlinePlayers']);
-Route::get('/players/ip', [App\Http\Controllers\AdminController::class, 'ipNicks']);
-Route::get('/players/{player}', [App\Http\Controllers\AdminController::class, 'playerDetail'])->where('player', '[0-9]+');
-Route::post('/players/kickban', [App\Http\Controllers\AdminController::class, 'kickban'])->middleware('throttle:20,1');
-Route::post('/players/message', [App\Http\Controllers\AdminController::class, 'privateMessage'])->middleware('throttle:20,1');
-Route::get('/reports/unseen', [App\Http\Controllers\AdminController::class, 'reportsUnseen']);
-Route::post('/reports/seen', [App\Http\Controllers\AdminController::class, 'reportsSeen']);
-Route::get('/reports/offenders', [App\Http\Controllers\AdminController::class, 'offenders']);
+Route::get('/lobbychat', [App\Http\Controllers\Admin\LogsController::class, 'lobbyChat']);
+Route::get('/audit', [App\Http\Controllers\Admin\LogsController::class, 'auditLog']);
+Route::post('/lobbychat/notice', [App\Http\Controllers\Admin\ModerationController::class, 'globalNotice'])->middleware('throttle:10,1');
+Route::get('/players', [App\Http\Controllers\Admin\PlayersController::class, 'players']);
+Route::get('/players/online', [App\Http\Controllers\Admin\PlayersController::class, 'onlinePlayers']);
+Route::get('/players/ip', [App\Http\Controllers\Admin\PlayersController::class, 'ipNicks']);
+Route::get('/players/{player}', [App\Http\Controllers\Admin\PlayersController::class, 'playerDetail'])->where('player', '[0-9]+');
+Route::post('/players/kickban', [App\Http\Controllers\Admin\ModerationController::class, 'kickban'])->middleware('throttle:20,1');
+Route::post('/players/message', [App\Http\Controllers\Admin\ModerationController::class, 'privateMessage'])->middleware('throttle:20,1');
+Route::get('/reports/unseen', [App\Http\Controllers\Admin\ReportsController::class, 'reportsUnseen']);
+Route::post('/reports/seen', [App\Http\Controllers\Admin\ReportsController::class, 'reportsSeen']);
+Route::get('/reports/offenders', [App\Http\Controllers\Admin\ReportsController::class, 'offenders']);
 // Muss vor /reports/{type} stehen, sonst greift dort das type-Pattern nicht mehr.
-Route::get('/reports/avatar/image/{hash}', [App\Http\Controllers\AdminController::class, 'avatarImage'])->where('hash', '[0-9a-fA-F]{8,128}');
-Route::get('/reports/{type}', [App\Http\Controllers\AdminController::class, 'reports'])->where('type', 'avatar|gamename');
-Route::post('/reports/{type}', [App\Http\Controllers\AdminController::class, 'reportAction'])->where('type', 'avatar|gamename');
+Route::get('/reports/avatar/image/{hash}', [App\Http\Controllers\Admin\ReportsController::class, 'avatarImage'])->where('hash', '[0-9a-fA-F]{8,128}');
+Route::get('/reports/{type}', [App\Http\Controllers\Admin\ReportsController::class, 'reports'])->where('type', 'avatar|gamename');
+Route::post('/reports/{type}', [App\Http\Controllers\Admin\ReportsController::class, 'reportAction'])->where('type', 'avatar|gamename');
 
 Route::get('/live', [App\Http\Controllers\LiveStatsController::class, 'now']);
-Route::get('/live/lobby', [App\Http\Controllers\AdminController::class, 'liveLobby']);
+Route::get('/live/lobby', [App\Http\Controllers\Admin\PlayersController::class, 'liveLobby']);
 
 Route::get('/html/{title}', [App\Http\Controllers\HtmlBlockController::class, 'getBlock']);
 Route::get('/a/{position}', [App\Http\Controllers\AdvertController::class, 'getAdverts']);

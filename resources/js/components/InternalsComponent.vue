@@ -36,6 +36,7 @@
                     <template #title>Banlist</template>
                     <el-menu-item index="banlist">Banned players</el-menu-item>
                     <el-menu-item index="shadowmute">Shadow mutes</el-menu-item>
+                    <el-menu-item index="audit">Audit log</el-menu-item>
                 </el-sub-menu>
                 <el-menu-item index="adverts">Adverts</el-menu-item>
                 <el-sub-menu index="logs">
@@ -135,6 +136,7 @@
                 />
                 <ban-list v-else-if="view === 'banlist'" :key="'banlist-' + revision" @changed="revision++" />
                 <shadow-mute-list v-else-if="view === 'shadowmute'" />
+                <audit-log v-else-if="view === 'audit'" />
                 <adverts v-else-if="view === 'adverts'" />
                 <game-server-alerts v-else-if="view === 'gameserveralerts'" :seen-id="alertsSeenOnOpen" />
                 <server-log v-else-if="view === 'serverlog'" />
@@ -149,6 +151,7 @@
 <script>
 import { Lock, Moon, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import Adverts from './Adverts.vue'
+import AuditLog from './AuditLog.vue'
 import BanList from './BanList.vue'
 import GameServerAlerts from './GameServerAlerts.vue'
 import LobbyChat from './LobbyChat.vue'
@@ -168,7 +171,7 @@ const SEEN_AFTER_MS = 10000
 
 export default {
     name: 'InternalsComponent',
-    components: { Adverts, BanList, GameServerAlerts, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ServerMessages, ShadowMuteList, WebServerLog },
+    components: { Adverts, AuditLog, BanList, GameServerAlerts, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ServerMessages, ShadowMuteList, WebServerLog },
     props: ['authenticated'],
     data() {
         return {
@@ -244,12 +247,21 @@ export default {
         this.auth = this.authenticated === true || this.authenticated === 'true'
         applyTheme(this.theme)
         document.addEventListener('visibilitychange', this.onVisible)
+        // 401 = Session weg oder Admin-Rechte entzogen (EnsureAdmin) -> zurück zum Login.
+        this.authInterceptor = window.axios.interceptors.response.use(null, (err) => {
+            if (err?.response?.status === 401 && this.auth && !String(err.config?.url || '').endsWith('/login')) {
+                this.auth = false
+                notice('Your session has ended – please log in again.', 'warning')
+            }
+            return Promise.reject(err)
+        })
     },
     beforeUnmount() {
         clearInterval(this.unseenTimer)
         clearTimeout(this.seenTimer)
         clearTimeout(this.alertsSeenTimer)
         document.removeEventListener('visibilitychange', this.onVisible)
+        if (this.authInterceptor !== undefined) window.axios.interceptors.response.eject(this.authInterceptor)
     },
     methods: {
         onVisible() {

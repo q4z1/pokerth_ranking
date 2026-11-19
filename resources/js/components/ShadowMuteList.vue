@@ -108,7 +108,7 @@ import { MuteNotification, Search } from '@element-plus/icons-vue'
 import AdminPanel from './AdminPanel.vue'
 import { apiGet, apiPost, confirmAction, formatDateTime, listMixin, notice, reportError } from '../admin/adminUtils.js'
 
-/** Muss zu AdminController::SHADOW_MUTE_DURATIONS passen (+ 'permanent'). */
+/** Muss zu Admin\ModerationController::SHADOW_MUTE_DURATIONS passen (+ 'permanent'). */
 const DURATIONS = [
     { value: '1h', label: '1 hour' },
     { value: '1d', label: '1 day' },

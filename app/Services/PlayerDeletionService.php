@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
  * ab, bleibt der Account vollständig erhalten. Die Avatar-Datei wird erst nach
  * dem Commit entfernt.
  *
- * Benutzt von AdminController (Players-Seite) und `php artisan player:delete`.
+ * Benutzt von Admin\ModerationController (Players-Seite) und `php artisan player:delete`.
  */
 class PlayerDeletionService
 {

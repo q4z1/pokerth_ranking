@@ -30,6 +30,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // 500). Der 401 kommt aus withExceptions() unten.
         $middleware->redirectGuestsTo(fn () => null);
 
+        // Nach `auth`: User muss noch in admin_player stehen (sonst Logout + 401).
+        $middleware->alias(['admin' => \App\Http\Middleware\EnsureAdmin::class]);
+
         // X-Robots-Tag nur auf Testinstanzen (APP_NOINDEX=true in der .env).
         $middleware->append(\App\Http\Middleware\NoIndex::class);
     })
