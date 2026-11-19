@@ -20,8 +20,6 @@ Route::get('/', function () {
 Route::get('/player/autocomplete', [App\Http\Controllers\PlayerController::class, 'autocomplete']);
 Route::get('/player/show', [App\Http\Controllers\PlayerController::class, 'show']);
 Route::post('/player/search', [App\Http\Controllers\PlayerController::class, 'search']);
-Route::post('/player/gender-country', [App\Http\Controllers\PlayerController::class, 'set_gender_country']);
-Route::get('/player/gender-country', [App\Http\Controllers\PlayerController::class, 'get_gender_country']);
 Route::get('/player/games/get', [App\Http\Controllers\PlayerController::class, 'games']);
 Route::get('/player/season/get/{player}/{season}', [App\Http\Controllers\PlayerController::class, 'getSeason']);
 Route::get('/player/season/get/leaderboard/{season}', [App\Http\Controllers\PlayerController::class, 'getSeasonLeaderboard']);

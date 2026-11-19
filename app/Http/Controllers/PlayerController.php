@@ -160,33 +160,6 @@ class PlayerController extends Controller
     return GameHasPlayer::offset($request->l)->where('player_idplayer', $request->p)->whereNotNull('end_time')->orderBy('end_time', 'DESC')->with('game')->limit(40)->get();
   }
 
-  public function set_gender_country(Request $request)
-  {
-    $phpbb_user = DB::table('pokerth.phpbb_users')
-      ->where('username', $request->username)
-      ->first();
-    $p = Player::selectRaw('player_id, username')
-      ->where('username', $request->username)
-      ->first();
-    if (!$phpbb_user) return ['status' => false, 'msg' => 'Forum User not found.'];
-    else if (!$p) return ['status' => false, 'msg' => 'Player not found.'];
-    else if (sha1($request->creation_time . $phpbb_user->user_form_salt . 'ucp_profile_info') != $request->form_token) return ['status' => false, 'msg' => 'Token mismatch.'];
-    else if (!DB::statement('UPDATE player SET country_iso = ?, gender = ? WHERE username = ?', [strtoupper($request->pth_country), $request->pth_gender, $request->username])) return ['status' => false, 'msg' => 'Setting Country/Gender failed.'];
-    Cache::forget('gender.prof.' . $request->username);
-    return ['status' => 'success'];
-  }
-
-  public function get_gender_country(Request $request)
-  {
-    $p = Cache::rememberForever('gender.prof.' . $request->u, function () use ($request) {
-      return Player::selectRaw('gender, country_iso')
-        ->where('username', $request->u)
-        ->first();
-    });
-    if (!$p) return ['status' => false, 'msg' => 'Player not found.'];
-    return ['status' => 'success', 'gender' => $p->gender, 'country_iso' => strtolower($p->country_iso)];
-  }
-
   private function searchForPlayerId($id, $array) {
     foreach ($array as $key => $val) {
         if(is_array($val)){
@@ -226,7 +199,12 @@ class PlayerController extends Controller
     $page = (int) $request->input('page', 1);
     $pagesize = (int) $request->input('pageSize', 25);
     $sort = $request->input('sort');
-    if ($sort['prop'] === 'rank_pos') $sort['prop'] = 'final_score';
+    if (!is_array($sort)) $sort = [];
+    if (($sort['prop'] ?? null) === 'rank_pos') $sort['prop'] = 'final_score';
+    // Only columns the leaderboard UI can sort by (request input goes into ORDER BY).
+    if (!in_array($sort['prop'] ?? null, ['final_score', 'points_sum', 'season_games', 'average_score', 'username'], true)) {
+      $sort = ['prop' => 'final_score', 'order' => 'descending'];
+    }
 
     if($season === "current"){
       $players = PlayerRanking::where([
@@ -307,7 +285,12 @@ class PlayerController extends Controller
     $page = $request->input('page', 1);
     $pagesize = $request->input('pageSize', 25);
     $sort = $request->input('sort');
-    if ($sort['prop'] === 'rank_pos') $sort['prop'] = 'final_score';
+    if (!is_array($sort)) $sort = [];
+    if (($sort['prop'] ?? null) === 'rank_pos') $sort['prop'] = 'final_score';
+    // Only columns the leaderboard UI can sort by (request input goes into ORDER BY).
+    if (!in_array($sort['prop'] ?? null, ['final_score', 'points_sum', 'season_games', 'average_score', 'username'], true)) {
+      $sort = ['prop' => 'final_score', 'order' => 'descending'];
+    }
     // @TODO: use the selected season for PlayerRanking
     $players = PlayerRanking::where([
       ['player_ranking.username', 'NOT LIKE', 'deleted_%'],
