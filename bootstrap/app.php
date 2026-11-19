@@ -36,6 +36,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withSchedule(function (Schedule $schedule) {
         $schedule->call(new SeasonSwitch)->cron('0 0 01 */3 *');
         $schedule->command('attack:check')->cron('*/5 * * * *');
+        // Game-Server-Logs/Sessions auf Angriffsmuster (Passwort-Raten,
+        // Fuzzing, Test-/XSS-Gastnamen, hängender Server). Funde -> Badge
+        // unter Logs, Discord, Mail an GAMESERVER_ALERT_MAIL.
+        $schedule->command('gameserver:attack-check')->cron('*/5 * * * *')->withoutOverlapping(10);
 
         // Stuendlich statt taeglich: die Platte stand am 23.08.2026 bei 95%,
         // und pokerth_access.log waechst unter Angriff um mehrere hundert MB

@@ -39,7 +39,28 @@
                 </el-sub-menu>
                 <el-menu-item index="adverts">Adverts</el-menu-item>
                 <el-sub-menu index="logs">
-                    <template #title>Logs</template>
+                    <template #title>
+                        <el-badge
+                            :value="alerts.unseen"
+                            :hidden="!alerts.unseen"
+                            :max="99"
+                            :type="alerts.unseen_critical ? 'danger' : 'warning'"
+                            class="internals-badge"
+                        >
+                            Logs
+                        </el-badge>
+                    </template>
+                    <el-menu-item index="gameserveralerts">
+                        <el-badge
+                            :value="alerts.unseen"
+                            :hidden="!alerts.unseen"
+                            :max="99"
+                            :type="alerts.unseen_critical ? 'danger' : 'warning'"
+                            class="internals-badge"
+                        >
+                            Game-Server Alerts
+                        </el-badge>
+                    </el-menu-item>
                     <el-menu-item index="serverlog">Game-Server Log</el-menu-item>
                     <el-menu-item index="servermessages">Game-Server Messages</el-menu-item>
                     <el-menu-item index="webserverlog">Webserver Log</el-menu-item>
@@ -115,6 +136,7 @@
                 <ban-list v-else-if="view === 'banlist'" :key="'banlist-' + revision" @changed="revision++" />
                 <shadow-mute-list v-else-if="view === 'shadowmute'" />
                 <adverts v-else-if="view === 'adverts'" />
+                <game-server-alerts v-else-if="view === 'gameserveralerts'" :seen-id="alertsSeenOnOpen" />
                 <server-log v-else-if="view === 'serverlog'" />
                 <server-messages v-else-if="view === 'servermessages'" />
                 <web-server-log v-else-if="view === 'webserverlog'" />
@@ -128,6 +150,7 @@
 import { Lock, Moon, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import Adverts from './Adverts.vue'
 import BanList from './BanList.vue'
+import GameServerAlerts from './GameServerAlerts.vue'
 import LobbyChat from './LobbyChat.vue'
 import OffendersTable from './OffendersTable.vue'
 import PlayerAdmin from './PlayerAdmin.vue'
@@ -145,7 +168,7 @@ const SEEN_AFTER_MS = 10000
 
 export default {
     name: 'InternalsComponent',
-    components: { Adverts, BanList, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ServerMessages, ShadowMuteList, WebServerLog },
+    components: { Adverts, BanList, GameServerAlerts, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ServerMessages, ShadowMuteList, WebServerLog },
     props: ['authenticated'],
     data() {
         return {
@@ -158,6 +181,8 @@ export default {
             revision: 0,
             theme: preferredTheme(),
             unseen: { gamename: { count: 0, max_id: 0 }, avatar: { count: 0, max_id: 0 } },
+            alerts: { unseen: 0, unseen_critical: 0, max_id: 0, seen_id: 0 },
+            alertsSeenOnOpen: 0,
             unseenTimer: null,
             seenTimer: null,
             Lock,
@@ -206,6 +231,14 @@ export default {
                 if (type) this.seenTimer = setTimeout(() => this.markSeen(type), SEEN_AFTER_MS)
             },
         },
+        /** Alerts-Seite: wie bei den Reports gelten 10 s dort als "gesehen". */
+        view(value) {
+            clearTimeout(this.alertsSeenTimer)
+            this.alertsSeenTimer = null
+            if (value !== 'gameserveralerts') return
+            this.alertsSeenOnOpen = this.alerts.seen_id
+            this.alertsSeenTimer = setTimeout(() => this.markAlertsSeen(), SEEN_AFTER_MS)
+        },
     },
     mounted() {
         this.auth = this.authenticated === true || this.authenticated === 'true'
@@ -215,6 +248,7 @@ export default {
     beforeUnmount() {
         clearInterval(this.unseenTimer)
         clearTimeout(this.seenTimer)
+        clearTimeout(this.alertsSeenTimer)
         document.removeEventListener('visibilitychange', this.onVisible)
     },
     methods: {
@@ -227,6 +261,21 @@ export default {
                 if (data.success) this.unseen = data.types
             } catch {
                 // Badge ist Komfort – Fehler hier nicht aufdrängen.
+            }
+            try {
+                const data = await apiGet('/gameserver/alerts/unseen')
+                if (data.success) this.alerts = data
+            } catch {
+                // siehe oben
+            }
+        },
+        async markAlertsSeen() {
+            if (!this.alerts.unseen) return
+            try {
+                const data = await apiPost('/gameserver/alerts/seen', { upto: this.alerts.max_id })
+                if (data.success) this.alerts = data
+            } catch {
+                // siehe loadUnseen
             }
         },
         async markSeen(type) {

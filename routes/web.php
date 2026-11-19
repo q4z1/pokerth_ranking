@@ -39,6 +39,9 @@ Route::get('/serverlog', [App\Http\Controllers\AdminController::class, 'serverLo
 Route::get('/webserverlog', [App\Http\Controllers\AdminController::class, 'webServerLog']);
 Route::get('/servermessages', [App\Http\Controllers\ServerMessagesController::class, 'index']);
 Route::get('/servermessages/download', [App\Http\Controllers\ServerMessagesController::class, 'download'])->middleware('throttle:10,1');
+Route::get('/gameserver/alerts', [App\Http\Controllers\GameServerAlertsController::class, 'index']);
+Route::get('/gameserver/alerts/unseen', [App\Http\Controllers\GameServerAlertsController::class, 'unseen']);
+Route::post('/gameserver/alerts/seen', [App\Http\Controllers\GameServerAlertsController::class, 'seen']);
 Route::get('/lobbychat', [App\Http\Controllers\AdminController::class, 'lobbyChat']);
 Route::post('/lobbychat/notice', [App\Http\Controllers\AdminController::class, 'globalNotice'])->middleware('throttle:10,1');
 Route::get('/players', [App\Http\Controllers\AdminController::class, 'players']);
