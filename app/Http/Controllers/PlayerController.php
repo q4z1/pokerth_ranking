@@ -84,6 +84,10 @@ class PlayerController extends Controller
   public function getSeason(Request $request, Player $player, $season)
   {
     $season = str_replace("-", "_", $season);
+    // $season goes into a table name - strict format only (SQL injection attempts, 2026-11-18).
+    if (!preg_match('/^\d{4}_\d{1,2}$/', $season)) {
+      abort(404);
+    }
     $seasonsDb = config('database.connections.seasons.database');
     // Kein Cache::flush() mehr: die Tabellen in pokerth_seasons werden beim
     // Season-Wechsel einmal befüllt und danach nicht mehr angefasst – neue
@@ -461,9 +465,14 @@ class PlayerController extends Controller
       return $s;
     });
 
+    // $season goes into table names below - only allow known seasons (SQL injection, 2026-11-18).
+    if ($season !== 'current' && !in_array($season, $seasons, true)) {
+      abort(404);
+    }
+
     $filters = $request->input('filters');
-    $page = $request->input('page', 1);
-    $pagesize = $request->input('pageSize', 25);
+    $page = (int) $request->input('page', 1);
+    $pagesize = (int) $request->input('pageSize', 25);
     $sort = $request->input('sort');
     if ($sort['prop'] === 'rank_pos') $sort['prop'] = 'final_score';
 

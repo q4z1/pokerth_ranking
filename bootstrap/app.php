@@ -16,10 +16,6 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->validateCsrfTokens(except: [
-            '/account/reset',
-            '/account/change',
-            '/account/create',
-            '/account/validate',
             '/ranking/leaderboard/*',
             '/gametable/show',
             '/game/pdb',
