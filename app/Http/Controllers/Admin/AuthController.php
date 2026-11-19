@@ -8,6 +8,7 @@ use App\Models\Player;
 use App\Models\User;
 use App\Services\AdminAccess;
 use App\Services\AdminAudit;
+use App\Support\RankingPassword;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -28,12 +29,12 @@ class AuthController extends Controller
     $username = (string) $request->input('username', '');
     $password = (string) $request->input('password', '');
 
-    $player = Player::selectRaw('player_id, username, CAST(AES_DECRYPT(password, "' . env('APP_SALT') . '") AS CHAR ) as password')
+    // Decrypt in PHP (RankingPassword): APP_SALT never goes into SQL text.
+    $player = Player::select('player_id', 'username', 'password')
       ->where('username', $username)
       ->first();
     $ok = $player
-      && is_string($player->password)
-      && hash_equals($player->password, $password)
+      && RankingPassword::check($password, $player->password)
       && AdminPlayer::find($player->player_id);
 
     if (!$ok) {

@@ -76,16 +76,8 @@ Route::post('/game/pdb', [App\Http\Controllers\GameController::class, 'pdbUpload
 Route::post('/ranking/leaderboard/{season}', [App\Http\Controllers\PlayerController::class, 'getLeaderboard']);
 Route::get('/ranking/cod', [App\Http\Controllers\GameController::class, 'getCOD']);
 
-// Disabled 2026-11-19: legacy unauthenticated account endpoint (pre phpBB extension), no callers since at least 2026-10-25.
-// Route::post('/account/reset', [App\Http\Controllers\PlayerController::class, 'account_reset']);
-// Disabled 2026-11-19: legacy unauthenticated account endpoint (pre phpBB extension), no callers since at least 2026-10-25.
-// Route::post('/account/create', [App\Http\Controllers\PlayerController::class, 'account_create']);
-// Disabled 2026-11-19: unauthenticated, only guarded by phpbb user_form_salt (leaked via SQLi 2026-11-18, used to hijack sp0ck). No callers.
-// Route::post('/account/change', [App\Http\Controllers\PlayerController::class, 'account_change']);
-// Disabled 2026-11-19: legacy unauthenticated account endpoint (pre phpBB extension), no callers since at least 2026-10-25.
-// Route::post('/account/validate', [App\Http\Controllers\PlayerController::class, 'account_validate']);
-// Disabled 2026-11-19: unauthenticated, only guarded by phpbb user_form_salt (leaked via SQLi 2026-11-18, used to hijack sp0ck). No callers.
-// Route::post('/account/delete', [App\Http\Controllers\PlayerController::class, 'account_delete']);
+// /account/{reset,create,change,validate,delete} removed 2026-11-19: unauthenticated legacy endpoints
+// (pre phpBB extension); change/delete were abused after the leaderboard SQL injection.
 
 Route::get('/downloads/all', [App\Http\Controllers\DownloadsController::class, 'allversions']);
 Route::get('/styles', [App\Http\Controllers\DownloadsController::class, 'styles']);

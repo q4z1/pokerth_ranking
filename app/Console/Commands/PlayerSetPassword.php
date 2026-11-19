@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use App\Support\RankingPassword;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -12,7 +13,8 @@ use Illuminate\Support\Facades\DB;
  *    exactly like phpBB's passwords.driver.argon2id (see
  *    config/default/container/services_password.yml), plus user_passchg and
  *    the "remember me" login keys reset, like ACP -> Users -> Overview does.
- *  - Ranking db (player.password): AES_ENCRYPT(password, APP_SALT), which the
+ *  - Ranking db (player.password): AES_ENCRYPT(password, APP_SALT) bytes, computed
+ *    in PHP by App\Support\RankingPassword, which the
  *    game server and game clients use. Same as the forum listener
  *    (ext/inquies/pokerth/event/listener.php afterRegDetails).
  *
@@ -48,12 +50,6 @@ class PlayerSetPassword extends Command
 
         if ($err = $this->passwordError($password)) {
             $this->error($err);
-            return self::FAILURE;
-        }
-
-        $salt = (string) env('APP_SALT');
-        if ($salt === '') {
-            $this->error('APP_SALT is not set.');
             return self::FAILURE;
         }
 
@@ -98,7 +94,7 @@ class PlayerSetPassword extends Command
             return self::FAILURE;
         }
 
-        DB::transaction(function () use ($forumUser, $player, $password, $salt) {
+        DB::transaction(function () use ($forumUser, $player, $password) {
             if ($forumUser) {
                 DB::table(self::FORUM_DB . '.phpbb_users')
                     ->where('user_id', $forumUser->user_id)
@@ -113,9 +109,10 @@ class PlayerSetPassword extends Command
                     ->delete();
             }
             if ($player) {
+                // Encrypted in PHP: APP_SALT and the password never go into SQL text.
                 DB::update(
-                    'UPDATE player SET password = AES_ENCRYPT(?, ?) WHERE player_id = ?',
-                    [$password, $salt, $player->player_id]
+                    'UPDATE player SET password = ? WHERE player_id = ?',
+                    [RankingPassword::encrypt($password), $player->player_id]
                 );
             }
         });
@@ -129,11 +126,8 @@ class PlayerSetPassword extends Command
             $forumOk ? $this->info('Forum password updated.') : $this->error('Forum password verification FAILED.');
         }
         if ($player) {
-            $plain = DB::selectOne(
-                'SELECT CAST(AES_DECRYPT(password, ?) AS CHAR) AS pw FROM player WHERE player_id = ?',
-                [$salt, $player->player_id]
-            )->pw ?? null;
-            $rankingOk = $plain === $password;
+            $blob = DB::table('player')->where('player_id', $player->player_id)->value('password');
+            $rankingOk = RankingPassword::check($password, $blob);
             $ok = $ok && $rankingOk;
             $rankingOk ? $this->info('Ranking db password updated.') : $this->error('Ranking db password verification FAILED.');
         }
