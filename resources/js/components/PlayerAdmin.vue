@@ -195,7 +195,7 @@
 
         <p class="player-admin__note admin-muted">
             Online = open session in the current game-server run, refreshed every 30 s. Times are server time (Europe/Berlin).
-            “IP shared” = distinct nicks on that IP in the last 14 days.
+            “IP shared” = distinct registered nicks on that IP in the last 14 days (guests not counted).
             <template v-if="geoip">
                 <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>.
             </template>
@@ -254,7 +254,7 @@
                     type="warning"
                     :closable="false"
                     show-icon
-                    :title="`${kick.row.ip_accounts} different nicks used this IP in the last 14 days – the 24 h IP ban hits all of them (shared IP / CGNAT / VPN?).`"
+                    :title="`${kick.row.ip_accounts} different registered nicks used this IP in the last 14 days – the 24 h IP ban hits all of them (shared IP / CGNAT / VPN?).`"
                 >
                     <el-link type="primary" :underline="false" @click="showIpNicks(kickIp)">Show the nicks</el-link>
                 </el-alert>
@@ -286,7 +286,6 @@
                         <span v-if="row.online" class="player-admin__dot is-online" title="online" />
                         <el-link v-if="row.player_id" type="primary" :underline="false" @click="openDetail(row)">{{ row.nick }}</el-link>
                         <span v-else>{{ row.nick }}</span>
-                        <el-tag v-if="row.guest" size="small" type="info" disable-transitions>guest</el-tag>
                         <el-tag v-if="row.banned" size="small" type="danger" disable-transitions>banned</el-tag>
                     </template>
                 </el-table-column>

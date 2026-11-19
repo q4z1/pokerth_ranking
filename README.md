@@ -32,6 +32,8 @@ Framework-Standard.
 | `sitemap:generate` | `sitemap.xml` für das Forum bauen | `--output=<pfad>`, `--dry-run` | 04:20 & 16:20 |
 | `avatars:purge-blacklisted` | Dateien bereits gesperrter Avatare aus dem öffentlichen Verzeichnis in die Quarantäne schieben | `--dry-run` | manuell |
 | `logs:rotate-nginx` | Zu große nginx-Logs komprimieren und leeren (copytruncate-Stil) | `--dir=`, `--max-size=<MB>`, `--keep=<n>`, `--dry-run` | manuell (siehe Hinweis) |
+| `player:set-password <name> [pw]` | Passwort im Forum (argon2id) und in der Ranking-DB (AES) setzen; ohne `pw` wird verdeckt abgefragt | `--force` (ohne Rückfrage) | manuell |
+| `player:delete <name>` | Account im Forum (phpBB) und in der Ranking-DB löschen – gleiche Logik wie „Delete“ auf der Players-Seite; Forenbeiträge bleiben als „Deleted“ | `--dry-run`, `--force` (ohne Rückfrage) | manuell |
 | `bbc:gamedates` | Spieltermine für BBC automatisch anlegen | – | manuell |
 | `ranking:fix` | Platzhalter für Ad-hoc-Neuberechnung des Rankings; Logik im Body ist auskommentiert und wird pro Einsatz angepasst | – | manuell / Entwicklung |
 | `season:switch` | Platzhalter (`handle()` gibt 0 zurück) – **nicht benutzen** | – | – |
@@ -89,6 +91,20 @@ ins Container-Image (`apt-get install -y pigz`). Der frühere externe 4h-Cron
 
 Konfiguration: `config/backup.php` (Pfade, Retention, DB-Ausschlüsse, `nice`/
 `ionice`-Stufen); Overrides optional über `BACKUP_*` in `.env`.
+
+**`player:delete <name>`** – Name exakt und case-sensitiv. Zeigt erst
+Forum-User und Ranking-Player (IDs, E-Mail, Beitrags- und Session-Zahl) und
+fragt nach. Löscht nach phpBB `user_delete()` im Modus „retain“: Forenbeiträge,
+Topics und Anhänge gehen an den Anonymous-User („Deleted“), User-Zeilen in den
+phpBB-Nebentabellen, Sessions, eigene Reports und die hochgeladene Avatar-Datei
+werden entfernt, `num_users` sinkt; auf Ranking-Seite verschwinden `player` und
+`player_ranking`. Alles in **einer Transaktion** – schlägt ein Schritt fehl, bleibt
+der Account unverändert. Gibt es den Namen nur auf einer Seite, wird nur diese
+gelöscht; Founder-Accounts werden verweigert. Logik in
+`app/Services/PlayerDeletionService.php` (auch von der Players-Seite benutzt).
+Anders als das Selbstlöschen im UCP landet der Name **nicht** in
+`suspended_nicknames`. Für eine dauerhafte Namenssperre zusätzlich einen
+Eintrag in phpBB „Disallow usernames“ anlegen (Beispiel: `Guest*`).
 
 **`logs:rotate-nginx`** – rotiert nur Dateien über der Größenschwelle; ein
 Leerlauf kostet nichts. ⚠️ In `app/Console/Kernel.php` ist der Befehl als

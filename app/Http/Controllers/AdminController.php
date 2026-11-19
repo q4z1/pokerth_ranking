@@ -10,13 +10,13 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\AdminPlayer;
 use App\Models\Advert;
 use App\Models\Player;
-use App\Models\PlayerRanking;
 use App\Models\ReportedAvatar;
 use App\Models\ReportedGamename;
 use App\Models\User;
 use App\Services\AvatarBlacklistService;
 use App\Services\GameServerAdminClient;
 use App\Services\GeoIpService;
+use App\Services\PlayerDeletionService;
 use App\Services\ServerLogAnalyzer;
 use App\Services\WebServerLogAnalyzer;
 
@@ -901,7 +901,7 @@ class AdminController extends Controller
   }
 
   /**
-   * Alle Nicks (inkl. Gäste), die unter einer IP gespielt haben – Grundlage
+   * Alle registrierten Nicks (ohne Gäste), die unter einer IP gespielt haben – Grundlage
    * der "IP shared"-Zahl. Sessions gibt es seit Beginn des Activity-Logs
    * (2026-08-05); Accounts, deren last_ip passt, aber ohne Session, kommen dazu.
    */
@@ -917,7 +917,7 @@ class AdminController extends Controller
               MAX(s.disconnected_at IS NULL AND s.run_id = (SELECT MAX(run_id) FROM server_run)) AS online,
               p.active
          FROM server_session s LEFT JOIN player p ON p.player_id = s.player_id
-        WHERE s.ip = INET6_ATON(?)
+        WHERE s.ip = INET6_ATON(?) AND s.is_guest = 0
         GROUP BY s.nick, s.player_id, p.active
         ORDER BY last_seen DESC
         LIMIT 500",
@@ -1004,7 +1004,7 @@ class AdminController extends Controller
 
   /**
    * Wie viele verschiedene Accounts in den letzten 14 Tagen unter jeder IP
-   * unterwegs waren. Der Kickban sperrt die IP 24 h – bei geteilten IPs
+   * unterwegs waren. Gäste zählen nicht mit – für die Moderation irrelevant. Der Kickban sperrt die IP 24 h – bei geteilten IPs
    * (CGNAT, VPN, Uni) trifft das auch Unbeteiligte.
    *
    * @return array<string,int>
@@ -1016,7 +1016,7 @@ class AdminController extends Controller
     $in = implode(',', array_fill(0, count($ips), 'INET6_ATON(?)'));
     $rows = DB::select(
       "SELECT INET6_NTOA(ip) AS ip, COUNT(DISTINCT nick) AS n FROM server_session
-        WHERE ip IN ({$in}) AND connected_at > NOW() - INTERVAL 14 DAY GROUP BY ip",
+        WHERE ip IN ({$in}) AND is_guest = 0 AND connected_at > NOW() - INTERVAL 14 DAY GROUP BY ip",
       $ips
     );
     $out = [];
@@ -1127,111 +1127,20 @@ class AdminController extends Controller
     ];
   }
 
+  /** Players-Seite → "Delete": Forum-User + Ranking-Account, siehe PlayerDeletionService. */
   private function delete(Player $player)
   {
-    if (!$player) return ['success' => false, 'msg' => 'Player not found.'];
-    $phpbb_user = DB::table('pokerth.phpbb_users')
-      ->where('username', $player->username)
-      ->first();
-    if (!$phpbb_user) return ['success' => false, 'msg' => 'Forum User not found.'];
-    // *** @INFO: 1. phpbb stuff - taken from /includes/functions_user.php => function user_delete()
-    // delete reports
-    $rp = DB::table('pokerth.phpbb_reports')->join('pokerth.phpbb_posts', 'pokerth.phpbb_reports.post_id', '=', 'pokerth.phpbb_posts.post_id')
-      ->where('pokerth.phpbb_reports.user_id', $phpbb_user->user_id)
-      ->get();
-    $report_posts = $report_topics = array();
-    foreach ($rp as $report_post) {
-      $report_posts[] = $report_post->post_id;
-      $report_topics[] = $report_post->topic_id;
+    if (!$player->exists) return ['success' => false, 'msg' => 'Player not found.'];
+    $svc = app(PlayerDeletionService::class);
+    $found = $svc->find($player->username);
+    if (!$found['forum']) return ['success' => false, 'msg' => 'Forum User not found.'];
+    if ($found['ambiguous']) return ['success' => false, 'msg' => 'Ambiguous username – use php artisan player:delete.'];
+    try {
+      $svc->delete($found['forum'], $found['player']);
+    } catch (\Throwable $e) {
+      report($e);
+      return ['success' => false, 'msg' => 'Delete failed, nothing was changed: ' . $e->getMessage()];
     }
-    if (count($report_posts)) {
-      $report_posts = array_unique($report_posts);
-      $report_topics = array_unique($report_topics);
-      $krt = DB::table('pokerth.phpbb_posts')->selectRaw('DISTINCT topic_id')
-        ->whereIn('pokerth.phpbb_posts.topic_id', $report_topics)
-        ->where('pokerth.phpbb_posts.post_reported', 1)
-        ->whereIn('pokerth.phpbb_posts.post_id', $report_posts)
-        ->get();
-      $keep_report_topics = array();
-      foreach ($krt as $rt) {
-        $keep_report_topics[] = $rt->topic_id;
-      }
-      if (count($keep_report_topics)) {
-        $report_topics = array_diff($report_topics, $keep_report_topics);
-      }
-      unset($keep_report_topics);
-      DB::statement('UPDATE pokerth.phpbb_posts SET post_reported = 0 WHERE post_id IN(' . implode(',', $report_posts) . ')');
-      if (count($report_topics)) {
-        DB::statement('UPDATE pokerth.phpbb_topics SET topic_reported = 0 WHERE topic_id IN(' . implode(',', $report_topics) . ')');
-      }
-    }
-    DB::statement('DELETE FROM pokerth.phpbb_reports WHERE user_id = ' . $phpbb_user->user_id);
-    // delete avatar
-    $avatar_path = DB::table('pokerth.phpbb_config')->where('config_name', 'avatar_path')->pluck('config_value')->toArray()[0];
-    if ($phpbb_user->user_avatar && $phpbb_user->user_avatar_type == 'avatar.driver.upload') {
-      if (substr($phpbb_user->user_avatar, 0, 1) !== 'g' && $phpbb_user->user_avatar !== '' && !is_numeric($phpbb_user->user_avatar)) {
-        if (file_exists(base_path() . $avatar_path . '/' . $phpbb_user->user_avatar)) {
-          @unlink(base_path() . $avatar_path . '/' . $phpbb_user->user_avatar);
-        }
-      }
-    }
-    // Unlink accounts from auth providers if it's not db
-    $auth_provider = DB::table('pokerth.phpbb_config')->where('config_name', 'auth_method')->pluck('config_value')->toArray()[0];
-    if ($auth_provider !== 'db') {
-      // @TODO: if oauth is used for example
-    }
-    // update num_users
-    DB::statement('UPDATE pokerth.phpbb_config SET config_value=(config_value-1) WHERE config_name = ?', ['num_users']);
-    // When we delete these users and retain the posts, we must assign all the data to the guest user
-    DB::statement(
-      'UPDATE pokerth.phpbb_forums SET forum_last_poster_id = 1, forum_last_poster_name = ?, forum_last_poster_colour = ? WHERE forum_last_poster_id = ?',
-      ['Deleted', '', $phpbb_user->user_id]
-    );
-    DB::statement('UPDATE pokerth.phpbb_posts SET poster_id = 1, post_username = ? WHERE poster_id = ?', ['Deleted', '', $phpbb_user->user_id]);
-    DB::statement(
-      'UPDATE pokerth.phpbb_topics SET topic_poster = 1, topic_first_poster_name = ?, topic_first_poster_colour = ? WHERE topic_poster = ?',
-      ['Deleted', '', $phpbb_user->user_id]
-    );
-    DB::statement(
-      'UPDATE pokerth.phpbb_topics SET topic_last_poster_id = 1, topic_last_poster_name = ?, topic_last_poster_colour = ? WHERE topic_last_poster_id = ?',
-      ['Deleted', '', $phpbb_user->user_id]
-    );
-    // Since we change every post by this author, we need to count this amount towards the anonymous user
-    $added_guest_posts = ($phpbb_user->user_posts) ? $phpbb_user->user_posts : 0;
-    // Assign more data to the Anonymous user
-    DB::statement('UPDATE pokerth.phpbb_attachments SET poster_id = 1 WHERE poster_id = ' . $phpbb_user->user_id);
-    DB::statement('UPDATE pokerth.phpbb_users SET user_posts = user_posts + ' . $added_guest_posts . ' WHERE user_id = 1');
-    // delete any entry with user_id from the following tables:
-    $table_ary = [
-      'phpbb_users',
-      'phpbb_user_group',
-      'phpbb_topics_watch',
-      'phpbb_forums_watch',
-      'phpbb_acl_users',
-      'phpbb_topics_track',
-      'phpbb_topics_posted',
-      'phpbb_forums_track',
-      'phpbb_profile_fields_data',
-      'phpbb_moderator_cache',
-      'phpbb_drafts',
-      'phpbb_bookmarks',
-      'phpbb_sessions_keys',
-      'phpbb_privmsgs_folder',
-      'phpbb_privmsgs_rules',
-      'phpbb_oauth_tokens',
-      'phpbb_oauth_states',
-      'phpbb_oauth_accounts',
-      'phpbb_user_notifications'
-    ];
-    foreach ($table_ary as $table) {
-      try {
-        DB::statement('DELETE FROM pokerth.' . $table . ' WHERE user_id = ' . $phpbb_user->user_id);
-      } catch (\Throwable $e) {
-        throw $e;
-      }
-    }
-    PlayerRanking::where('username', $player->username)->delete();
-    $player->delete();
-    return ['success' => true, 'msg' => "Player deleted."];
+    return ['success' => true, 'msg' => 'Player deleted.'];
   }
 }
