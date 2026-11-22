@@ -122,9 +122,17 @@ class AttackCheck extends Command
     // Official crawler ranges, so verified search engine bots are not challenged
     // by the filter. cf.client.bot would do the same in one word, but that field
     // is not available on our plan, so we match the source IPs instead.
+    //
+    // The same ranges are also left out of countHits(), otherwise a verified
+    // crawler could still trip the filter it is exempt from. GPTBot was added on
+    // 2026-11-22 after exactly that: a sitemap crawl from 74.7.227.16/.175 sent
+    // ~3,150 requests in 20 minutes (pokerth + wec), two samples of 1474 and 1466
+    // hits, and put every visitor behind the challenge for an hour. It honours
+    // robots.txt, so its load is steered there, not here.
     protected $crawler_sources = [
         'Googlebot' => 'https://developers.google.com/static/crawling/ipranges/common-crawlers.json',
         'bingbot' => 'https://www.bing.com/toolbox/bingbot.json',
+        'GPTBot' => 'https://openai.com/gptbot.json',
     ];
     protected $crawler_cache_file = 'crawler_ips.json';
     protected $crawler_cache_ttl = 21600; // 21600 => 6 hours
@@ -389,11 +397,19 @@ class AttackCheck extends Command
      * the scan itself was untouched. The only legitimate traffic without the
      * header is internal (game server, LAN clients via split DNS or NAT
      * reflection), a few requests per window, so nothing real is lost.
+     *
+     * Requests from the verified crawler ranges ($crawler_sources) are skipped
+     * too, for the same reason: the rule exempts them, so they cannot be stopped
+     * by it and must not be able to switch it on. awk hands back the count per
+     * source IP and the range check is done here, a window has a few hundred
+     * distinct IPs at most (2002 at the botnet peak), cheap enough in PHP.
      */
     protected function countHits($since)
     {
         $hits = [];
         $uniqueIps = [];
+        $allowlist = $this->allowlistBits();
+        $allowed = []; // ip => bool, shared across vhosts
 
         foreach($this->access_logs as $name => $path){
             if(!is_readable($path)){
@@ -402,16 +418,62 @@ class AttackCheck extends Command
 
             // tail -n +2 drops the first line, which tail -c is free to cut in half.
             $command = "tail -c " . $this->access_log_tail . " " . escapeshellarg($path)
-                . " | tail -n +2 | awk '$4 > \"[$since]\" && $1 != \"-\" { total++; if (!seen[$1]++) uniq++ } "
-                . "END { print (total+0) \"|\" (uniq+0) }'";
+                . " | tail -n +2 | awk '$4 > \"[$since]\" && $1 != \"-\" { n[$1]++ } "
+                . "END { for (ip in n) print ip, n[ip] }'";
 
-            [$total, $unique] = explode("|", trim(shell_exec($command)));
+            $total = 0;
+            $unique = 0;
+            foreach(preg_split('/\n/', trim((string) shell_exec($command)), -1, PREG_SPLIT_NO_EMPTY) as $line){
+                [$ip, $count] = explode(' ', $line, 2);
 
-            $hits[$name] = (int) $total;
-            $uniqueIps[$name] = (int) $unique;
+                if(!isset($allowed[$ip])){
+                    $allowed[$ip] = $this->ipInBits($ip, $allowlist);
+                }
+                if($allowed[$ip]){
+                    continue;
+                }
+
+                $total += (int) $count;
+                $unique++;
+            }
+
+            $hits[$name] = $total;
+            $uniqueIps[$name] = $unique;
         }
 
         return [$hits, $uniqueIps];
+    }
+
+    /**
+     * The crawler allowlist as [family, bits] pairs for ipInBits().
+     */
+    protected function allowlistBits()
+    {
+        $bits = [];
+        foreach($this->crawlerPrefixes() ?? [] as $cidr){
+            $parsed = $this->prefixToBits($cidr);
+            if($parsed !== null){
+                $bits[] = $parsed;
+            }
+        }
+
+        return $bits;
+    }
+
+    protected function ipInBits($ip, $allowlist)
+    {
+        $address = $this->prefixToBits($ip);
+        if($address === null){
+            return false;
+        }
+
+        foreach($allowlist as [$family, $prefix]){
+            if($family === $address[0] && strncmp($address[1], $prefix, strlen($prefix)) === 0){
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -487,7 +549,7 @@ class AttackCheck extends Command
     }
 
     /**
-     * Published Googlebot and bingbot ranges, merged and cached. Returns the last
+     * Published Googlebot, bingbot and GPTBot ranges, merged and cached. Returns the last
      * known good list when a source is unreachable or answers with a short list.
      */
     protected function crawlerPrefixes()
@@ -532,7 +594,7 @@ class AttackCheck extends Command
 
     /**
      * Merges a CIDR list into the shortest equivalent one: drops ranges contained
-     * in another and joins sibling halves. Both sources together are roughly 340
+     * in another and joins sibling halves. All sources together are roughly 360
      * ranges, more than fits into a rule expression, merged it is well below 100.
      */
     protected function mergePrefixes($cidrs)
