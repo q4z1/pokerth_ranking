@@ -337,11 +337,11 @@ class CollusionDetector
             if ($h !== null) $hashCount[$h] = ($hashCount[$h] ?? 0) + 1;
         }
         $pwGroupOf = [];
-        $nextLetter = 'A';
         foreach ($memberIds as $id) {
             $h = $pwByPlayer[$id] ?? null;
             if ($h !== null && ($hashCount[$h] ?? 0) >= 2 && !isset($pwGroupOf[$h])) {
-                $pwGroupOf[$h] = $nextLetter++;
+                $n = count($pwGroupOf);
+                $pwGroupOf[$h] = $n < 26 ? chr(65 + $n) : 'A' . ($n - 25);
             }
         }
 
