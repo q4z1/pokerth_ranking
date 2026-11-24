@@ -125,7 +125,9 @@ bzw. ähnlicher Nick erhärten. Öffentliche VPN-/CGNAT-IPs werden über
 Accounts nutzen). Ausgabe sind Ringe mit Score; `--player=` zeigt gezielt den
 Ring eines Accounts. Logik in `app/Services/CollusionDetector.php`. Geteilte IP
 bleibt ein Indiz, kein Beweis (Haushalt/CGNAT) – die Liste ist eine
-Entscheidungsgrundlage, kein Automatik-Ban.
+Entscheidungsgrundlage, kein Automatik-Ban. Dieselbe Erkennung gibt es im
+Admin-Backend unter **Reports → Collusion** (`GET /reports/collusion`,
+`ReportsController::collusion`, Vue-Komponente `CollusionTable.vue`) mit Ban-Buttons.
 
 **`ranking:track-ring`** – für wiederkehrende Ban-Evader: aus bekannten
 Seed-Accounts (Presets in `config/rings.php`, reale Namen nur in der

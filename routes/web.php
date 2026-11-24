@@ -52,6 +52,7 @@ Route::post('/players/message', [App\Http\Controllers\Admin\ModerationController
 Route::get('/reports/unseen', [App\Http\Controllers\Admin\ReportsController::class, 'reportsUnseen']);
 Route::post('/reports/seen', [App\Http\Controllers\Admin\ReportsController::class, 'reportsSeen']);
 Route::get('/reports/offenders', [App\Http\Controllers\Admin\ReportsController::class, 'offenders']);
+Route::get('/reports/collusion', [App\Http\Controllers\Admin\ReportsController::class, 'collusion']);
 // Muss vor /reports/{type} stehen, sonst greift dort das type-Pattern nicht mehr.
 Route::get('/reports/avatar/image/{hash}', [App\Http\Controllers\Admin\ReportsController::class, 'avatarImage'])->where('hash', '[0-9a-fA-F]{8,128}');
 Route::get('/reports/{type}', [App\Http\Controllers\Admin\ReportsController::class, 'reports'])->where('type', 'avatar|gamename');

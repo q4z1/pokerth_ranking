@@ -21,6 +21,7 @@
                         </el-badge>
                     </template>
                     <el-menu-item index="offenders">Repeat offenders</el-menu-item>
+                    <el-menu-item index="collusion">Collusion</el-menu-item>
                     <el-menu-item index="reports-gamename">
                         <el-badge :value="unseen.gamename.count" :hidden="!unseen.gamename.count" :max="99" class="internals-badge">
                             Table names
@@ -120,6 +121,7 @@
                     @show-reports="showReports"
                     @changed="revision++"
                 />
+                <collusion-table v-else-if="view === 'collusion'" :key="'collusion-' + revision" />
                 <reports-table
                     v-else-if="view === 'reports-gamename'"
                     :key="'gamename-' + revision"
@@ -153,6 +155,7 @@ import { Lock, Moon, Sunny, SwitchButton, User } from '@element-plus/icons-vue'
 import Adverts from './Adverts.vue'
 import AuditLog from './AuditLog.vue'
 import BanList from './BanList.vue'
+import CollusionTable from './CollusionTable.vue'
 import GameServerAlerts from './GameServerAlerts.vue'
 import LobbyChat from './LobbyChat.vue'
 import OffendersTable from './OffendersTable.vue'
@@ -171,7 +174,7 @@ const SEEN_AFTER_MS = 10000
 
 export default {
     name: 'InternalsComponent',
-    components: { Adverts, AuditLog, BanList, GameServerAlerts, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ServerMessages, ShadowMuteList, WebServerLog },
+    components: { Adverts, AuditLog, BanList, CollusionTable, GameServerAlerts, LobbyChat, OffendersTable, PlayerAdmin, PokerthNowComponent, ReportsTable, ServerLog, ServerMessages, ShadowMuteList, WebServerLog },
     props: ['authenticated'],
     data() {
         return {

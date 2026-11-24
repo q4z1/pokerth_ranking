@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\ReportedAvatar;
 use App\Services\AvatarBlacklistService;
+use App\Services\CollusionDetector;
 use App\Services\ReportStats;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -145,6 +146,44 @@ class ReportsController extends AdminBaseController
     })->sortByDesc('total_reports')->values();
 
     return ['success' => true, 'list' => $list];
+  }
+
+  /**
+   * Collusion / multi-seat detection: account rings of one person that sit
+   * together at ranked tables. Logic in App\Services\CollusionDetector.
+   */
+  public function collusion(Request $request, CollusionDetector $detector)
+  {
+    $days = $request->input('days');
+    $days = ($days === null || $days === '') ? null : max(1, (int) $days);
+
+    $confidence = $request->input('confidence');
+    $confidence = in_array($confidence, ['review', 'medium', 'high'], true) ? $confidence : null;
+
+    $result = $detector->detect([
+      'days'          => $days,
+      'minTables'     => (int) $request->input('min_tables', 2),
+      'ipMaxAccounts' => (int) $request->input('ip_max_accounts', 12),
+      'limit'         => min(500, max(1, (int) $request->input('limit', 50))),
+      'minConfidence' => $confidence,
+      'player'        => $request->input('player'),
+    ]);
+
+    // PlayerRef expects an `exists` flag; every ring member is a real row.
+    foreach ($result['rings'] as &$ring) {
+      foreach ($ring['members'] as &$member) {
+        $member['exists'] = true;
+      }
+      unset($member);
+    }
+    unset($ring);
+
+    return [
+      'success' => true,
+      'rings'   => $result['rings'],
+      'total'   => $result['total'],
+      'params'  => $result['params'],
+    ];
   }
 
   /**
