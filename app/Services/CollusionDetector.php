@@ -133,7 +133,7 @@ class CollusionDetector
         // Describe + score the rings.
         $out = [];
         foreach ($rings as $memberIds) {
-            $out[] = $this->describeRing($memberIds, $edges, $meta, $ipByPlayer, $ipAccounts, $ranking, $days, $botIds);
+            $out[] = $this->describeRing($memberIds, $edges, $meta, $ipByPlayer, $ipAccounts, $pwByPlayer, $ranking, $days, $botIds);
         }
 
         // Sort by priority: best (lowest) member rank first - a ring with a
@@ -324,10 +324,26 @@ class CollusionDetector
         return $out;
     }
 
-    private function describeRing(array $memberIds, array $edges, array $meta, array $ipByPlayer, array $ipAccounts, array $ranking, ?int $days, array $botIds): array
+    private function describeRing(array $memberIds, array $edges, array $meta, array $ipByPlayer, array $ipAccounts, array $pwByPlayer, array $ranking, ?int $days, array $botIds): array
     {
         sort($memberIds);
         $set = array_fill_keys($memberIds, true);
+
+        // Password groups: members whose password blob is shared by >= 2 members
+        // of THIS ring get a group letter (A, B, …). Same letter = same password.
+        $hashCount = [];
+        foreach ($memberIds as $id) {
+            $h = $pwByPlayer[$id] ?? null;
+            if ($h !== null) $hashCount[$h] = ($hashCount[$h] ?? 0) + 1;
+        }
+        $pwGroupOf = [];
+        $nextLetter = 'A';
+        foreach ($memberIds as $id) {
+            $h = $pwByPlayer[$id] ?? null;
+            if ($h !== null && ($hashCount[$h] ?? 0) >= 2 && !isset($pwGroupOf[$h])) {
+                $pwGroupOf[$h] = $nextLetter++;
+            }
+        }
 
         $lastSeen = null; $pwMatch = false; $nameSim = false; $minAccts = null;
         $ips = [];
@@ -359,6 +375,7 @@ class CollusionDetector
             $r = $ranking[$id] ?? null;
             $rank = $r['rank'] ?? null;
             if ($rank !== null) $topRank = $topRank === null ? $rank : min($topRank, $rank);
+            $h = $pwByPlayer[$id] ?? null;
             $members[] = [
                 'player_id'  => $id,
                 'username'   => $m->username ?? '?',
@@ -368,6 +385,7 @@ class CollusionDetector
                 'rank'       => $rank,
                 'score'      => $r['score'] ?? null,
                 'games'      => $r['games'] ?? null,
+                'pw_group'   => $h !== null ? ($pwGroupOf[$h] ?? null) : null,
             ];
         }
 

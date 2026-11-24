@@ -60,7 +60,18 @@
 
                 <el-table class="admin-table" :data="ring.members" row-key="player_id" stripe :row-class-name="rowClass">
                     <el-table-column label="Player" min-width="180">
-                        <template #default="{ row }"><player-ref :player="row" /></template>
+                        <template #default="{ row }">
+                            <player-ref :player="row" />
+                            <el-tooltip
+                                v-if="row.pw_group"
+                                :content="'Shares password group ' + row.pw_group + ' with other members'"
+                                placement="top"
+                            >
+                                <el-tag size="small" type="danger" effect="plain" class="collusion-pw" disable-transitions>
+                                    pw {{ row.pw_group }}
+                                </el-tag>
+                            </el-tooltip>
+                        </template>
                     </el-table-column>
                     <el-table-column label="Rank" width="90" align="right">
                         <template #default="{ row }">
@@ -226,6 +237,9 @@ export default {
 }
 .collusion-filter {
     width: 150px;
+}
+.collusion-pw {
+    margin-left: 6px;
 }
 .collusion-note,
 .collusion-empty {

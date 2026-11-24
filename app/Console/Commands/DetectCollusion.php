@@ -110,6 +110,7 @@ class DetectCollusion extends Command
                 $rows[] = [
                     $m['player_id'],
                     $m['username'] . ($m['banned'] ? ' [BANNED]' : ''),
+                    $m['pw_group'] !== null ? 'pw ' . $m['pw_group'] : '-',
                     $m['rank'] !== null ? '#' . $m['rank'] : '-',
                     $m['score'] !== null ? $m['score'] : '-',
                     $m['games'] !== null ? $m['games'] : '-',
@@ -117,7 +118,7 @@ class DetectCollusion extends Command
                     $m['ips'],
                 ];
             }
-            $this->table(['id', 'nick', 'rank', 'score', 'games', 'last_login', '#IPs'], $rows);
+            $this->table(['id', 'nick', 'pw', 'rank', 'score', 'games', 'last_login', '#IPs'], $rows);
 
             if ($ring['shared_ips']) {
                 $this->line('     shared IPs: ' . implode(', ', $ring['shared_ips']));
@@ -127,6 +128,7 @@ class DetectCollusion extends Command
 
         $this->comment('Note: a shared IP is an indication, not proof (household/CGNAT possible). '
             . 'Confidence HIGH = same password, similar nick or private IP. '
+            . 'pw A/B marks members that share the same password (same letter = same password); '
             . 'rank/score/games are the current season standing (for prioritisation).');
 
         return self::SUCCESS;
