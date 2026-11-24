@@ -34,6 +34,8 @@ Framework-Standard.
 | `logs:rotate-nginx` | Zu große nginx-Logs komprimieren und leeren (copytruncate-Stil) | `--dir=`, `--max-size=<MB>`, `--keep=<n>`, `--dry-run` | manuell (siehe Hinweis) |
 | `player:set-password <name> [pw]` | Passwort im Forum (argon2id) und in der Ranking-DB (AES) setzen; ohne `pw` wird verdeckt abgefragt | `--force` (ohne Rückfrage) | manuell |
 | `player:delete <name>` | Account im Forum (phpBB) und in der Ranking-DB löschen – gleiche Logik wie „Delete“ auf der Players-Seite; Forenbeiträge bleiben als „Deleted“ | `--dry-run`, `--force` (ohne Rückfrage) | manuell |
+| `ranking:detect-collusion` | Account-Ringe **einer** Person finden, die gemeinsam an gewerteten Tischen sitzen (Multi-Seat / Chip-Dumping); Spalten Rang/Score, sortiert nach bestem Rang | `--days=`, `--since=day\|week\|month\|year`, `--confidence=review\|medium\|high`, `--min-tables=`, `--ip-max-accounts=`, `--player=`, `--limit=`, `--json` | manuell |
+| `ranking:track-ring [preset]` | Bekannten Ban-Evasion-Ring aus Seed-Accounts aufspannen und **neue** Accounts (≤ N Tage) farblich hervorheben | `--seed=*`, `--new-days=`, `--ip-max=`, `--subnet-max=`, `--avatar-max=`, `--show-weak`, `--json` | manuell |
 | `bbc:gamedates` | Spieltermine für BBC automatisch anlegen | – | manuell |
 | `ranking:fix` | Platzhalter für Ad-hoc-Neuberechnung des Rankings; Logik im Body ist auskommentiert und wird pro Einsatz angepasst | – | manuell / Entwicklung |
 | `season:switch` | Platzhalter (`handle()` gibt 0 zurück) – **nicht benutzen** | – | – |
@@ -112,6 +114,28 @@ Leerlauf kostet nichts. ⚠️ In `app/Console/Kernel.php` ist der Befehl als
 stündlich eingetragen, aber `Kernel.php` wird unter Laravel 12 nicht mehr
 geladen (Scheduler kommt komplett aus `bootstrap/app.php`). Er läuft also
 aktuell **nicht** automatisch – bei Bedarf in `bootstrap/app.php` nachtragen.
+
+**`ranking:detect-collusion`** – sucht Account-Ringe, die derselben Person
+gehören und gemeinsam an **gewerteten** Tischen (`game_has_player`) sitzen.
+Verknüpft wird über den **IP-Pool** aus allen Sessions + `last_ip` (nicht über
+„gleiche IP im selben Spiel" – der Game-Server sieht die Gegensitz-IP gar
+nicht), kombiniert mit wiederholtem gemeinsamen Tisch; gleicher Passwort-Blob
+bzw. ähnlicher Nick erhärten. Öffentliche VPN-/CGNAT-IPs werden über
+`--ip-max-accounts` ausgefiltert (eine IP „verknüpft" nur, wenn sie wenige
+Accounts nutzen). Ausgabe sind Ringe mit Score; `--player=` zeigt gezielt den
+Ring eines Accounts. Logik in `app/Services/CollusionDetector.php`. Geteilte IP
+bleibt ein Indiz, kein Beweis (Haushalt/CGNAT) – die Liste ist eine
+Entscheidungsgrundlage, kein Automatik-Ban.
+
+**`ranking:track-ring`** – für wiederkehrende Ban-Evader: aus bekannten
+Seed-Accounts (Presets in `config/rings.php`, reale Namen nur in der
+gitignorierten `config/rings.local.php`, oder ad hoc per `--seed`) wird der
+aktuelle Ring aufgespannt und **neue** Accounts (`--new-days`, Default 7) gelb
+hervorgehoben – inkl. frischer Wegwerf-Accounts, die über IP, /24, gleichen
+Passwort-Blob oder seltenen Avatar andocken. Selbst gelöschte/umbenannte Seeds
+werden über `suspended_nicknames` (live + Season-Snapshots) und
+`server_session.nick` aufgelöst, da die `player_id` stabil bleibt. Logik in
+`app/Services/RingTracker.php`.
 
 ## Scheduler
 

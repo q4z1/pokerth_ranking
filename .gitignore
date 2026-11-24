@@ -20,3 +20,6 @@ npm-debug.log
 yarn-error.log
 
 .claude/settings.json
+
+# Lokale Ring-Presets mit echten Spielernamen (nie committen)
+config/rings.local.php
