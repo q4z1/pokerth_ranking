@@ -22,7 +22,11 @@ use RuntimeException;
  * Private Nachricht: → ChatRequest(targetPlayerId, text). Der Server bestätigt
  * nicht; Fehlschlag = ChatReject mit unserem Text. Sitzt das Ziel an einem
  * laufenden Tisch, hält der Server die PM bis Spielende zurück (bzw. lehnt
- * sie bei älteren Servern ab). Antworten an den Bot liest niemand.
+ * sie bei älteren Servern ab). Die PM geht nicht vom Bot, sondern vom
+ * Game-Account des angemeldeten Admins (withLogin()), damit Antworten im
+ * eigenen Client ankommen. Voraussetzung: der Admin ist dabei nicht selbst
+ * verbunden – ein WebSocket-Login unter einem belegten Namen lehnt der Server
+ * mit "player name in use" ab (code in_use), ein TCP-Client würde gekickt.
  *
  * Global Notice: nach InitAck → AdminGlobalNotice(text) | AdminGlobalNoticeAck ←.
  * Der Server schickt den Text als chatTypeBroadcast-ChatMessage an alle
@@ -72,6 +76,9 @@ class GameServerAdminClient
         4 => 'invalid',
     ];
 
+    /** ErrorMessage.ErrorReason playerNameInUse. */
+    private const ERR_NAME_IN_USE = 4;
+
     /** ErrorMessage.ErrorReason → lesbarer Text. */
     private const ERROR_REASONS = [
         1 => 'version not supported',
@@ -104,6 +111,12 @@ class GameServerAdminClient
     public function __construct(?array $cfg = null)
     {
         $this->cfg = $cfg ?? config('services.game_server_admin');
+    }
+
+    /** Gleicher Server, aber Login mit einem anderen Account (statt des Bots). */
+    public function withLogin(string $nick, string $password): static
+    {
+        return new static(array_merge($this->cfg, ['nick' => $nick, 'password' => $password]));
     }
 
     public function isConfigured(): bool
@@ -159,7 +172,8 @@ class GameServerAdminClient
     }
 
     /**
-     * Schickt dem Spieler mit diesem Nickname eine private Nachricht vom Bot.
+     * Schickt dem Spieler mit diesem Nickname eine private Nachricht vom
+     * eingeloggten Account (Bot oder per withLogin() der Admin selbst).
      *
      * @return array{ok:bool, code:string, msg:string}
      */
@@ -171,6 +185,9 @@ class GameServerAdminClient
         $nick = trim($nick);
         $text = trim($text);
         if ($nick === '') return ['ok' => false, 'code' => 'invalid', 'msg' => 'No nickname given.'];
+        if (strcasecmp($nick, (string) $this->cfg['nick']) === 0) {
+            return ['ok' => false, 'code' => 'invalid', 'msg' => 'You cannot send a message to yourself.'];
+        }
         if ($text === '') return ['ok' => false, 'code' => 'invalid', 'msg' => 'The message is empty.'];
         if (!mb_check_encoding($text, 'UTF-8')) return ['ok' => false, 'code' => 'invalid', 'msg' => 'The message is not valid UTF-8.'];
         if (strlen($text) > self::NOTICE_MAX_BYTES) {
@@ -202,8 +219,11 @@ class GameServerAdminClient
                     : 'player is at a running table, or the bot hit the chat rate limit.';
                 return ['ok' => false, 'code' => 'rejected', 'msg' => "The game server rejected the message: {$why}"];
             }
-            return ['ok' => true, 'code' => 'sent', 'msg' => "Message sent to \"{$nick}\"."];
+            return ['ok' => true, 'code' => 'sent', 'msg' => "Message sent to \"{$nick}\" as \"{$this->cfg['nick']}\"."];
         } catch (RuntimeException $e) {
+            if ($e->getCode() === self::ERR_NAME_IN_USE) {
+                return ['ok' => false, 'code' => 'in_use', 'msg' => "Not sent: \"{$this->cfg['nick']}\" is currently connected to the game server. Disconnect your client and send the message again."];
+            }
             return ['ok' => false, 'code' => 'error', 'msg' => $e->getMessage()];
         } finally {
             $this->close();
@@ -338,7 +358,8 @@ class GameServerAdminClient
             } else if ($type === self::T_INIT_ACK) {
                 return;
             } else if ($type === self::T_ERROR) {
-                throw new RuntimeException('Game server refused the bot login: ' . $this->errorText($body) . '.');
+                $reason = (int) ($this->pbFirst($this->pbDecode($body), 1) ?? 0);
+                throw new RuntimeException('Game server refused the login of "' . $this->cfg['nick'] . '": ' . $this->errorText($body) . '.', $reason);
             }
         }
     }

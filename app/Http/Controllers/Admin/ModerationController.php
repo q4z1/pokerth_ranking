@@ -6,13 +6,15 @@ use App\Models\Player;
 use App\Services\GameServerAdminClient;
 use App\Services\PlayerDeletionService;
 use App\Services\ReportStats;
+use App\Support\RankingPassword;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Eingriffe gegen Spieler: Ban/Unban/Delete, Shadow Mute und die Live-Aktionen
- * über den Admin-Bot (Kickban, private Nachricht, Global Notice).
+ * über den Game-Server (Kickban und Global Notice per Admin-Bot, private
+ * Nachricht vom Game-Account des angemeldeten Admins).
  * Jede Aktion landet im Audit-Log.
  */
 class ModerationController extends AdminBaseController
@@ -188,9 +190,20 @@ class ModerationController extends AdminBaseController
     if ($nick === '') return ['success' => false, 'msg' => 'No player given.'];
     $text = trim((string) $request->input('text', ''));
 
-    $result = app(GameServerAdminClient::class)->privateMessage($nick, $text);
+    // Absender ist der Game-Account des angemeldeten Admins (Backend-User.name
+    // = player.username, siehe AuthController), nicht der Bot - so landen
+    // Antworten im eigenen Client. Passwort per AES aus pokerth_ranking.player.
+    $sender = (string) (Auth::user()->name ?? '');
+    $password = RankingPassword::decrypt(
+      DB::table('player')->where('username', $sender)->value('password')
+    );
+    if ($sender === '' || $password === null) {
+      $result = ['ok' => false, 'code' => 'no_login', 'msg' => "No game server login available for \"{$sender}\"."];
+    } else {
+      $result = app(GameServerAdminClient::class)->withLogin($sender, $password)->privateMessage($nick, $text);
+    }
     $this->audit()->log('message', ['player_id' => $playerId ?: null, 'name' => $nick], [
-      'text' => $text, 'code' => $result['code'], 'msg' => $result['msg'],
+      'text' => $text, 'from' => $sender, 'code' => $result['code'], 'msg' => $result['msg'],
     ], $result['ok']);
 
     return ['success' => $result['ok'], 'code' => $result['code'], 'msg' => $result['msg']];

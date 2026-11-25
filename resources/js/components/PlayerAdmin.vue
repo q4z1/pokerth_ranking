@@ -119,7 +119,7 @@
             </el-table-column>
             <el-table-column label="Action" width="290" align="right">
                 <template #default="{ row }">
-                    <el-tooltip :content="row.online ? 'Private message from the admin bot' : 'Player is not online'" placement="top">
+                    <el-tooltip :content="row.online ? 'Private message from your game account' : 'Player is not online'" placement="top">
                         <span>
                             <el-button size="small" :disabled="!row.online" @click="askMessage(row)">Message</el-button>
                         </span>
@@ -209,13 +209,13 @@
             <template v-else>GeoIP database missing – run <code>php artisan geoip:update</code>.</template>
         </p>
 
-        <!-- Private Nachricht (Einweg, Antworten werden nicht gelesen) -->
+        <!-- Private Nachricht vom Game-Account des Admins (Antworten kommen im eigenen Client an) -->
         <el-dialog v-model="pm.open" title="Private message" width="min(520px, 94vw)" append-to-body>
             <template v-if="pm.row">
                 <p>
                     To <strong>{{ pm.row.username }}</strong>
                     <span v-if="pm.row.guest" class="admin-muted"> (guest)</span>,
-                    sent as a private chat message from the admin bot.
+                    sent as a private chat message from your game account.
                 </p>
                 <el-input
                     v-model="pm.text"
@@ -226,10 +226,11 @@
                 />
                 <div class="player-admin__pm-meta admin-muted">
                     <span :class="{ 'player-admin__pm-over': pmBytes > PM_MAX_BYTES }">{{ pmBytes }} / {{ PM_MAX_BYTES }} bytes</span>
-                    <span>Replies go to the bot account and are not read.</span>
+                    <span>Replies reach your account – log in with your client afterwards.</span>
                 </div>
                 <p class="admin-muted player-admin__pm-hint">
                     A player at a running table gets the message after the game (servers before that feature reject it).
+                    Disconnect your own client first: a second login under your name is refused (web client) or kicks it (desktop client).
                 </p>
             </template>
             <template #footer>
@@ -756,7 +757,8 @@ export default {
                     notice(data.msg)
                 } else {
                     // Dialog offen lassen, damit der Text nicht verloren geht.
-                    notice(data.msg || 'Message failed.', 'error')
+                    // in_use: eigener Account ist gerade mit dem Game-Server verbunden.
+                    notice(data.msg || 'Message failed.', data.code === 'in_use' ? 'warning' : 'error')
                 }
             } catch (err) {
                 reportError(err, 'Message failed.')
