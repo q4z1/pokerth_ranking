@@ -119,9 +119,9 @@
             </el-table-column>
             <el-table-column label="Action" width="290" align="right">
                 <template #default="{ row }">
-                    <el-tooltip :content="row.online ? 'Private message from your game account' : 'Player is not online'" placement="top">
+                    <el-tooltip :content="row.online ? 'Private message from your game account' : 'Player is offline – delivered at the next login'" placement="top">
                         <span>
-                            <el-button size="small" :disabled="!row.online" @click="askMessage(row)">Message</el-button>
+                            <el-button size="small" @click="askMessage(row)">Message</el-button>
                         </span>
                     </el-tooltip>
                     <el-tooltip
@@ -217,6 +217,9 @@
                     <span v-if="pm.row.guest" class="admin-muted"> (guest)</span>,
                     sent as a private chat message from your game account.
                 </p>
+                <p v-if="pm.row.player_id && !pm.row.online && !pm.row.guest" class="admin-muted">
+                    Not online right now – the game server holds the message until the next login (up to 30 days).
+                </p>
                 <el-input
                     v-model="pm.text"
                     type="textarea"
@@ -226,7 +229,7 @@
                 />
                 <div class="player-admin__pm-meta admin-muted">
                     <span :class="{ 'player-admin__pm-over': pmBytes > PM_MAX_BYTES }">{{ pmBytes }} / {{ PM_MAX_BYTES }} bytes</span>
-                    <span>Replies reach your account – log in with your client afterwards.</span>
+                    <span>Replies reach your account when you log in with your client (offline replies need the QML client).</span>
                 </div>
                 <p class="admin-muted player-admin__pm-hint">
                     A player at a running table gets the message after the game (servers before that feature reject it).

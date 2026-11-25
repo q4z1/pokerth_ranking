@@ -200,7 +200,9 @@ class ModerationController extends AdminBaseController
     if ($sender === '' || $password === null) {
       $result = ['ok' => false, 'code' => 'no_login', 'msg' => "No game server login available for \"{$sender}\"."];
     } else {
-      $result = app(GameServerAdminClient::class)->withLogin($sender, $password)->privateMessage($nick, $text);
+      $result = app(GameServerAdminClient::class)->withLogin($sender, $password)
+        // Offline-Zustellung nur für Accounts; Gäste gibt es nur online.
+        ->privateMessage($nick, $text, $playerId > 0);
     }
     $this->audit()->log('message', ['player_id' => $playerId ?: null, 'name' => $nick], [
       'text' => $text, 'from' => $sender, 'code' => $result['code'], 'msg' => $result['msg'],

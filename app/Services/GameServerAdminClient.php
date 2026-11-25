@@ -175,9 +175,15 @@ class GameServerAdminClient
      * Schickt dem Spieler mit diesem Nickname eine private Nachricht vom
      * eingeloggten Account (Bot oder per withLogin() der Admin selbst).
      *
+     * $allowOffline (nur Accounts): ist der Spieler nicht online, geht die PM
+     * per Name (targetPlayerName, targetPlayerId = 0). Der Server sucht den
+     * Account asynchron in der DB und hält die PM bis zum nächsten Login
+     * (max. 30 Tage). Die Lookup-Antwort verwirft er, wenn unsere Session
+     * schon zu ist – daher die Wartezeit unten vor dem Abmelden.
+     *
      * @return array{ok:bool, code:string, msg:string}
      */
-    public function privateMessage(string $nick, string $text): array
+    public function privateMessage(string $nick, string $text, bool $allowOffline = false): array
     {
         if (!$this->isConfigured()) {
             return ['ok' => false, 'code' => 'not_configured', 'msg' => 'Game server admin account is not configured (PTH_ADMIN_BOT_* in .env).'];
@@ -198,14 +204,18 @@ class GameServerAdminClient
             $this->connect();
             $this->login();
             $uniqueId = $this->findUniqueId($this->collectPlayers(), $nick);
-            if ($uniqueId === null) {
+            $offline = $uniqueId === null;
+            if ($offline && !$allowOffline) {
                 return ['ok' => false, 'code' => 'not_online', 'msg' => "\"{$nick}\" is not online on the game server."];
             }
 
-            $this->send(self::T_CHAT_REQUEST, $this->pbVarint(2, $uniqueId) . $this->pbBytes(3, $text));
+            $this->send(self::T_CHAT_REQUEST, $offline
+                ? $this->pbVarint(2, 0) . $this->pbBytes(3, $text) . $this->pbBytes(4, $nick)
+                : $this->pbVarint(2, $uniqueId) . $this->pbBytes(3, $text));
 
-            // Kein Ack bei Erfolg – nur ein ChatReject käme zurück.
-            $deadline = microtime(true) + 2;
+            // Kein Ack bei Erfolg – nur ein ChatReject käme zurück. Offline
+            // etwas länger: der Server fragt erst die DB nach dem Namen.
+            $deadline = microtime(true) + ($offline ? 3 : 2);
             while (microtime(true) < $deadline) {
                 $msg = $this->receive(max(0.1, $deadline - microtime(true)));
                 if ($msg === null) break;
@@ -214,10 +224,20 @@ class GameServerAdminClient
                 if ($type !== self::T_CHAT_REJECT) continue;
                 $f = $this->pbDecode($body);
                 if ((string) ($this->pbFirst($f, 1) ?? '') !== $text) continue;
-                $why = (int) ($this->pbFirst($f, 2) ?? 0) === 1
-                    ? 'too many messages are already waiting for this player (they are at a running table).'
-                    : 'player is at a running table, or the bot hit the chat rate limit.';
+                $limit = (int) ($this->pbFirst($f, 2) ?? 0) === 1;
+                if ($offline) {
+                    $why = $limit
+                        ? 'too many messages are already waiting for this player.'
+                        : 'no such account, or the server does not hold messages for offline players.';
+                } else {
+                    $why = $limit
+                        ? 'too many messages are already waiting for this player (they are at a running table).'
+                        : 'player is at a running table, or the chat rate limit was hit.';
+                }
                 return ['ok' => false, 'code' => 'rejected', 'msg' => "The game server rejected the message: {$why}"];
+            }
+            if ($offline) {
+                return ['ok' => true, 'code' => 'queued', 'msg' => "\"{$nick}\" is offline – the message from \"{$this->cfg['nick']}\" is delivered at the next login (kept for 30 days)."];
             }
             return ['ok' => true, 'code' => 'sent', 'msg' => "Message sent to \"{$nick}\" as \"{$this->cfg['nick']}\"."];
         } catch (RuntimeException $e) {
